@@ -4,7 +4,7 @@ slug: route-vision-and-cim
 type: route
 related_spec: —
 author: control-tower
-pr: openIndu/control-tower#NN
+pr: openIndu/control-tower#2
 ---
 
 # 收录 openIndu-vision / openIndu-cim，并让组织覆盖检查说清自己的可见范围
