@@ -4,7 +4,7 @@ slug: hook-token-anchored-push-detection
 type: other
 related_spec: —
 author: control-tower
-pr: openIndu/control-tower#NN
+pr: openIndu/control-tower#1
 ---
 
 # RULE 7 hook 改为按 token 锚定 git 子命令，消除误报；并把 hook 测试接进 CI
