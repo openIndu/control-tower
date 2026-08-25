@@ -64,12 +64,22 @@ jobs:
       # route.json 必须覆盖组织下全部仓库。
       # 曾经漏了 4 个（plc4x / openindu-station / openplc-runtime / community），
       # 其中 plc4x 是组织内最大的代码体——靠人维护清单必然漂移，改由 CI 校验。
+      #
+      # 可见范围的坑（2026-08-25 实测）：默认 GITHUB_TOKEN 只对**本仓库**有权限，
+      # `gh repo list openIndu` 因此只返回**公开**仓——当时是 5 个，而组织实际有 15 个。
+      # 也就是说这道检查对全部 10 个私有仓（含所有业务仓）是失明的，绿灯并不代表
+      # 全组织已覆盖。openIndu-vision / openIndu-cim 两个新建的私有仓就是这样漏过去的。
+      #
+      # 真正的修法是给一个有 org 读权限的 PAT（secret ORG_READ_TOKEN）。在那之前，
+      # 至少让这道检查**说清楚自己看见了什么**，别让绿灯被误读成全覆盖。
       - name: route.json covers every org repo
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.ORG_READ_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
-          gh repo list openIndu --limit 100 --json name --jq '.[].name' | sort -u > /tmp/gh.txt
+          gh repo list openIndu --limit 100 --json name,visibility > /tmp/gh.json
+          node -e "console.log(require('/tmp/gh.json').map(r=>r.name).join('\n'))" | sort -u > /tmp/gh.txt
           node -e "console.log(Object.keys(require('./route.json').repos).join('\n'))" | sort -u > /tmp/rj.txt
+          priv=$(node -e "console.log(require('/tmp/gh.json').filter(r=>r.visibility!=='PUBLIC').length)")
           missing=$(comm -23 /tmp/gh.txt /tmp/rj.txt || true)
           if [ -n "$missing" ]; then
             echo "::error::以下仓库在 openIndu 组织下存在，但 route.json 未收录："
@@ -77,7 +87,10 @@ jobs:
             echo "请在 plugins/openindu-control-tower/reference/route.json 补录后运行 node scripts/sync-route.mjs"
             exit 1
           fi
-          echo "✓ route.json 覆盖组织全部 $(wc -l < /tmp/gh.txt) 个 GitHub 仓库"
+          echo "✓ route.json 覆盖本 token 可见的 $(wc -l < /tmp/gh.txt) 个仓库（其中私有 $priv 个）"
+          if [ "$priv" -eq 0 ]; then
+            echo "::warning::本次只校验了公开仓——当前 token 看不到任何私有仓，私有仓的路由漂移不会被这道检查发现。配置 secret ORG_READ_TOKEN（需 org 读权限）以获得全覆盖。"
+          fi
 
       # route.json 声明的 modules 必须与构建清单实际探测一致。
       # 曾经把 openindu-gateway 标成 rust，实际 main 上是 python（Rust 在未合并分支）。

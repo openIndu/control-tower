@@ -26,14 +26,15 @@ openIndu is a submodule-aggregate architecture. Sub-repo merge ≠ live. Miss an
 
 Use `/route` to find which repo the change is in, then:
 
-| Change location                                          | Applies         | Note                                                            |
-| -------------------------------------------------------- | --------------- | --------------------------------------------------------------- |
-| `openIndu-backend` / `-admin` / `-portal`                | ① to ⑥ **all**  | submodule sub-repos; image rebuild needed                       |
-| `openIndu-website` (aggregate itself)                    | ① ② ④ ⑤ ⑥       | no ③; it IS the aggregate                                       |
-| `infra-deploy` (K8s manifests only)                      | ⑤ ⑥             | no ④ unless image changes                                       |
-| `control-tower`                                          | ① ②             | control layer, not in cluster; downstream `/plugin update`      |
-| `openIndu-studio`                                        | ① ② ③           | IS the 4th submodule of the aggregate, but no image → ends at ③ |
-| `openIndu-platform` / `-controller` / `openindu-station` | ① ② + as needed | not in website aggregate; per their own release flow            |
+| Change location                                          | Applies         | Note                                                                                       |
+| -------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------ |
+| `openIndu-backend` / `-admin` / `-portal`                | ① to ⑥ **all**  | submodule sub-repos; image rebuild needed                                                  |
+| `openIndu-website` (aggregate itself)                    | ① ② ④ ⑤ ⑥       | no ③; it IS the aggregate                                                                  |
+| `infra-deploy` (K8s manifests only)                      | ⑤ ⑥             | no ④ unless image changes                                                                  |
+| `control-tower`                                          | ① ②             | control layer, not in cluster; downstream `/plugin update`                                 |
+| `openIndu-studio`                                        | ① ② ③           | IS the 4th submodule of the aggregate, but no image → ends at ③                            |
+| `openIndu-platform` / `-controller` / `openindu-station` | ① ② + as needed | not in website aggregate; per their own release flow                                       |
+| `openIndu-vision` / `openIndu-cim`                       | ① ② ③           | submodules of `openindu-station`, no image → ends at ③ (the pointer bump PR in the parent) |
 
 Mark non-applicable boxes **N/A**, not ✅ — the two mean different things.
 
