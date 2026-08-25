@@ -42,6 +42,50 @@ function currentBranch(cwd) {
   }
 }
 
+/** git 自身的选项里，需要额外吃掉一个值的那几个（`git -C <path> …`）。 */
+const GIT_OPTS_WITH_VALUE = new Set([
+  "-C",
+  "-c",
+  "--git-dir",
+  "--work-tree",
+  "--namespace",
+  "--exec-path",
+  "--super-prefix",
+]);
+
+/** 去掉可执行文件的路径前缀：`/usr/bin/git`、`C:\…\git.exe` → `git`。 */
+function isGitToken(token) {
+  return /^git(\.exe)?$/i.test(token.replace(/^.*[\\/]/, ""));
+}
+
+/**
+ * 从一段命令的 token 流里找出**真正的** git 推送调用，
+ * 返回每次调用中子命令之后的参数列表。
+ *
+ * 为什么不能在整串里搜子命令名：那样会被命令里任何一处出现的同名词带偏
+ * ——echo 文本、提交信息、文件路径都算——然后把其后的词当成 refspec。
+ * 例如 `echo "推送到 main 之前先看一眼"; git push origin feat/x`
+ * 会被误判成推送受保护分支。所以这里锚定 `git` 这个**词**，跳过 git
+ * 自身的选项，再看它的子命令是不是推送。
+ */
+function pushArgLists(tokens) {
+  const out = [];
+
+  for (let i = 0; i < tokens.length; i++) {
+    if (!isGitToken(tokens[i])) continue;
+
+    // 跳过 git 自身的选项，落到子命令上
+    let j = i + 1;
+    while (j < tokens.length && tokens[j].startsWith("-")) {
+      j += GIT_OPTS_WITH_VALUE.has(tokens[j]) ? 2 : 1;
+    }
+
+    if (tokens[j] === "push") out.push(tokens.slice(j + 1));
+  }
+
+  return out;
+}
+
 /**
  * 判断一条命令是否会把提交推到受保护分支。
  * 返回 null 表示放行，否则返回阻断原因。
@@ -54,29 +98,28 @@ function inspect(command, cwd) {
 
   for (const segment of segments) {
     const s = segment.trim();
-    if (!/\bgit\b[\s\S]*\bpush\b/.test(s)) continue;
+    const tokens = s.split(/\s+/).filter(Boolean);
 
-    // push 后面的位置参数：<remote> <refspec...>
-    const after = s.slice(s.indexOf("push") + "push".length);
-    const args = after.split(/\s+/).filter(Boolean);
-    const positional = args.filter((a) => !a.startsWith("-"));
+    for (const args of pushArgLists(tokens)) {
+      const positional = args.filter((a) => !a.startsWith("-"));
 
-    // 情况 1：显式写了受保护分支作为 refspec
-    //   git push origin main / +main / HEAD:main / refs/heads/main
-    for (const arg of positional.slice(1)) {
-      const dst = arg.includes(":") ? arg.slice(arg.lastIndexOf(":") + 1) : arg;
-      const ref = dst.replace(/^\+/, "").replace(/^refs\/heads\//, "");
-      if (PROTECTED.includes(ref)) {
-        return `命令 \`${s}\` 会把提交推送到受保护分支 ${ref}`;
+      // 情况 1：显式写了受保护分支作为 refspec
+      //   `<remote> main` / `+main` / `HEAD:main` / `refs/heads/main`
+      for (const arg of positional.slice(1)) {
+        const dst = arg.includes(":") ? arg.slice(arg.lastIndexOf(":") + 1) : arg;
+        const ref = dst.replace(/^\+/, "").replace(/^refs\/heads\//, "");
+        if (PROTECTED.includes(ref)) {
+          return `命令 \`${s}\` 会把提交推送到受保护分支 ${ref}`;
+        }
       }
-    }
 
-    // 情况 2：没写 refspec，但当前就在受保护分支上
-    //   git push / git push origin / git push -u origin
-    if (positional.length <= 1) {
-      const branch = currentBranch(cwd);
-      if (branch && PROTECTED.includes(branch)) {
-        return `当前分支是 ${branch}，\`${s}\` 会直接推送受保护分支`;
+      // 情况 2：没写 refspec，但当前就在受保护分支上
+      //   裸的 `git push` / `git push <remote>` / `git push -u <remote>`
+      if (positional.length <= 1) {
+        const branch = currentBranch(cwd);
+        if (branch && PROTECTED.includes(branch)) {
+          return `当前分支是 ${branch}，\`${s}\` 会直接推送受保护分支`;
+        }
       }
     }
   }
