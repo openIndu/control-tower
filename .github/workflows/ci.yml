@@ -34,6 +34,15 @@ jobs:
       - name: route.json single source
         run: node scripts/sync-route.mjs --check
 
+      # RULE 7 主干保护 hook 的单元测试。
+      #
+      # 这份测试早就存在，但一直没接进 CI —— 也就是说 hook 改坏了不会有任何
+      # 红灯。按 RULE 2「自动化测试覆盖足以支撑回归判断」，这是个真实的空洞：
+      # 该 hook 会装到每个下游仓库、拦每一次 Bash/PowerShell 调用，误报会直接
+      # 卡住所有人的工作流。挂上。
+      - name: RULE 7 hook tests
+        run: node plugins/openindu-control-tower/hooks/block-push-main.test.mjs
+
       # 插件 schema + skill/agent/hook 文件校验
       - name: Validate plugin
         run: npx --yes @anthropic-ai/claude-code@latest plugin validate ./plugins/openindu-control-tower --strict

@@ -143,6 +143,46 @@ await asyncTest("push to remote with no refspec", async () => {
   ok(code === 0 || code === 2, "should not crash on bare git push");
 });
 
+// --- Regression: the subcommand must be located by token, not by substring ---
+//
+// The hook used to find the push arguments with `indexOf("push")`, which
+// matched the FIRST occurrence of that substring anywhere in the command —
+// including inside echo text, commit messages and file paths — and then read
+// the words after it as a refspec. Any command that merely mentioned both
+// words in prose was blocked even when the real destination was a feature
+// branch. These four cases all failed before the token-anchored rewrite.
+
+await asyncTest("echo text mentioning the protected branch, then a feature push", async () => {
+  const { code } = await runHook({
+    tool_input: {
+      command:
+        'echo "pushing the feature branch (not main)" && git push -u origin refactor/extract',
+    },
+  });
+  deepStrictEqual(code, 0, "prose in echo must not be parsed as push arguments");
+});
+
+await asyncTest("commit message mentioning the protected branch", async () => {
+  const { code } = await runHook({
+    tool_input: { command: 'git commit -m "docs: how we push to main"' },
+  });
+  deepStrictEqual(code, 0, "git commit is not git push");
+});
+
+await asyncTest("file path containing the substring", async () => {
+  const { code } = await runHook({
+    tool_input: { command: "cat docs/push-to-main-policy.md" },
+  });
+  deepStrictEqual(code, 0, "a path is not a git invocation");
+});
+
+await asyncTest("git -C <path> push to a feature branch", async () => {
+  const { code } = await runHook({
+    tool_input: { command: "git -C /tmp/repo push -u origin feat/x" },
+  });
+  deepStrictEqual(code, 0, "git's own options must be skipped, not misread");
+});
+
 console.log("\nBlock (exit 2):");
 
 await asyncTest("git push origin main — explicit", async () => {
@@ -159,6 +199,29 @@ await asyncTest("git push origin master", async () => {
     tool_input: { command: "git push origin master" },
   });
   deepStrictEqual(code, 2, "push to master should be blocked");
+});
+
+// --- The token-anchored lookup must not open holes it did not have before ---
+
+await asyncTest("git -C <path> pushing the protected branch", async () => {
+  const { code } = await runHook({
+    tool_input: { command: "git -C /tmp/repo push origin main" },
+  });
+  deepStrictEqual(code, 2, "git's own value-taking options must be skipped correctly");
+});
+
+await asyncTest("git -c <key>=<value> before the subcommand", async () => {
+  const { code } = await runHook({
+    tool_input: { command: "git -c core.pager=cat push origin master" },
+  });
+  deepStrictEqual(code, 2, "-c takes a value; the subcommand is still push");
+});
+
+await asyncTest("absolute path to the git binary", async () => {
+  const { code } = await runHook({
+    tool_input: { command: "/usr/bin/git push origin main" },
+  });
+  deepStrictEqual(code, 2, "a path-prefixed git must still be recognised");
 });
 
 await asyncTest("git push origin +main (forced refspec)", async () => {
