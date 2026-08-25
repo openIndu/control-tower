@@ -1,0 +1,7 @@
+node_modules/
+dist/
+build/
+.cache/
+
+# 运行期产生的通信记录，格式由 agent 写入时决定，不做强制格式化
+team/communications/threads/

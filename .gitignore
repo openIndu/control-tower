@@ -1,0 +1,41 @@
+# Node / npm
+node_modules/
+*.log
+npm-debug.log*
+.npm
+
+# Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Local environment / secrets — must never enter the repo
+.env
+.env.local
+*.local
+.claude/settings.local.json
+
+# Build artifacts
+dist/
+build/
+.cache/
+
+# Skill named "build" — not a build-artifact directory
+!plugins/openindu-control-tower/skills/build/
+
+# Python (for any helper scripts)
+__pycache__/
+*.py[cod]
+.venv/
+.ruff_cache/
+.mypy_cache/
+
+# Agent runtime comms — ephemeral, produced by agents at runtime
+team/communications/threads/*
+!team/communications/threads/.gitkeep
+team/communications/TASK_LOG.md
+
+# OS
+Thumbs.db
+ehthumbs.db

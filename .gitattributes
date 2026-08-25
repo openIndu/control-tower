@@ -1,0 +1,19 @@
+# 统一行尾为 LF，保证 Windows / Linux / macOS 上的本地检查与 CI 结果一致。
+#
+# 背景：没有这个文件时，Windows 检出会把文本转成 CRLF，而 prettier 默认
+# endOfLine=lf，于是 `npx prettier --check "**/*.md"` 在 Windows 上必然报错，
+# 但同一份代码在 Linux CI 上是绿的。文档让贡献者提交前跑的命令跑不过，
+# 违反 RULE 2「提交前本地格式检查必须能通过」。
+
+* text=auto eol=lf
+
+# 二进制资产不做行尾转换
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.woff  binary
+*.woff2 binary
+*.xdb  binary

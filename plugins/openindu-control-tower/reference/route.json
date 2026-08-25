@@ -1,0 +1,195 @@
+{
+  "org": "openIndu",
+  "base_url": "https://github.com/openIndu",
+  "mirror": {
+    "gitee": "https://gitee.com/openIndu",
+    "note": "Since 2026-06-20 all repos migrated to GitHub, origin=GitHub; Gitee is only the infra-deploy manifest repo and a backup mirror."
+  },
+  "repos": {
+    "control-tower": {
+      "url": "https://github.com/openIndu/control-tower",
+      "phase": "brain",
+      "type": "control-tower",
+      "description": "openIndu independent control layer: maintains routing info, Agent principles, agent definitions; directs sub-repo template/script/Agent-prompt updates."
+    },
+    "openIndu-website": {
+      "url": "https://github.com/openIndu/openIndu-website",
+      "phase": "aggregate",
+      "type": "aggregate",
+      "submodules": ["openIndu-backend", "openIndu-admin", "openIndu-portal", "openIndu-studio"],
+      "local_path_hint": "../openIndu-website",
+      "description": "Aggregate dev repo: submodule-aggregates backend + admin + portal + studio; docker-compose local stack; RULE 11 steps 4+5 entry is this repo's own /release command (not the plugin's /build)."
+    },
+    "openIndu-backend": {
+      "url": "https://github.com/openIndu/openIndu-backend",
+      "phase": "backend",
+      "type": "backend",
+      "aggregate": "openIndu-website",
+      "image": "${OPENINDU_REGISTRY}/openindu/openindu-backend",
+      "production_db": {
+        "host": "${OPENINDU_PROD_DB_HOST}",
+        "port": "${OPENINDU_PROD_DB_PORT}",
+        "database": "${OPENINDU_PROD_DB_NAME}",
+        "note": "RULE 10 production-SQL protection target. Host, port, database and credentials are all injected via vault or env — never committed to this repo."
+      },
+      "description": "FastAPI Web API (8004) + MCP Server (8005); depends on PostgreSQL + Milvus + Aliyun OSS."
+    },
+    "openIndu-admin": {
+      "url": "https://github.com/openIndu/openIndu-admin",
+      "phase": "frontend",
+      "type": "admin",
+      "aggregate": "openIndu-website",
+      "image": "${OPENINDU_REGISTRY}/openindu/openindu-admin",
+      "domain": "admin.openindu.com",
+      "description": "React 19 + Vite 6 unified admin (admin/member/regular-user tiers)."
+    },
+    "openIndu-portal": {
+      "url": "https://github.com/openIndu/openIndu-portal",
+      "phase": "frontend",
+      "type": "portal",
+      "aggregate": "openIndu-website",
+      "image": "${OPENINDU_REGISTRY}/openindu/openindu-portal",
+      "domain": "openindu.com",
+      "description": "React 19 + Vite 6 community front-end (anonymous + authenticated)."
+    },
+    "openIndu-studio": {
+      "url": "https://github.com/openIndu/openIndu-studio",
+      "mirror_gitee": "https://gitee.com/openIndu/openIndu-studio",
+      "phase": "tooling",
+      "type": "studio",
+      "primary_language": "python",
+      "modules": ["converters", "local-rag-mcp", "scripts"],
+      "authoritative_host": "github",
+      "aggregate": "openIndu-website",
+      "release_flow": "library — it IS the 4th submodule of openIndu-website (confirmed 2026-08-05 against .gitmodules), but produces no container image and has no manifest in infra-deploy, so RULE 11 ends at the aggregate submodule-pointer PR",
+      "description": "AI-assisted PLC/HMI program development toolchain: electrical-module survey, circuit design, BOM generation, IO-address planning through PLC/HMI programming; includes RAG knowledge base and MCP tools. Python 99%. GitHub is the authoritative source (confirmed 2026-08-04); Gitee is mirror only — if a local clone points at Gitee, switch origin."
+    },
+    "openIndu-platform": {
+      "url": "https://github.com/openIndu/openIndu-platform",
+      "phase": "platform",
+      "type": "platform",
+      "polyglot_monorepo": true,
+      "release_flow": "independent — not in the openIndu-website submodule aggregate; image build and deploy per its own pipeline",
+      "modules": [
+        {
+          "path": "openindu-backend",
+          "manifest": "pom.xml",
+          "language": "java"
+        },
+        {
+          "path": "openindu-website",
+          "manifest": "package.json",
+          "language": "vue"
+        },
+        {
+          "path": "openindu-collector",
+          "manifest": "pyproject.toml",
+          "language": "python"
+        },
+        {
+          "path": "openindu-app",
+          "manifest": "package.json",
+          "language": "vue-uniapp"
+        },
+        {
+          "path": "openindu-website-next",
+          "manifest": "package.json",
+          "language": "typescript"
+        },
+        {
+          "path": "openindu-gateway",
+          "manifest": "requirements.txt",
+          "language": "python",
+          "pending_rewrite": {
+            "target_language": "rust",
+            "branch": "feat/frontend-react-refactor",
+            "status": "pushed, not merged to main",
+            "note": "Python→Rust rewrite (Modbus driver / edge alarm / data transform). Rust file count on main is 0; the rust role covers this in-flight work."
+          }
+        }
+      ],
+      "description": "Industrial-internet platform (IIoT base): device access, data pipeline, application runtime (platform layer). Long-term moat. Polyglot monorepo — a single type can't express its stack; dispatch must descend to module granularity."
+    },
+    "openindu-station": {
+      "url": "https://github.com/openIndu/openindu-station",
+      "phase": "application",
+      "type": "station",
+      "primary_language": "csharp",
+      "modules": [
+        "src/OpenIndu.Station.Core",
+        "src/OpenIndu.Station.Platform",
+        "src/OpenIndu.Station.Motion",
+        "src/OpenIndu.Station.Vision",
+        "src/OpenIndu.Station.Scan",
+        "src/OpenIndu.Station.App.Dispense",
+        "src/OpenIndu.Station.App.LaserCut",
+        "tests/OpenIndu.Station.Verify"
+      ],
+      "description": "Self-developed station app (described as openindu-motor): 8 .csproj, 180 .cs. Includes motion control, vision, scan, dispensing and laser-cutting apps. The only repo in the org with a standalone test project (Verify)."
+    },
+    "openIndu-controller": {
+      "url": "https://github.com/openIndu/openIndu-controller",
+      "phase": "edge",
+      "type": "controller",
+      "primary_language": "csharp",
+      "modules": ["openInduCore", "openInduVision", "openPlatform"],
+      "release_flow": "independent — not in the openIndu-website submodule aggregate; edge deploy differs from cluster",
+      "description": "Edge controller, connecting real industrial devices (collect/dispatch); the hands and feet of the industrial loop (edge layer). 3 .csproj, 110 .cs."
+    },
+    "plc4x": {
+      "url": "https://github.com/openIndu/plc4x",
+      "phase": "vendor",
+      "type": "fork",
+      "upstream": "https://github.com/apache/plc4x",
+      "default_branch": "develop",
+      "primary_language": "java",
+      "divergence": {
+        "measured": "2026-08-04",
+        "status": "diverged",
+        "ahead_by": 6,
+        "behind_by": 18,
+        "files_changed": 49,
+        "patch_scope": "plc4net/ entirely (40 .cs / 6 .csproj / 1 .sln / 1 .props) + 1 .NET CI workflow; Java / Go / Ruby / C untouched.",
+        "patch_nature": "net452→net8.0 migration, SPI3 driver runtime implementation, API alignment (Field→Tag), bit codec and ReadBuffer/WriteBuffer fixes, plus 929 lines of new tests."
+      },
+      "delivery_owner": "station-control",
+      "description": "Fork of Apache PLC4X (industrial-protocol adapter). The org's largest code body (~197 MB): Java 73% / Go 8% / Ruby 7% / C# 4% / C 3%. Local patches are 100% in plc4net/ (the .NET subproject), owned by the station-control role — upstream Java/Go/Ruby code is never modified and needs no corresponding language role. Behind upstream by 18 commits; periodic rebase required."
+    },
+    "openplc-runtime": {
+      "url": "https://github.com/openIndu/openplc-runtime",
+      "phase": "vendor",
+      "type": "fork",
+      "upstream": "https://github.com/Autonomy-Logic/openplc-runtime",
+      "primary_language": "python",
+      "divergence": {
+        "measured": "2026-08-04",
+        "status": "behind",
+        "ahead_by": 0,
+        "behind_by": 41,
+        "files_changed": 0
+      },
+      "delivery_owner": null,
+      "description": "Fork of OpenPLC Runtime v4. Python 37% / C 35% / C++ 25%. Zero local changes — pure mirror, only 41 commits behind upstream. Needs no delivery role; just a sync strategy: periodic fast-forward, or archive once no longer needed."
+    },
+    ".github": {
+      "url": "https://github.com/openIndu/.github",
+      "phase": "meta",
+      "type": "meta",
+      "description": "Org-level GitHub config (profile / issue templates). No business code; no agent assigned."
+    },
+    "community": {
+      "url": "https://github.com/openIndu/community",
+      "phase": "meta",
+      "type": "meta",
+      "description": "Community governance docs. No business code; no agent assigned."
+    },
+    "infra-deploy": {
+      "url": "https://gitee.com/openIndu/infra-deploy",
+      "phase": "gitops",
+      "type": "gitops",
+      "host": "gitee",
+      "k8s_namespace": "openindu-website",
+      "description": "K8s manifest sole home (Deployment/Service/ConfigMap/Secret/Ingress). The openIndu-website/ subdir corresponds to this platform. PR title/body in English (RULE 9)."
+    }
+  }
+}

@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  checks:
+    name: format + plugin + route
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # RULE 2 — 提交前格式必须过
+      - name: Markdown format (prettier)
+        run: npx --yes prettier@3 --check "**/*.md"
+
+      # JSON 必须可解析（route.json 曾因未转义引号在 main 上失效）
+      - name: JSON syntax
+        run: |
+          fail=0
+          while IFS= read -r f; do
+            node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" "$f" \
+              || { echo "::error file=$f::invalid JSON"; fail=1; }
+          done < <(git ls-files '*.json')
+          exit $fail
+
+      # route.json 单一来源：根目录必须与插件内唯一源一致
+      - name: route.json single source
+        run: node scripts/sync-route.mjs --check
+
+      # 插件 schema + skill/agent/hook 文件校验
+      - name: Validate plugin
+        run: npx --yes @anthropic-ai/claude-code@latest plugin validate ./plugins/openindu-control-tower --strict
+
+      - name: Validate marketplace
+        run: npx --yes @anthropic-ai/claude-code@latest plugin validate . --strict
+
+      # 守则只能有一份源。发现第二份副本就 fail
+      - name: Single principle source
+        run: |
+          copies=$(git ls-files | grep -iE '(^|/)principle\.md$' | grep -v '^team/principle\.md$' || true)
+          if [ -n "$copies" ]; then
+            echo "::error::发现守则副本，守则唯一源只能是 plugins/openindu-control-tower/skills/principle/SKILL.md"
+            echo "$copies"
+            exit 1
+          fi
+          echo "✓ 守则无重复副本"
+
+      # route.json 必须覆盖组织下全部仓库。
+      # 曾经漏了 4 个（plc4x / openindu-station / openplc-runtime / community），
+      # 其中 plc4x 是组织内最大的代码体——靠人维护清单必然漂移，改由 CI 校验。
+      - name: route.json covers every org repo
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh repo list openIndu --limit 100 --json name --jq '.[].name' | sort -u > /tmp/gh.txt
+          node -e "console.log(Object.keys(require('./route.json').repos).join('\n'))" | sort -u > /tmp/rj.txt
+          missing=$(comm -23 /tmp/gh.txt /tmp/rj.txt || true)
+          if [ -n "$missing" ]; then
+            echo "::error::以下仓库在 openIndu 组织下存在，但 route.json 未收录："
+            echo "$missing" | sed 's/^/  - /'
+            echo "请在 plugins/openindu-control-tower/reference/route.json 补录后运行 node scripts/sync-route.mjs"
+            exit 1
+          fi
+          echo "✓ route.json 覆盖组织全部 $(wc -l < /tmp/gh.txt) 个 GitHub 仓库"
+
+      # route.json 声明的 modules 必须与构建清单实际探测一致。
+      # 曾经把 openindu-gateway 标成 rust，实际 main 上是 python（Rust 在未合并分支）。
+      - name: route.json modules match detected build manifests
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/detect-modules.mjs --check
+
+      # 席位一致性：文档声称的席位数 == agents/ 文件数；不得出现旧 agent 名
+      # （backend/frontend/infra-deploy 作 agent 名已废止，stage-4 改名后多处文档曾残留）。
+      - name: roster consistency (seat count + no stale agent names)
+        run: node scripts/check-roster.mjs

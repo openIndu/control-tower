@@ -1,0 +1,388 @@
+# ============================================================
+# Team Manifest — openIndu SDLC role pipeline (v5.0.0)
+# ============================================================
+# 20 role agents covering the 0-to-1 SDLC pipeline.
+# Agent definitions live in ../agents/; distributed by the openindu-control-tower plugin.
+# Principle source: ../skills/principle/SKILL.md (load via /principle)
+# Routing source: ./route.json (query via /route)
+# All agents are pure role+skill — ZERO business binding (no specific repos/services).
+# Business binding lives in route.json (data) + each repo's CLAUDE.md + design/ dirs.
+# ============================================================
+
+team:
+  name: "openindu-maintainers"
+  description: "openIndu SDLC role pipeline — 0-to-1 from business analysis to BI"
+
+# ---- Agent roster (20) ----
+agents:
+  # ---- Governance ----
+  - id: manager
+    file: ../agents/manager.md
+    plugin_ref: "openindu-control-tower:manager"
+    type: meta
+    repos: "*"
+    description: "Team manager: classify/dispatch/track tasks, policy exceptions, RULE 11 completeness"
+
+  - id: arbiter
+    file: ../agents/arbiter.md
+    plugin_ref: "openindu-control-tower:arbiter"
+    type: meta
+    repos: "*"
+    description: "Cross-repo arbiter + spec reviewer (narrowed: conflicts, spec finalization, inspector-proposal grading)"
+
+  - id: inspector
+    file: ../agents/inspector.md
+    plugin_ref: "openindu-control-tower:inspector"
+    type: audit
+    repos: "*"
+    description: "Proactive read-only inspector; produces prioritized improvement proposals"
+
+  - id: control-tower
+    file: ../agents/control-tower.md
+    plugin_ref: "openindu-control-tower:control-tower"
+    type: repo
+    repos: [control-tower]
+    description: "Maintains the brain itself: principles, route.json, 20 agent definitions, plugin"
+
+  # ---- Ideation ----
+  - id: business-analyst
+    file: ../agents/business-analyst.md
+    plugin_ref: "openindu-control-tower:business-analyst"
+    type: ideation
+    design_dir: design/business/
+    repos: "*"
+    description: "Business analyst: market research, competitor analysis, business case (feeds product-manager)"
+
+  - id: product-manager
+    file: ../agents/product-manager.md
+    plugin_ref: "openindu-control-tower:product-manager"
+    type: ideation
+    design_dir: design/product/
+    repos: "*"
+    description: "Product manager: requirements, user stories, acceptance criteria, PRDs, cross-repo contracts"
+
+  # ---- Design ----
+  - id: architect
+    file: ../agents/architect.md
+    plugin_ref: "openindu-control-tower:architect"
+    type: design
+    design_dir: design/architecture/
+    repos: "*"
+    description: "Architect: technology selection, system architecture, ADRs, roadmap, tech-debt"
+
+  - id: ui-ux-designer
+    file: ../agents/ui-ux-designer.md
+    plugin_ref: "openindu-control-tower:ui-ux-designer"
+    type: design
+    design_dir: design/uiux/
+    repos: "*"
+    description: "UI/UX designer: interaction, visual, design system, accessibility, motion"
+
+  # ---- Build ----
+  - id: frontend
+    file: ../agents/frontend.md
+    plugin_ref: "openindu-control-tower:frontend"
+    type: build
+    position: Frontend
+    design_dir: design/uiux/
+    languages: [typescript, javascript, vue]
+    description: "Frontend engineer: React/Vue/UniApp/Vite/pnpm. Consumes ui-ux specs, implements code"
+
+  - id: backend
+    file: ../agents/backend.md
+    plugin_ref: "openindu-control-tower:backend"
+    type: build
+    position: Backend
+    design_dir: design/database/
+    languages: [java, python]
+    description: "Backend engineer: Spring Boot + FastAPI. Consumes architecture/PRD, implements code"
+
+  - id: edge
+    file: ../agents/edge.md
+    plugin_ref: "openindu-control-tower:edge"
+    type: build
+    position: Edge
+    languages: [rust]
+    description: "Edge engineer: Rust/Cargo/field-protocol drivers. Protocol errors fail silently — highest risk"
+
+  - id: station-control
+    file: ../agents/station-control.md
+    plugin_ref: "openindu-control-tower:station-control"
+    type: build
+    position: "Station, Edge, Upstream"
+    languages: [csharp]
+    description: "Station & control engineer: C#/.NET — motion/vision/scan/dispense/laser + controllers + upstream. Default L3 (physical devices)"
+
+  # ---- Quality ----
+  - id: test
+    file: ../agents/test.md
+    plugin_ref: "openindu-control-tower:test"
+    type: quality
+    repos: "*"
+    description: "Test engineer: RULE 2 admission gate; regression-judgment capability, not coverage numbers"
+
+  - id: reviewer
+    file: ../agents/reviewer.md
+    plugin_ref: "openindu-control-tower:reviewer"
+    type: quality
+    repos: "*"
+    description: "Code reviewer: RULE 5.2 four-lens pre-review; NO approval authority (L2+ needs human)"
+
+  - id: security
+    file: ../agents/security.md
+    plugin_ref: "openindu-control-tower:security"
+    type: quality
+    repos: "*"
+    description: "Security engineer: RULE 5.4 full — credentials, least-privilege, untrusted input, exposure surface"
+
+  # ---- Data & Insight ----
+  - id: data
+    file: ../agents/data.md
+    plugin_ref: "openindu-control-tower:data"
+    type: data
+    repos: "*"
+    description: "Data engineer: RULE 10 full — production-SQL protection; plans, human executes"
+
+  - id: bi-analyst
+    file: ../agents/bi-analyst.md
+    plugin_ref: "openindu-control-tower:bi-analyst"
+    type: data
+    design_dir: design/bi/
+    repos: "*"
+    description: "BI analyst: metrics definition, dashboards, analytics SQL, experimentation; makes requirements measurable"
+
+  # ---- Operations ----
+  - id: ops
+    file: ../agents/ops.md
+    plugin_ref: "openindu-control-tower:ops"
+    type: operations
+    design_dir: design/ops/
+    repos: "*"
+    description: "Operations engineer: day-2 ops — server/db health, logs, config validation, runbooks, incidents"
+
+  - id: release
+    file: ../agents/release.md
+    plugin_ref: "openindu-control-tower:release"
+    type: operations
+    repos: "*"
+    description: "Release engineer: RULE 11 six-stage pipeline + aggregate compose + gitops K8s manifests"
+
+  # ---- Codebase Insight ----
+  - id: codebase-analyst
+    file: ../agents/codebase-analyst.md
+    plugin_ref: "openindu-control-tower:codebase-analyst"
+    type: insight
+    repos: "*"
+    description: "Codebase analyst: uses /codebase-analysis 7-step methodology to reverse-engineer/onboard to any repo (read-only)"
+
+# ---- Roster state (v5.0.0) ----
+# 20 seats: governance 4 + ideation 2 + design 2 + build 4 + quality 3 + data 2 + operations 2 + insight 1
+# Pipeline: business-analyst → product-manager → architect → ui-ux-designer → build → ops → bi-analyst
+# (codebase-analyst read-only at any stage; governance/quality横切)
+roster:
+  decided: "2026-08-04"
+  landed: "2026-08-04"
+  total: 20
+  domains:
+    governance: [manager, arbiter, inspector, control-tower]
+    ideation: [business-analyst, product-manager]
+    design: [architect, ui-ux-designer]
+    build: [frontend, backend, edge, station-control]
+    quality: [test, reviewer, security]
+    data: [data, bi-analyst]
+    operations: [ops, release]
+    insight: [codebase-analyst]
+  renamed_from:
+    product-manager: "product (renamed + thickened)"
+    business-analyst: "new (v4)"
+    architect: "new (v4)"
+    ui-ux-designer: "new (v4)"
+    ops: "new (v4)"
+    bi-analyst: "new (v4)"
+    codebase-analyst: "new (v4)"
+  note: "v4.0.0: full SDLC pipeline (20 agents, reverses v3's 4-seat delivery focus). v5.0.0: +3 skills (autopilot/memory/design-md) + self-verify/observability enrichment; agent roster unchanged at 20. Agents pure role+skill, zero business binding; design/ docs live in project repos."
+
+# ---- Coverage ----
+# Adding a repo never changes any agent: route.json's modules.language decides which build agent activates.
+# Fork ownership, empty repos, meta repos are route.json data (delivery_owner / status) — not enumerated here (dependency inversion).
+coverage_notes:
+  generic: "Fork ownership, empty repos, meta repos are declared per-repo in route.json (delivery_owner/status), not enumerated here."
+
+# ---- Skills (13) ----
+skills:
+  - id: principle
+    file: ../skills/principle/SKILL.md
+    description: "The 11 RULEs — sole source (Rule #1 entry)"
+  - id: adopt
+    file: ../skills/adopt/SKILL.md
+    description: "Onboard a repo to the plugin + converge duplicate governance assets"
+  - id: launch
+    file: ../skills/launch/SKILL.md
+    description: "Bring up the openindu-maintainers team + spawn manager"
+  - id: design
+    file: ../skills/design/SKILL.md
+    description: "Orchestrate the 0-to-1 SDLC pipeline across role agents (NEW v4)"
+  - id: delivery-check
+    file: ../skills/delivery-check/SKILL.md
+    description: "RULE 11 delivery-pipeline completeness self-check"
+  - id: route
+    file: ../skills/route/SKILL.md
+    description: "Repo routing query"
+  - id: spec-new
+    file: ../skills/spec-new/SKILL.md
+    description: "Draft a spec design"
+  - id: revision-new
+    file: ../skills/revision-new/SKILL.md
+    description: "Draft a revision record"
+  - id: codebase-analysis
+    file: ../skills/codebase-analysis/SKILL.md
+    description: "7-step codebase analysis methodology (used by codebase-analyst)"
+  - id: autopilot
+    file: ../skills/autopilot/SKILL.md
+    description: "Tiered autonomous SDLC (L0 human / L1 semi / L2 staging-auto / L3 sandbox-full); wraps /design with a STOP policy"
+  - id: memory
+    file: ../skills/memory/SKILL.md
+    description: "Role-scoped lessons ledger (pitfalls/techniques); agents read at startup, append after non-trivial work"
+  - id: design-md
+    file: ../skills/design-md/SKILL.md
+    description: "Adopt a DESIGN.md design system (pick from awesome-design-md or generate); ui-ux/frontend implement against it"
+  - id: build
+    file: ../skills/build/SKILL.md
+    description: "Build and push a Docker image (RULE 11 step ④); image build → push to Aliyun CR"
+
+# ---- Escalation rules ----
+escalation_rules:
+  - trigger: "manager receives a user task"
+    from: "manager"
+    to: "arbiter"
+    action: "manager spawns arbiter to review task nature. arbiter routes: spec/cross-cutting → control-tower; cross-repo → review-then-release; single-repo → pass-through"
+
+  - trigger: "role agent hits a cross-repo conflict"
+    from: "any role agent"
+    to: "arbiter"
+    action: "agent marks the conflict in escalation path, notifies arbiter"
+
+  - trigger: "arbiter can't decide"
+    from: "arbiter"
+    to: "manager"
+    action: "arbiter submits options + impact analysis to manager"
+
+  - trigger: "task exceeds agent scope"
+    from: "any agent"
+    to: "manager"
+    action: "agent files a spec explaining the change rationale"
+
+  - trigger: "control-tower completes spec first pass"
+    from: "control-tower"
+    to: "arbiter"
+    action: "control-tower submits to arbiter review; finalized only on approval, max 3 rounds"
+
+  - trigger: "inspector submits a proposal"
+    from: "inspector"
+    to: "manager"
+    action: "manager spawns arbiter to grade proposal (rationality, priority, principle alignment); on approval, user confirms; manager dispatches the role agent"
+
+  - trigger: "arbiter rejects inspector proposal"
+    from: "arbiter"
+    to: "inspector"
+    action: "arbiter returns revision suggestions; max 3 rounds"
+
+  - trigger: "K8s manifest change"
+    from: "any role agent"
+    to: "release agent"
+    action: "RULE 8 — K8s manifests only in the gitops repo; no agent embeds prod K8s YAML in business sub-repos"
+
+  - trigger: "production DB write"
+    from: "any agent"
+    to: "manager + user"
+    action: "RULE 10 — production SQL write is L3; agent provides dry-run script, user confirms, human executes"
+
+# ---- Task routing ----
+task_routing:
+  # Build tasks route by module language → build agent (language detected from build manifests by scripts/detect-modules.mjs).
+  by_language:
+    java: [backend]
+    python: [backend]
+    csharp: [station-control]
+    rust: [edge]
+    vue: [frontend]
+    typescript: [frontend]
+    javascript: [frontend]
+
+  # Non-build by file pattern
+  by_pattern:
+    - pattern: "plugins/openindu-control-tower/.*|\\.claude-plugin/.*|scripts/.*\\.mjs"
+      assign_to: [control-tower]
+      note: "public plugin + control-tower itself"
+
+    - pattern: "route\\.json|spec/.*|revision/.*"
+      assign_to: [control-tower]
+
+    - pattern: ".*\\.yaml|kustomize|helm|k8s|deployment|configmap|secret|docker-compose.*\\.yml"
+      assign_to: [release]
+      note: "K8s manifests only in gitops repo (RULE 8)"
+
+    - pattern: "Dockerfile|Dockerfile\\.k8s|\\.dockerignore|nginx.*\\.conf"
+      assign_to: [release]
+      note: "build/hosting assets; content changes coordinated with the build role"
+
+    - pattern: "alembic|migrations|flyway|.*\\.sql"
+      assign_to: [data]
+      note: "migrations + SQL → data seat (RULE 10)"
+
+    - pattern: "\\.github/workflows/.*\\.yml"
+      assign_to: [control-tower, release]
+
+    - pattern: "CLAUDE\\.md|AGENTS\\.md|\\.claude/settings\\.json"
+      assign_to: [control-tower]
+      note: "templates distributed by control-tower; repo-specific additions by the build role"
+
+    - pattern: "docs/.*|README\\.md"
+      assign_to: [product-manager, control-tower]
+
+    - pattern: "design/business/.*"
+      assign_to: [business-analyst]
+    - pattern: "design/product/.*"
+      assign_to: [product-manager]
+    - pattern: "design/architecture/.*"
+      assign_to: [architect]
+    - pattern: "design/uiux/.*"
+      assign_to: [ui-ux-designer, frontend]
+    - pattern: "design/database/.*"
+      assign_to: [backend]
+    - pattern: "design/bi/.*"
+      assign_to: [bi-analyst]
+    - pattern: "design/ops/.*"
+      assign_to: [ops]
+
+  # Quality/ideation tasks route by intent, not file
+  by_intent:
+    "market research / competitor analysis / business case": [business-analyst]
+    "requirements / PRD / acceptance criteria / cross-repo contract":
+      [product-manager]
+    "tech selection / architecture / ADR / roadmap": [architect]
+    "interface design / interaction / design system / a11y": [ui-ux-designer]
+    "add tests / assess agent admission / fix failing cases": [test]
+    "PR pre-review / code quality": [reviewer]
+    "credentials / permissions / vulns / exposure surface": [security]
+    "production DB write / data repair": [data]
+    "metrics / dashboards / experimentation": [bi-analyst]
+    "server health / logs / config / incident / runbook": [ops]
+    "delivery pipeline推进": [release]
+    "reverse-engineer / onboard to / document a codebase": [codebase-analyst]
+
+# ---- Spawn config ----
+# Plugin agents invoked directly via @openindu-control-tower:<id>.
+# manager spawns sub-agents in a flat team (no name/team_name).
+spawn_configs:
+  default:
+    subagent_type: "general-purpose"
+    mode: "dontAsk"
+    run_in_background: true
+    note: "try general-purpose first, fall back to claude"
+
+  # Same-role multi-repo: spawn multiple subagents in one round, each with repo="<repo>" param.
+  # Per spec/003 §2.4: replicas are spawn params, not agent identity.
+  multi_repo_same_role:
+    example_role: frontend
+    rule: 'When one role covers multiple repos with no dependencies, parallel-spawn multiple subagents, each prompt carries repo="<repo>". Replica count = repo count, never written into agent identity.'
