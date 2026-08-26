@@ -208,7 +208,7 @@ roster:
 coverage_notes:
   generic: "Fork ownership, empty repos, meta repos are declared per-repo in route.json (delivery_owner/status), not enumerated here."
 
-# ---- Skills (13) ----
+# ---- Skills (14) ----
 skills:
   - id: principle
     file: ../skills/principle/SKILL.md
@@ -249,6 +249,9 @@ skills:
   - id: build
     file: ../skills/build/SKILL.md
     description: "Build and push a Docker image (RULE 11 step ④); image build → push to Aliyun CR"
+  - id: company-analysis
+    file: ../skills/company-analysis/SKILL.md
+    description: "Evidence-led company research using six layers plus Five Forces, SWOT, and DuPont"
 
 # ---- Escalation rules ----
 escalation_rules:

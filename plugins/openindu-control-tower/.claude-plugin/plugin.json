@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "openindu-control-tower",
   "displayName": "openIndu Workflow",
-  "version": "5.2.4",
+  "version": "5.3.0",
   "description": "openIndu org-wide Agent behavior principles (11), 20 maintainer agents (governance/ideation/design/build/quality/data/operations/insight — zero business binding), workflow skills (incl. tiered autopilot + memory + DESIGN.md), and a main-branch protection hook",
   "author": {
     "name": "openIndu 社区",

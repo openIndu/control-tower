@@ -45,7 +45,7 @@ Plus **20 agents** (governance / ideation / design / build / quality / data / op
         │  · plugins/openindu-control-tower/    │
         │      ├─ 11 principles (sole src)│
         │      ├─ 20 SDLC role agents     │
-        │      ├─ 12 workflow skills      │
+        │      ├─ 13 workflow skills      │
         │      └─ trunk-protection hook   │
         │  · route.json (repo routing, data)│
         │  · spec/ revision/ design & change│
@@ -167,7 +167,7 @@ control-tower/
 ├── .claude-plugin/marketplace.json  # Marketplace catalog
 ├── plugins/openindu-control-tower/       # ★ Public Claude Code plugin
 │   ├── .claude-plugin/plugin.json
-│   ├── skills/                      # 12 skills (principle + 11 workflow)
+│   ├── skills/                      # 14 skills (principle + 13 workflow)
 │   ├── agents/                      # 20 agents (SDLC roles, zero business binding)
 │   ├── hooks/                       # Trunk protection
 │   ├── reference/                   # route.json + manifest.yaml

@@ -21,14 +21,15 @@ Every project starts as "we should build X." Most fail not in code but in framin
 
 ## Skills
 
-| Skill               | Coverage                                                                |
-| ------------------- | ----------------------------------------------------------------------- |
-| Market research     | Market sizing, trend analysis, segmentation                             |
-| Competitor analysis | Feature matrices, positioning maps, moat assessment                     |
-| Value hypothesis    | Jobs-to-be-done, problem-solution fit, value-proposition canvas         |
-| Business case       | ROI framing, cost drivers, revenue/impact levers, risk-adjusted scoring |
-| Stakeholder mapping | Who decides, who uses, who blocks                                       |
-| Interview synthesis | Turning qualitative input into structured insight                       |
+| Skill               | Coverage                                                                                        |
+| ------------------- | ----------------------------------------------------------------------------------------------- |
+| Market research     | Market sizing, trend analysis, segmentation                                                     |
+| Competitor analysis | Feature matrices, positioning maps, moat assessment                                             |
+| Value hypothesis    | Jobs-to-be-done, problem-solution fit, value-proposition canvas                                 |
+| Business case       | ROI framing, cost drivers, revenue/impact levers, risk-adjusted scoring                         |
+| Stakeholder mapping | Who decides, who uses, who blocks                                                               |
+| Interview synthesis | Turning qualitative input into structured insight                                               |
+| Company research    | Use `/company-analysis` for evidence-led company profiles or a daily company-observation column |
 
 ## Techniques
 
