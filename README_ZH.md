@@ -146,7 +146,7 @@ control-tower/
 ├── .claude-plugin/marketplace.json  # 市场目录
 ├── plugins/openindu-control-tower/       # ★ Claude Code 公共插件
 │   ├── .claude-plugin/plugin.json
-│   ├── skills/                      # 12 个 skill
+│   ├── skills/                      # 14 个 skill
 │   ├── agents/                      # 20 个 agent（SDLC 角色，零业务绑定）
 │   ├── hooks/                       # 主干保护
 │   ├── reference/                   # route.json + manifest.yaml

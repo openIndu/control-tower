@@ -43,6 +43,7 @@ Or run `/adopt` in a repo — it writes the block below into `.claude/settings.j
 | `/spec-new`          | Draft a spec design (control-tower)                                 |
 | `/revision-new`      | Draft a revision record (control-tower)                             |
 | `/codebase-analysis` | 7-step codebase analysis methodology (used by codebase-analyst)     |
+| `/company-analysis`  | Evidence-led company research using Five Forces, SWOT, and DuPont   |
 
 ### Agents (20)
 
