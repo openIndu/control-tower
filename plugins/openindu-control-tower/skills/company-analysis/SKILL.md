@@ -24,6 +24,20 @@ Use these layers, scaling depth to the reader's need:
 5. **Strategy and organization** — capital allocation, R&D, acquisitions, geographic priorities, execution record, and management incentives.
 6. **Valuation and downside** — only when appropriate for a public company; state valuation date, method, assumptions, and thesis-breaking risks. Never present it as personalized investment advice.
 
+## Technical-community mode
+
+When the audience is an engineering or open-source industrial community, do not stop at a market or management summary. Rebalance the report toward **30% market/company context, 50% technology and engineering analysis, and 20% ecosystem or project implications**. Answer what the company is building, where each capability sits in the stack, how it reaches a factory or field system, and what an engineer could verify or reuse.
+
+Add the following technical views:
+
+- **Technology route:** distinguish product announcement, commercially available capability, customer case, and scalable production evidence.
+- **Stack map:** map AI/Agent, industrial software, edge/data, control/OT, and physical asset layers; show data and control boundaries.
+- **Engineering deployment:** required data, protocols, compute location, latency, offline behavior, permissions, audit, rollback, safety and cybersecurity constraints.
+- **Product and alternative matrix:** compare the company's approach with open-source, cloud, domestic, or peer alternatives without assuming feature equivalence.
+- **Community implications:** identify what should be adopted, integrated, tested, or explicitly kept out of a physical control loop. For openIndu, connect findings to device data models, PLC/HMI/CAD/IR generation, RAG/MCP, edge gateways, and verification.
+
+Do not allow financial tables or press-release chronology to crowd out these views. Every major technical claim should state its evidence level and whether it is independently verified.
+
 ## Apply three complementary lenses
 
 ### Porter’s Five Forces
@@ -50,12 +64,17 @@ For a full report, use:
 
 1. Executive conclusion and research boundary
 2. Company snapshot and latest developments
-3. Industry and Five Forces
-4. Business model, products, and moat
-5. Strategy and SWOT
-6. Financial and DuPont analysis
-7. Key risks, open questions, and monitoring indicators
-8. Sources
+3. Technology route and product/stack map
+4. Engineering deployment, interoperability, safety, and cybersecurity
+5. Industry and Five Forces
+6. Business model, products, and moat
+7. Strategy and SWOT
+8. Financial and DuPont analysis
+9. Community or product-line implications
+10. Key risks, open questions, and monitoring indicators
+11. Sources
+
+For a technical-community report, the acceptance bar is: a reader can identify the technology layers, the data/control path, the deployment prerequisites, the maturity of each claim, and at least three concrete engineering follow-ups.
 
 For the recurring **每日公司观察** column, retain the same evidence standard in a compact structure:
 
