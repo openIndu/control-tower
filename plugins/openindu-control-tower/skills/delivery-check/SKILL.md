@@ -32,7 +32,7 @@ Use `/route` to find which repo the change is in, then:
 | `openIndu-website` (aggregate itself)                    | ① ② ④ ⑤ ⑥       | no ③; it IS the aggregate                                                                  |
 | `infra-deploy` (K8s manifests only)                      | ⑤ ⑥             | no ④ unless image changes                                                                  |
 | `control-tower`                                          | ① ②             | control layer, not in cluster; downstream `/plugin update`                                 |
-| `openIndu-studio`                                        | ① ② ③           | IS the 4th submodule of the aggregate, but no image → ends at ③                            |
+| `openIndu-studio`                                        | ① ②             | independent library; not in the Website aggregate and has no image                         |
 | `openIndu-platform` / `-controller` / `openindu-station` | ① ② + as needed | not in website aggregate; per their own release flow                                       |
 | `openIndu-vision` / `openIndu-cim`                       | ① ② ③           | submodules of `openindu-station`, no image → ends at ③ (the pointer bump PR in the parent) |
 
