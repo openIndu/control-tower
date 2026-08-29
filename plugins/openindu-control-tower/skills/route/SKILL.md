@@ -51,9 +51,9 @@ After reading the `route.json` entry, beyond the raw fields, answer these three 
 - The repo name `openindu-station` is all-lowercase, inconsistent with the other `openIndu-*` camelCase. Write URLs exactly as in `route.json`; don't "correct" them. A GitHub repo rename is needed to resolve this.
 - **Release flow is not uniform across the non-backend repos — read each entry's `release_flow`, do not generalise:**
   - `openIndu-platform` / `openIndu-controller` — `release_flow: "independent"`; NOT in the `openIndu-website` submodule aggregate, own build and deploy paths.
-  - `openIndu-studio` — **IS the 4th submodule of `openIndu-website`** (confirmed 2026-08-05 against `.gitmodules`), but produces no container image and has no manifest in `infra-deploy`, so RULE 11 ends at the aggregate submodule-pointer PR.
+  - `openIndu-studio` — independently maintained library, **not** a submodule of `openIndu-website`; it produces no container image and has no manifest in `infra-deploy`, so delivery ends at its own reviewed repository change.
   - `openindu-station` — application layer, releases per its own flow. Since 2026-08-25 it is also a **submodule parent**: `openIndu-vision` and `openIndu-cim` mount at `src/OpenIndu.Station.Vision` and `src/OpenIndu.Station.Scan`.
-  - `openIndu-vision` / `openIndu-cim` — submodules of `openindu-station`, same shape as `openIndu-studio` inside `openIndu-website`: no image, no `infra-deploy` manifest, so RULE 11 ends at the parent's submodule-pointer PR. **Neither builds standalone** — their csproj reaches `OpenIndu.Station.Core` through a relative path that only resolves inside the parent checkout. Changing them is a two-PR flow: the submodule repo first, then the pointer bump in `openindu-station`.
+  - `openIndu-vision` / `openIndu-cim` — submodules of `openindu-station`: no image, no `infra-deploy` manifest, so RULE 11 ends at the parent's submodule-pointer PR. **Neither builds standalone** — their csproj reaches `OpenIndu.Station.Core` through a relative path that only resolves inside the parent checkout. Changing them is a two-PR flow: the submodule repo first, then the pointer bump in `openindu-station`.
   - Use `/delivery-check` to determine which RULE 11 steps apply per repo.
 
 ## Editing routing

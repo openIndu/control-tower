@@ -16,9 +16,9 @@
       "url": "https://github.com/openIndu/openIndu-website",
       "phase": "aggregate",
       "type": "aggregate",
-      "submodules": ["openIndu-backend", "openIndu-admin", "openIndu-portal", "openIndu-studio"],
+      "submodules": ["openIndu-backend", "openIndu-admin", "openIndu-portal"],
       "local_path_hint": "../openIndu-website",
-      "description": "Aggregate dev repo: submodule-aggregates backend + admin + portal + studio; docker-compose local stack; RULE 11 steps 4+5 entry is this repo's own /release command (not the plugin's /build)."
+      "description": "Aggregate dev repo: submodule-aggregates backend + admin + portal; docker-compose local stack; RULE 11 steps 4+5 entry is this repo's own /release command (not the plugin's /build)."
     },
     "openIndu-backend": {
       "url": "https://github.com/openIndu/openIndu-backend",
@@ -60,8 +60,7 @@
       "primary_language": "python",
       "modules": ["converters", "local-rag-mcp", "scripts"],
       "authoritative_host": "github",
-      "aggregate": "openIndu-website",
-      "release_flow": "library — it IS the 4th submodule of openIndu-website (confirmed 2026-08-05 against .gitmodules), but produces no container image and has no manifest in infra-deploy, so RULE 11 ends at the aggregate submodule-pointer PR",
+      "release_flow": "independent library — not in the openIndu-website submodule aggregate; produces no container image and has no manifest in infra-deploy, so delivery ends at its own reviewed repository change",
       "description": "AI-assisted PLC/HMI program development toolchain: electrical-module survey, circuit design, BOM generation, IO-address planning through PLC/HMI programming; includes RAG knowledge base and MCP tools. Python 99%. GitHub is the authoritative source (confirmed 2026-08-04); Gitee is mirror only — if a local clone points at Gitee, switch origin."
     },
     "openIndu-platform": {
@@ -142,7 +141,7 @@
       "mount_path": "src/OpenIndu.Station.Vision",
       "modules": ["."],
       "delivery_owner": "station-control",
-      "release_flow": "submodule — mounted into openindu-station at src/OpenIndu.Station.Vision. Produces no container image and has no manifest in infra-deploy, so RULE 11 ends at the parent's submodule-pointer PR (same shape as openIndu-studio inside openIndu-website). Does NOT build standalone: the csproj reaches Core through a relative path that only resolves inside the parent checkout.",
+      "release_flow": "submodule — mounted into openindu-station at src/OpenIndu.Station.Vision. Produces no container image and has no manifest in infra-deploy, so RULE 11 ends at the parent's submodule-pointer PR. Does NOT build standalone: the csproj reaches Core through a relative path that only resolves inside the parent checkout.",
       "description": "Vision subsystem, split out of openindu-station on 2026-08-25 with its own history preserved (git subtree split, 10 commits). Camera HAL (Hikvision MVS / Cognex In-Sight / simulator), calibration, and vision tools (BlobLocator / OpenCvSharp4 / MVTec Halcon). net48, x64, WinForms. The three vendor SDKs are conditionally compiled — their commercial DLLs are never redistributed, so a machine without them still builds cleanly."
     },
     "openIndu-cim": {
