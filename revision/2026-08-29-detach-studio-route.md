@@ -4,7 +4,7 @@ slug: detach-studio-route
 type: route
 related_spec: —
 author: control-tower
-pr: pending
+pr: openIndu/control-tower#6
 ---
 
 # Detach Studio from the Website aggregate route
