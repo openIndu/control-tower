@@ -136,13 +136,14 @@
       "url": "https://github.com/openIndu/openIndu-vision",
       "phase": "application",
       "type": "vision",
+      "status": "active",
       "primary_language": "csharp",
       "aggregate": "openindu-station",
       "mount_path": "src/OpenIndu.Station.Vision",
       "modules": ["."],
       "delivery_owner": "station-control",
-      "release_flow": "submodule — mounted into openindu-station at src/OpenIndu.Station.Vision. Produces no container image and has no manifest in infra-deploy, so RULE 11 ends at the parent's submodule-pointer PR. Does NOT build standalone: the csproj reaches Core through a relative path that only resolves inside the parent checkout.",
-      "description": "Vision subsystem, split out of openindu-station on 2026-08-25 with its own history preserved (git subtree split, 10 commits). Camera HAL (Hikvision MVS / Cognex In-Sight / simulator), calibration, and vision tools (BlobLocator / OpenCvSharp4 / MVTec Halcon). net48, x64, WinForms. The three vendor SDKs are conditionally compiled — their commercial DLLs are never redistributed, so a machine without them still builds cleanly."
+      "release_flow": "source / submodule-only, per openIndu-vision-product/spec/vision-001-form-and-contracts.md. The vision code still lives in-tree at openindu-station/src/OpenIndu.Station.Vision (a directory on openindu-station/main, no .gitmodules yet); openindu-station#173, a stalled all-in-one vision+scan split, is unmerged and superseded for vision by spec/vision-001, which re-extracts vision alone from current openindu-station/main and mounts it back at the same path as a submodule of openindu-station. No mirror, no container image, no infra-deploy manifest — RULE 11 ends at the parent's submodule-pointer PR in openindu-station; changing it is a two-PR flow (this repo, then the pointer bump). Goal per spec/vision-001, not yet true: the kernel builds standalone under `dotnet build` once the Vision.Contracts extraction severs the relative-path dependency on OpenIndu.Station.Core. Standalone CLI / IDE distribution is out of scope for vision-001 — a future spec covers it (see spec/vision-001 §4.7).",
+      "description": "Vision subsystem: camera HAL (Hikvision MVS / Cognex In-Sight / simulator), calibration, and vision tools (BlobLocator / OpenCvSharp4 / MVTec Halcon). net48, x64, WinForms. The three vendor SDKs are conditionally compiled — their commercial DLLs are never redistributed, so a machine without them still builds cleanly. This repo's current content (7491063a) is a stale 2026-08-25 subtree-split snapshot — no consumer, missing openindu-station a1b8d85's CognexCamera fix; spec/vision-001's clean re-extraction resets it."
     },
     "openIndu-cim": {
       "url": "https://github.com/openIndu/openIndu-cim",
