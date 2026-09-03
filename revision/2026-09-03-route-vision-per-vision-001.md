@@ -33,6 +33,18 @@ pr: openIndu/control-tower#7
 顺带把 `/route` 与 `/delivery-check` 里同样把 vision 说成「已是 submodule / 不能独立构建」
 的 prose 校正为「计划中、源码仍在父仓 in-tree」。
 
+## 依据（`/principle` spec 修改流程第 3 步「定稿后记入 `revision/`」）
+
+- **spec**：`openIndu-vision-product/spec/vision-001-form-and-contracts.md`（`status: finalized`）
+- **finalize 事件**：arbiter **第 2 轮 `pass_with_conditions`**，2026-09-02，评审文
+  `openIndu-vision-product/spec/vision-001-arbiter-review.md` **§R2**
+  - §R2.1 —— R-1…R-7 全部闭合
+  - §R2.5 —— PC-4（本条 route.json 变更）定稿措辞 + PC-1/2/3 状态；明确「control-tower
+    席位机械落地、**不需再评审轮**」
+  - §R2.4 —— spec 转 `finalized` 的收尾编辑清单（已由 team-lead 应用）
+- **本文件** = 该流程第 3 步的产物（一并覆盖 spec §3.5 的 RULE 4 例外 / PC-3，用户 2026-09-02
+  批准，见下）。
+
 ## 变更
 
 | 文件                                                            | 变更                                                                                                                                                          |
@@ -160,7 +172,9 @@ camelCase + `type: vision` + `primary_language: csharp` + 含 `Does NOT build st
 - [x] `npx claude plugin validate ./plugins/openindu-control-tower --strict` — 通过
 - [x] `node scripts/check-roster.mjs` — 20 席不变
 - [x] `node plugins/openindu-control-tower/hooks/block-push-main.test.mjs` — hook 测试全过
-- [ ] arbiter 复审 — **不需要**（§R2.5：PC-4 control-tower 机械落地、不需再评审轮）
+- [x] arbiter 评审 — **第 2 轮 `pass_with_conditions`**（`vision-001-arbiter-review.md` §R2，
+      2026-09-02）；PC-4 措辞见 §R2.5，定性为「control-tower 机械落地、不需再评审轮」——
+      本 PR 不再触发新一轮 arbiter
 - [~] `node scripts/detect-modules.mjs --check` — 失败项为 `openIndu-cim`（pre-existing，
   见「未改动」），与本 PR 无关
 
