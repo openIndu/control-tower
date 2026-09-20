@@ -4,7 +4,7 @@ slug: organization-issue-pipeline
 type: agent
 related_spec: —
 author: control-tower
-pr: openIndu/control-tower#TBD
+pr: openIndu/control-tower#10
 ---
 
 # Organization-wide Issue intake and delivery pipeline
