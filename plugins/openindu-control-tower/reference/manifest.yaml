@@ -208,7 +208,7 @@ roster:
 coverage_notes:
   generic: "Fork ownership, empty repos, meta repos are declared per-repo in route.json (delivery_owner/status), not enumerated here."
 
-# ---- Skills (14) ----
+# ---- Skills (15) ----
 skills:
   - id: principle
     file: ../skills/principle/SKILL.md
@@ -240,6 +240,9 @@ skills:
   - id: autopilot
     file: ../skills/autopilot/SKILL.md
     description: "Tiered autonomous SDLC (L0 human / L1 semi / L2 staging-auto / L3 sandbox-full); wraps /design with a STOP policy"
+  - id: issue-pipeline
+    file: ../skills/issue-pipeline/SKILL.md
+    description: "Organization-wide Issue collection, structured triage, adversarial review, and dispatch to the existing SDLC"
   - id: memory
     file: ../skills/memory/SKILL.md
     description: "Role-scoped lessons ledger (pitfalls/techniques); agents read at startup, append after non-trivial work"

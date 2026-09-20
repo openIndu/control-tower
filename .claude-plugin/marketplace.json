@@ -11,8 +11,8 @@
       "name": "openindu-control-tower",
       "displayName": "openIndu Workflow",
       "source": "./plugins/openindu-control-tower",
-      "description": "openIndu org-wide Agent behavior principles (11), 20 maintainer agents (governance/ideation/design/build/quality/data/operations/insight — zero business binding), workflow skills (incl. tiered autopilot + memory + DESIGN.md), and a main-branch protection hook",
-      "version": "5.3.2",
+      "description": "openIndu org-wide Agent behavior principles (11), 20 maintainer agents, organization Issue intake, tiered SDLC workflows, and a main-branch protection hook",
+      "version": "5.4.0",
       "author": {
         "name": "openIndu 社区",
         "url": "https://github.com/openIndu"
@@ -21,13 +21,7 @@
       "repository": "https://github.com/openIndu/control-tower",
       "license": "Apache-2.0",
       "category": "governance",
-      "keywords": [
-        "openindu",
-        "governance",
-        "principle",
-        "workflow",
-        "agent"
-      ]
+      "keywords": ["openindu", "governance", "principle", "workflow", "agent"]
     }
   ]
 }

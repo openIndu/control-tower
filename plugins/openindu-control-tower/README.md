@@ -36,6 +36,7 @@ Or run `/adopt` in a repo — it writes the block below into `.claude/settings.j
 | `/launch`            | Bring up the `openindu-maintainers` team                            |
 | `/design`            | Orchestrate the 0-to-1 SDLC pipeline across roles                   |
 | `/autopilot`         | Run the pipeline at a chosen autonomy tier (L0-L3)                  |
+| `/issue-pipeline`    | Triage organization Issues, adversarially review, then dispatch     |
 | `/design-md`         | Adopt a DESIGN.md design system for UI work                         |
 | `/memory`            | Read/write the team's reusable lessons ledger                       |
 | `/delivery-check`    | RULE 11 delivery-pipeline completeness self-check                   |
