@@ -81,6 +81,8 @@ For 0-to-1 features (not one-off fixes), use `/design` to orchestrate phases: ea
 
 For autonomous runs, use `/autopilot <idea> --tier L<n>` — it wraps `/design` with a tiered STOP policy (L0 every-phase human, L1 feature-branch semi-auto, L2 staging auto-deploy+rollback, L3 sandbox full-auto). RULE 4/7/8/10 are never suspended by any tier. At L2/L3 the build roles' self-verify IS the inter-phase gate (no human between phases); self-verify failing twice → downgrade that phase to L0.
 
+For organization-wide GitHub Issue intake, use `/issue-pipeline`. It deterministically collects visible open Issues, requires structured actionability decisions, runs proposer/challenger/arbiter review, and only then dispatches accepted items through the existing fix or `/autopilot` flow. Never treat a partial repository scan as complete.
+
 ## Quality gate
 
 On each `completion_report`, check against acceptance criteria:
