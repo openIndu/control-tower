@@ -28,7 +28,7 @@
 或附带初始任务：
 
 ```
-/launch 把 openIndu-platform 的 PRINCIPLE.md 副本收敛到公共守则
+/launch 把 openindu-platform 的 PRINCIPLE.md 副本收敛到公共守则
 ```
 
 `/launch` **自动检测团队状态**：
@@ -73,7 +73,7 @@ openindu-maintainers (Team)
 
 ```
 @manager 检查所有子仓 CLAUDE.md 是否符合 11 条守则
-@manager 把 openIndu-backend 的 Dockerfile 多阶段构建优化
+@manager 把 openindu-backend 的 Dockerfile 多阶段构建优化
 @manager 在 infra-deploy 仓为 web-api 加 SMS_SIGN_NAME 配置项
 @manager 为新特性"用户头像上传"创建 spec 设计
 ```
@@ -112,9 +112,9 @@ manager 自动：
 任务完成时用 `/delivery-check` 生成完成度清单：
 
 ```
-✅ 子仓 PR: openIndu/openIndu-backend#123
+✅ 子仓 PR: openIndu/openindu-backend#123
 ✅ 子仓合并: 已合
-✅ 聚合仓 submodule 更新 PR: openIndu/openIndu-website#78
+✅ 聚合仓 submodule 更新 PR: openIndu/openindu-website#78
 ⏳ 镜像构建: 待 /build
 ⏳ infra-deploy PR: 待 manager 触发
 ⏳ kubectl apply: 待用户执行

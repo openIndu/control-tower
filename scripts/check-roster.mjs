@@ -16,7 +16,7 @@
  *   2. plugin.json / marketplace.json description 含 "{N} 个 maintainer agent"
  *   3. 无旧 plugin-ref：openindu-control-tower:(backend|frontend|infra-deploy)
  *   4. 无旧席名作 agent 用法："(backend|frontend|infra-deploy) agent"、"frontend 副本/2 副本"
- *      （仓库名 openIndu-backend / infra-deploy 仓 不触发）
+ *      （仓库名 openindu-backend / infra-deploy 仓 不触发）
  */
 
 import { readFileSync, readdirSync } from "node:fs";
