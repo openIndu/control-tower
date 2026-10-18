@@ -43,5 +43,5 @@ User request on 2026-10-18 ("请帮我更新2,3"). control-tower#11 and #12 had 
 - [x] The five commands in spec 004 section 6 give the expected results (extracted from the spec and run verbatim; the outputs are in the PR description).
 - [x] `npx prettier --check "**/*.md"` passed
 - [x] arbiter review passed: round 1 `revision_required` (text fixes only), round 2 `approved`, both on 2026-10-18.
-- [ ] RULE 5.1, declared deviation: the principle file is a prompt and 5.1 asks for an eval even for a one-character change. The repo has no eval harness (the model eval of at least 20 cases cannot be met per change) and the arbiter cannot waive a RULE, so the programmatic checks above stand in for it. Accepted by the maintainer through PR approval (to be ticked at merge).
+- [x] RULE 5.1, declared deviation: the principle file is a prompt and 5.1 asks for an eval even for a one-character change. The repo has no eval harness (the model eval of at least 20 cases cannot be met per change) and the arbiter cannot waive a RULE, so the programmatic checks above stand in for it. Accepted by the maintainer on 2026-10-18, when they approved the merge of this PR.
 - [ ] downstream repos synced (not applicable until consumers run `/plugin update`)
