@@ -4,7 +4,7 @@ slug: lowercase-remaining-repo-names
 type: route
 related_spec: —
 author: control-tower
-pr: openIndu/control-tower#TBD
+pr: openIndu/control-tower#12
 ---
 
 # Route: vision, cim and controller follow the lowercase rename; remaining repo-name prose
