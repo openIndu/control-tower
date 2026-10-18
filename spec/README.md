@@ -63,8 +63,9 @@ control-tower 提交 arbiter（threads 中写 review_request）
 
 ## 索引
 
-| NNN | 标题                                                                                      | 状态      | 责任人        | 创建日     |
-| --- | ----------------------------------------------------------------------------------------- | --------- | ------------- | ---------- |
-| 001 | [用 Claude Code 插件把守则与治理 agent 下发到全组织](./001-shared-plugin-distribution.md) | finalized | control-tower | 2026-08-03 |
-| 002 | [openIndu 全组织 Agent 清点与收敛](./002-agent-consolidation.md)                          | finalized | control-tower | 2026-08-03 |
-| 003 | [Agent 组织架构重构——按能力编制，与仓库数量解耦](./003-agent-org-design.md)               | finalized | control-tower | 2026-08-03 |
+| NNN | 标题                                                                                            | 状态      | 责任人        | 创建日     |
+| --- | ----------------------------------------------------------------------------------------------- | --------- | ------------- | ---------- |
+| 001 | [用 Claude Code 插件把守则与治理 agent 下发到全组织](./001-shared-plugin-distribution.md)       | finalized | control-tower | 2026-08-03 |
+| 002 | [openIndu 全组织 Agent 清点与收敛](./002-agent-consolidation.md)                                | finalized | control-tower | 2026-08-03 |
+| 003 | [Agent 组织架构重构——按能力编制，与仓库数量解耦](./003-agent-org-design.md)                     | finalized | control-tower | 2026-08-03 |
+| 004 | [principle 里的示例仓库名跟随 GitHub 小写改名](./004-principle-example-repo-names-lowercase.md) | finalized | control-tower | 2026-10-18 |
