@@ -2,7 +2,7 @@
 /**
  * 模块级路由探测（spec/003 阶段 3 的前置）
  *
- * 问题：route.json 的粒度是「仓库」，但 openIndu-platform 是 6 个子模块、4 种语言的
+ * 问题：route.json 的粒度是「仓库」，但 openindu-platform 是 6 个子模块、4 种语言的
  * monorepo。单一 repo type 无法表达它的技术栈，任何「按 repo type 派活」的机制都会失效。
  *
  * 解法：按**构建清单文件**探测每个模块的语言——这是可程序化判定的事实，

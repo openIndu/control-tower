@@ -28,7 +28,7 @@ RULE 4 (L3 risk actions), RULE 7 (no push to main), RULE 8 (K8s in gitops), RULE
 
 ## 0. Codebase pre-check (before any design)
 
-**Invoke `codebase-analyst` BEFORE the ideation/design phases** to scan the target repo for existing implementations of the requested feature. This prevents "designing something that already exists" (pilot finding #1 from openIndu-website 2026-08-05).
+**Invoke `codebase-analyst` BEFORE the ideation/design phases** to scan the target repo for existing implementations of the requested feature. This prevents "designing something that already exists" (pilot finding #1 from openindu-website 2026-08-05).
 
 | What codebase-analyst does                                                                     | Output                             |
 | ---------------------------------------------------------------------------------------------- | ---------------------------------- |
@@ -133,9 +133,9 @@ Pipeline done = all phase artifacts exist + build produces working code + `/deli
 
 ## Two-repo PR flow (submodule architecture)
 
-When the target repo is a **submodule** of an aggregate repo (e.g. `openIndu-backend` under `openIndu-website`):
+When the target repo is a **submodule** of an aggregate repo (e.g. `openindu-backend` under `openindu-website`):
 
-- **Design docs** commit to the **aggregate** repo (e.g. `openIndu-website/design/`).
+- **Design docs** commit to the **aggregate** repo (e.g. `openindu-website/design/`).
 - **Code changes** commit to the **submodule** repo (e.g. `openIndu-backend/`) → submodule PR.
 - After the submodule PR merges, the **aggregate** repo needs a submodule pointer update PR (RULE 11 step ③).
 - Two PRs total (submodule code + aggregate pointer) — this is inherent to the submodule architecture, not a bug. `manager` coordinates both.

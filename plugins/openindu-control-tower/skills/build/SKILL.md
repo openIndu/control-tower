@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 Build a Docker image for an openIndu service and push it to the Aliyun Container Registry. This is step ④ of the RULE 11 delivery pipeline.
 
-**Call `/principle` first** (RULE 1). This skill is typically used in the **aggregate repo** (`openIndu-website`) which holds the docker-compose stack and submodule pointers. For repos outside the website aggregate (studio/platform/controller), adapt the build context per that repo's `Dockerfile` location.
+**Call `/principle` first** (RULE 1). This skill is typically used in the **aggregate repo** (`openindu-website`) which holds the docker-compose stack and submodule pointers. For repos outside the website aggregate (studio/platform/controller), adapt the build context per that repo's `Dockerfile` location.
 
 ---
 
@@ -19,9 +19,9 @@ Use `/route <service-name>` to get the service's `image` registry path. If no im
 
 | Repo                        | Image registry path                                                                   | Dockerfile location                 |
 | --------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------- |
-| `openIndu-backend`          | `${OPENINDU_REGISTRY}/openindu/openindu-backend` | `openIndu-backend/Dockerfile`       |
-| `openIndu-admin`            | `${OPENINDU_REGISTRY}/openindu/openindu-admin`   | `openIndu-admin/Dockerfile.k8s`     |
-| `openIndu-portal`           | `${OPENINDU_REGISTRY}/openindu/openindu-portal`  | `openIndu-portal/Dockerfile.k8s`    |
+| `openindu-backend`          | `${OPENINDU_REGISTRY}/openindu/openindu-backend` | `openIndu-backend/Dockerfile`       |
+| `openindu-admin`            | `${OPENINDU_REGISTRY}/openindu/openindu-admin`   | `openIndu-admin/Dockerfile.k8s`     |
+| `openindu-portal`           | `${OPENINDU_REGISTRY}/openindu/openindu-portal`  | `openIndu-portal/Dockerfile.k8s`    |
 | Other (studio/platform/etc) | per their own registry                                                                | per their own repo                  |
 
 > `${OPENINDU_REGISTRY}` is this deployment's Aliyun Container Registry host. It is deliberately not committed — export it in your shell or take it from your `docker login` target. The `${OPENINDU_PROD_DB_*}` placeholders in `route.json` work the same way (RULE 5.4: infrastructure endpoints are injected, never committed).
@@ -52,7 +52,7 @@ grep -rn "image:.*<service>" <gitops-repo>/
 ## 3. Build
 
 ```bash
-# From the aggregate repo root (openIndu-website). Note the build context is the
+# From the aggregate repo root (openindu-website). Note the build context is the
 # SUBMODULE directory, not the aggregate root:
 docker build \
   --tag ${OPENINDU_REGISTRY}/openindu/<service>:<tag> \
@@ -102,7 +102,7 @@ The next step is ⑤ — create the infra-deploy PR to update the image tag in t
 - Create the infra-deploy PR (step ⑤ — use the `release` agent or do it manually)
 - Decide when to build (that's the `release` agent's coordination)
 
-> **In `openIndu-website`, prefer that repo's own `/release` command.** It covers ④+⑤ in one pass (build/push, then the infra-deploy Gitee PR) and carries the aggregate's local details — `Dockerfile.k8s` selection, the dual `:latest` + SHA tag, the submodule build context, and the Gitee `pull/new/...` PR URL. This skill remains the generic step-④ path for repos with no aggregate-specific command.
+> **In `openindu-website`, prefer that repo's own `/release` command.** It covers ④+⑤ in one pass (build/push, then the infra-deploy Gitee PR) and carries the aggregate's local details — `Dockerfile.k8s` selection, the dual `:latest` + SHA tag, the submodule build context, and the Gitee `pull/new/...` PR URL. This skill remains the generic step-④ path for repos with no aggregate-specific command.
 
 ## Troubleshooting
 

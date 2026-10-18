@@ -34,7 +34,7 @@ Use `/route` to find which repo the change is in, then:
 | `control-tower`                                          | ① ②             | control layer, not in cluster; downstream `/plugin update`                                                                  |
 | `openindu-studio`                                        | ① ②             | independent library; not in the Website aggregate and has no image                                                          |
 | `openindu-platform` / `-controller` / `openindu-station` | ① ② + as needed | not in website aggregate; per their own release flow                                                                        |
-| `openIndu-vision` / `openIndu-cim`                       | ① ② ③           | submodules of `openindu-station` (planned; sources still in-tree), no image → ends at ③ (the pointer bump PR in the parent) |
+| `openindu-vision` / `openindu-cim`                       | ① ② ③           | submodules of `openindu-station` (planned; sources still in-tree), no image → ends at ③ (the pointer bump PR in the parent) |
 
 Mark non-applicable boxes **N/A**, not ✅ — the two mean different things.
 

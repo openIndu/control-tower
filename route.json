@@ -17,7 +17,7 @@
       "phase": "aggregate",
       "type": "aggregate",
       "submodules": ["openindu-backend", "openindu-admin", "openindu-portal"],
-      "local_path_hint": "../openIndu-website",
+      "local_path_hint": "../openindu-website",
       "description": "Aggregate dev repo: submodule-aggregates backend + admin + portal; docker-compose local stack; RULE 11 steps 4+5 entry is this repo's own /release command (not the plugin's /build)."
     },
     "openindu-backend": {
@@ -128,12 +128,12 @@
         "pr": "openIndu/openindu-station#173",
         "branch": "refactor/extract-vision-and-scan",
         "status": "open, CI blocked on the SUBMODULE_TOKEN secret",
-        "note": "src/OpenIndu.Station.Vision → openIndu-vision and src/OpenIndu.Station.Scan → openIndu-cim, remounted as submodules at the same paths. The `modules` list above still names all 8 because #173 has not merged and main still holds the sources. Once it merges, drop those two entries here — the GitHub tree API does not traverse submodules, so scripts/detect-modules.mjs will start reporting 6 modules for this repo and --check would otherwise fail."
+        "note": "src/OpenIndu.Station.Vision → openindu-vision and src/OpenIndu.Station.Scan → openindu-cim, remounted as submodules at the same paths. The `modules` list above still names all 8 because #173 has not merged and main still holds the sources. Once it merges, drop those two entries here — the GitHub tree API does not traverse submodules, so scripts/detect-modules.mjs will start reporting 6 modules for this repo and --check would otherwise fail."
       },
       "description": "Self-developed station app (described as openindu-motor): 8 .csproj, 180 .cs. Includes motion control, vision, scan, dispensing and laser-cutting apps. The only repo in the org with a standalone test project (Verify)."
     },
-    "openIndu-vision": {
-      "url": "https://github.com/openIndu/openIndu-vision",
+    "openindu-vision": {
+      "url": "https://github.com/openIndu/openindu-vision",
       "phase": "application",
       "type": "vision",
       "status": "active",
@@ -145,8 +145,8 @@
       "release_flow": "source / submodule-only, per openIndu-vision-product/spec/vision-001-form-and-contracts.md. The vision code still lives in-tree at openindu-station/src/OpenIndu.Station.Vision (a directory on openindu-station/main, no .gitmodules yet); openindu-station#173, a stalled all-in-one vision+scan split, is unmerged and superseded for vision by spec/vision-001, which re-extracts vision alone from current openindu-station/main and mounts it back at the same path as a submodule of openindu-station. No mirror, no container image, no infra-deploy manifest — RULE 11 ends at the parent's submodule-pointer PR in openindu-station; changing it is a two-PR flow (this repo, then the pointer bump). Goal per spec/vision-001, not yet true: the kernel builds standalone under `dotnet build` once the Vision.Contracts extraction severs the relative-path dependency on OpenIndu.Station.Core. Standalone CLI / IDE distribution is out of scope for vision-001 — a future spec covers it (see spec/vision-001 §4.7).",
       "description": "Vision subsystem: camera HAL (Hikvision MVS / Cognex In-Sight / simulator), calibration, and vision tools (BlobLocator / OpenCvSharp4 / MVTec Halcon). net48, x64, WinForms. The three vendor SDKs are conditionally compiled — their commercial DLLs are never redistributed, so a machine without them still builds cleanly. This repo's current content (7491063a) is a stale 2026-08-25 subtree-split snapshot — no consumer, missing openindu-station a1b8d85's CognexCamera fix; spec/vision-001's clean re-extraction resets it."
     },
-    "openIndu-cim": {
-      "url": "https://github.com/openIndu/openIndu-cim",
+    "openindu-cim": {
+      "url": "https://github.com/openIndu/openindu-cim",
       "phase": "application",
       "type": "cim",
       "primary_language": "csharp",
@@ -154,11 +154,11 @@
       "mount_path": "src/OpenIndu.Station.Scan",
       "modules": ["."],
       "delivery_owner": "station-control",
-      "release_flow": "submodule — mounted into openindu-station at src/OpenIndu.Station.Scan. No image, no infra-deploy manifest, so RULE 11 ends at the parent's submodule-pointer PR. Does NOT build standalone, same Core relative-path reason as openIndu-vision.",
+      "release_flow": "submodule — mounted into openindu-station at src/OpenIndu.Station.Scan. No image, no infra-deploy manifest, so RULE 11 ends at the parent's submodule-pointer PR. Does NOT build standalone, same Core relative-path reason as openindu-vision.",
       "description": "CIM subsystem (product traceability), split out of openindu-station on 2026-08-25 with its own history preserved (git subtree split, 3 commits). Today it holds one module — the barcode-scanner HAL (Cognex DataMan / simulator). Broader CIM capability (traceability records, MES/ERP interfaces, work-order flow) is intended to land here rather than back in the station repo. net48, x64. The DataMan SDK is conditionally compiled."
     },
-    "openIndu-controller": {
-      "url": "https://github.com/openIndu/openIndu-controller",
+    "openindu-controller": {
+      "url": "https://github.com/openIndu/openindu-controller",
       "phase": "edge",
       "type": "controller",
       "primary_language": "csharp",
