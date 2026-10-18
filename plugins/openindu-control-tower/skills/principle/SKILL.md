@@ -209,7 +209,7 @@ MUST:
 - All changes go via `feat/...` `fix/...` `chore/...` branches
 - Merge via GitHub PR (origin=GitHub openIndu org) or Gitee PR (infra-deploy)
 - Hotfix also goes via PR; do not bypass for "urgency"
-- Aggregate repo `openIndu-website` submodule pointer updates also go via PR
+- Aggregate repo `openindu-website` submodule pointer updates also go via PR
 - This plugin ships a `PreToolUse` hook blocking `git push` to `main`/`master`; do not bypass it
 
 MUST NOT:
@@ -259,7 +259,7 @@ MUST NOT:
 ## RULE 10 — Production SQL: multi-column WHERE + BEFORE/AFTER + conditional commit
 
 Statement: executing UPDATE / DELETE on the production DB directly is L3. Multiple protection layers are mandatory.
-WHEN: any write to the production DB found via `/route` (currently `openIndu-backend`'s `production_db`, see `plugins/openindu-control-tower/reference/route.json`).
+WHEN: any write to the production DB found via `/route` (currently `openindu-backend`'s `production_db`, see `plugins/openindu-control-tower/reference/route.json`).
 MUST:
 
 - WHERE clause has ≥ 2 independent columns (e.g. `id = ? AND user_id = ?`) to prevent single-condition table wipe
