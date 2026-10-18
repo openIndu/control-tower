@@ -4,7 +4,7 @@ slug: lowercase-repo-names-in-route
 type: route
 related_spec: —
 author: control-tower
-pr: openIndu/control-tower#TBD
+pr: openIndu/control-tower#11
 ---
 
 # Route: follow the GitHub rename of six repos to all-lowercase names
