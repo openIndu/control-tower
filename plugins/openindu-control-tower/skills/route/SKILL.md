@@ -21,12 +21,12 @@ Read the file before answering — don't rely on memory; the repo list changes (
 ```
 github.com/openIndu/
 ├── control-tower/   ← brain: principles, governance agents, plugin source
-├── openIndu-website/         ← aggregate: submodule聚合 + docker-compose + /build
-├── openIndu-backend/         ← backend: FastAPI (8004) + MCP Server (8005)
-├── openIndu-admin/           ← frontend: React admin → admin.openindu.com
-├── openIndu-portal/          ← frontend: React community site → openindu.com
-├── openIndu-studio/          ← tooling: low-code/workflow tooling (tool layer)
-├── openIndu-platform/        ← platform: IIoT base (platform layer)
+├── openindu-website/         ← aggregate: submodule聚合 + docker-compose + /build
+├── openindu-backend/         ← backend: FastAPI (8004) + MCP Server (8005)
+├── openindu-admin/           ← frontend: React admin → admin.openindu.com
+├── openindu-portal/          ← frontend: React community site → openindu.com
+├── openindu-studio/          ← tooling: low-code/workflow tooling (tool layer)
+├── openindu-platform/        ← platform: IIoT base (platform layer)
 ├── openindu-station/         ← application: station apps (motion/dispense/laser) + submodule parent
 │   ├── openIndu-vision/      ← planned submodule @ src/OpenIndu.Station.Vision (camera HAL / calib / tools; extraction per spec/vision-001)
 │   └── openIndu-cim/         ← submodule @ src/OpenIndu.Station.Scan (scanner HAL, traceability)
@@ -48,10 +48,10 @@ After reading the `route.json` entry, beyond the raw fields, answer these three 
 
 ## Known data issues (flag in the answer)
 
-- The repo name `openindu-station` is all-lowercase, inconsistent with the other `openIndu-*` camelCase. Write URLs exactly as in `route.json`; don't "correct" them. A GitHub repo rename is needed to resolve this.
+- Repo-name casing is mixed while the org moves to all-lowercase names: `openindu-website`, `openindu-backend`, `openindu-admin`, `openindu-portal`, `openindu-studio`, `openindu-platform` and `openindu-station` are lowercase on GitHub (the first six were renamed on 2026-10-17; `openindu-station` always was), while `openIndu-vision`, `openIndu-cim` and `openIndu-controller` are still camelCase. Write names and URLs exactly as in `route.json`; don't "correct" them. GitHub redirects old URLs, but the CI step `route.json covers every org repo` compares names case-sensitively against `gh repo list`, so after any GitHub rename update the `route.json` key in the same change window or CI goes red.
 - **Release flow is not uniform across the non-backend repos — read each entry's `release_flow`, do not generalise:**
-  - `openIndu-platform` / `openIndu-controller` — `release_flow: "independent"`; NOT in the `openIndu-website` submodule aggregate, own build and deploy paths.
-  - `openIndu-studio` — independently maintained library, **not** a submodule of `openIndu-website`; it produces no container image and has no manifest in `infra-deploy`, so delivery ends at its own reviewed repository change.
+  - `openindu-platform` / `openIndu-controller` — `release_flow: "independent"`; NOT in the `openindu-website` submodule aggregate, own build and deploy paths.
+  - `openindu-studio` — independently maintained library, **not** a submodule of `openindu-website`; it produces no container image and has no manifest in `infra-deploy`, so delivery ends at its own reviewed repository change.
   - `openindu-station` — application layer, releases per its own flow. It is becoming a **submodule parent**: `openIndu-vision` and `openIndu-cim` are to mount at `src/OpenIndu.Station.Vision` and `src/OpenIndu.Station.Scan` — as of 2026-09-03 both sources are still in-tree (`openindu-station#173` unmerged; `openIndu-vision` extraction is tracked in `openIndu-vision-product/spec/vision-001-form-and-contracts.md`).
   - `openIndu-vision` / `openIndu-cim` — submodules of `openindu-station` (planned; sources still in-tree): no image, no `infra-deploy` manifest, so RULE 11 ends at the parent's submodule-pointer PR. Their csproj reaches `OpenIndu.Station.Core` through a relative path that only resolves inside the parent checkout — **neither builds standalone today**; `openIndu-vision`'s spec/vision-001 aims to sever that for vision. Changing them is a two-PR flow: the submodule repo first, then the pointer bump in `openindu-station`.
   - Use `/delivery-check` to determine which RULE 11 steps apply per repo.
