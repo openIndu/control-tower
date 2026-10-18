@@ -4,7 +4,7 @@ slug: principle-lowercase-example-names
 type: principle
 related_spec: 004-principle-example-repo-names-lowercase
 author: control-tower
-pr: openIndu/control-tower#TBD
+pr: openIndu/control-tower#13
 ---
 
 # Principle: the example repo names in RULE 7 and RULE 10 follow the lowercase rename
