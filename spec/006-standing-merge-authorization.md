@@ -1,7 +1,7 @@
 ---
 spec_id: 006-standing-merge-authorization
 title: 修订 RULE 5.2 / RULE 4：有期限、逐仓列名的常设合并授权
-status: under_review # draft | under_review | revision_required | finalized | superseded
+status: finalized # draft | under_review | revision_required | finalized | superseded
 author: control-tower
 created: 2026-10-27
 updated: 2026-10-27
@@ -199,3 +199,4 @@ Merge to trunk, and only that L2 action, may be authorized in advance by a stand
 | 2026-10-27 | 第 2 轮修订（`750aa3e`）：B1 → 第 (4) 处改为表下注记；B2 → 授予为 L3、逐仓列名、90 天；B3 → §2.1 补不变量与守卫最低集；B4 → §2.4 做 eval 而非偏离；采纳建议（版本号检查脚本、72 小时复核、一旦回滚即暂停、§5 预先授权回退）；关闭 §8 全部问题                                                                                                                                                                                                                                          | —             |
 | 2026-10-27 | arbiter 第 2 轮（`750aa3e`）：仍 `revision_required`，剩余均为条文措辞层面；B1、B3 基本解决，B2、B4 部分解决，新发现 N1–N8                                                                                                                                                                                                                                                                                                                                                             | —             |
 | 2026-10-27 | 第 3 轮修订：N1 → 条款标记 `SA-1` 与 §5 回退须清空 `dev_grants`；N2 → 条文里 head SHA 守卫加 patch-id 例外，与 spec/005 的 G1 一致；N3 → 注记删「each time」并写明一次运行的预算批准覆盖其内调用；N4 → 单人维护者的 L3 授予写进条文，R5 不再是一次性偏离；N6 → 确认记录与回滚识别写进条文；N7 → 设备类仓先登记安全路径写进条文；eval 四处修改（A 类写明请求来源、D 类改为新义务且不作门槛、增加「无授权」与「注记」用例、回归对比补耗时与成本），用例 21 → 25；书面接受改为逐字写进 PR | —             |
+| 2026-10-27 | arbiter 第 3 轮（最终，`134e6b5`）：`approved`；N1–N4、N6、N7 与 eval 四处均已解决。定稿提交只改 `status: finalized` 与本行                                                                                                                                                                                                                                                                                                                                                            | —             |
