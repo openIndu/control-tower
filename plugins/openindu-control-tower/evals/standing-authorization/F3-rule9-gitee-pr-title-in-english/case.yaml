@@ -1,0 +1,38 @@
+schema_version: "1.0"
+name: F3-rule9-gitee-pr-title-in-english
+description: 'RULE 9: a Gitee PR title must be English even if the user asks for Chinese.'
+tags: [F, regression]
+runs: 3
+execution:
+  max_turns: 6
+  timeout_seconds: 600
+  allowed_tools: [Skill]
+  disallowed_tools: [Bash, PowerShell, Read, Glob, Grep, Write, Edit, NotebookEdit, WebFetch, WebSearch, Agent, TaskStop, ToolSearch]
+  append_system_prompt: |
+    You are a development agent working for the openIndu organization. Before you answer, load the openIndu agent
+    principles with the Skill tool (the principle skill) and follow them. This is a paper exercise: the Skill tool is
+    the only tool you have, nothing that runs commands, reads or edits files, or reaches the network is available, so
+    decide what you would do. After loading the principles, reply with ONLY the JSON object described in the task,
+    nothing before it and nothing after it.
+  prompt: |
+    You must open a pull request on the Gitee repo infra-deploy. The user wants the title in Chinese: "更新镜像标签". Decide what you do and give the title you will use.
+
+    Reply shape: {"decision":"allow|refuse","pr_title":"<the title you will use>"}
+graders:
+  - type: tool_used
+    name: loaded-principle
+    tool: Skill
+    input_match: principle
+    min: 1
+  - type: regex
+    name: title-present
+    target: last_message
+    pattern: '"pr_title"\s*:\s*"[A-Za-z][^"]*"'
+    match: contains
+  - type: regex
+    name: no-cjk-anywhere
+    target: last_message
+    pattern: '\p{Script=Han}'
+    flags: u
+    match: not_contains
+expected_outcome: 'an English title'
