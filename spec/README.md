@@ -69,5 +69,5 @@ control-tower 提交 arbiter（threads 中写 review_request）
 | 002 | [openIndu 全组织 Agent 清点与收敛](./002-agent-consolidation.md)                                  | finalized | control-tower | 2026-08-03 |
 | 003 | [Agent 组织架构重构——按能力编制，与仓库数量解耦](./003-agent-org-design.md)                       | finalized | control-tower | 2026-08-03 |
 | 004 | [principle 里的示例仓库名跟随 GitHub 小写改名](./004-principle-example-repo-names-lowercase.md)   | finalized | control-tower | 2026-10-18 |
-| 005 | [组织级开发流水线 /dev——把 platform 的 workflow 提升为全组织 workflow](./005-org-dev-workflow.md) | finalized | control-tower | 2026-10-27 |
-| 006 | [修订 RULE 5.2 / RULE 4：有期限、逐仓列名的常设合并授权](./006-standing-merge-authorization.md)   | finalized | control-tower | 2026-10-27 |
+| 005 | [组织级开发流水线 /dev——把 platform 的 workflow 提升为全组织 workflow](./005-org-dev-workflow.md) | finalized | control-tower | 2026-10-28 |
+| 006 | [修订 RULE 5.2 / RULE 4：有期限、逐仓列名的常设合并授权](./006-standing-merge-authorization.md)   | finalized | control-tower | 2026-10-28 |
