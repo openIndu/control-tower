@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openindu.dev/schema/dev.schema.json",
+  "title": "openIndu /dev data contract",
+  "description": "Validates route.json's shape for the org-wide /dev pipeline (spec/005) and standing merge authorization (spec/006). Field semantics, issue terminal states and runner exit codes are documented here as the sole source — this file is spec/005 section 2.4 made machine-checkable. Runtime parameters live as data in route.json, never enumerated in runner code (see CLAUDE.md: the control layer does not enumerate concrete repos).",
+  "type": "object",
+  "required": ["org", "base_url", "repos"],
+  "properties": {
+    "org": { "type": "string" },
+    "base_url": { "type": "string" },
+    "mirror": { "type": "object" },
+    "dev_grants": {
+      "type": "array",
+      "description": "Standing merge authorizations (principle SKILL.md clause SA-1). Empty until spec/005 stage 9's grant PR. A repo not named in any entry's `repos`, including one created after the grant, does not inherit it. An expired, unreadable or revoked grant authorizes nothing.",
+      "default": [],
+      "items": { "$ref": "#/$defs/devGrant" }
+    },
+    "repos": {
+      "type": "object",
+      "description": "Keyed by repo id (route.json's existing per-repo entries). Each entry may carry an optional `dev` object; every `dev.*` field defaults as documented in $defs/devConfig when the key or the whole object is absent.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "dev": { "$ref": "#/$defs/devConfig" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "devGrant": {
+      "type": "object",
+      "description": "One standing authorization entry, per principle SKILL.md RULE 5.2's SA-1 clause.",
+      "required": ["id", "approved_by", "approved_on", "expires_on", "repos"],
+      "properties": {
+        "id": { "type": "string", "description": "Stable identifier for this grant." },
+        "approved_by": { "type": "string", "description": "The maintainer who approved it. Never an agent." },
+        "single_approver": {
+          "type": "boolean",
+          "description": "true when the organization has a single maintainer and that person's own approval was sufficient alone (SA-1); an agent is never the approver, regardless of org size."
+        },
+        "approved_on": { "type": "string", "format": "date", "description": "Grant date." },
+        "expires_on": {
+          "type": "string",
+          "format": "date",
+          "description": "At most 90 days after approved_on."
+        },
+        "ref": { "type": "string", "description": "The reviewed/CI-evaluated artifact this grant traces back to (spec, PR, or similar)." },
+        "principle_ref": {
+          "type": "string",
+          "description": "Commit SHA on control-tower's default branch whose principle/SKILL.md the grant was issued against. Read live at merge time; a failed read or a default-branch SKILL.md without the SA-1 marker means no merge (guard G12)."
+        },
+        "repos": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Individually listed repo ids this grant covers. A repo not listed here does not inherit the grant."
+        }
+      }
+    },
+    "devConfig": {
+      "type": "object",
+      "description": "Per-repo /dev configuration. Every field below is optional; the listed default applies when the field, or the whole `dev` object, is absent.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether /dev may operate on this repo at all (PR-only counts as operating). Default false. Excluded repo types (control-tower, aggregate, gitops, fork, meta) may never be set to true."
+        },
+        "default_branch": {
+          "type": "string",
+          "description": "Baseline branch for CI/merge comparisons. Default: the repo's actual default branch."
+        },
+        "merge_method": {
+          "type": "string",
+          "enum": ["squash", "merge", "rebase"],
+          "default": "squash",
+          "description": "Default: squash."
+        },
+        "checks": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Local deterministic gate commands (format/lint/test), taken from this repo's own CI. Also the only Bash commands the implementer role may run. Default: none — local gating is left to CI."
+        },
+        "required_checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "kind"],
+            "properties": {
+              "name": { "type": "string" },
+              "kind": {
+                "type": "string",
+                "enum": ["test", "secret-scan", "lint", "dco", "build", "other"]
+              }
+            }
+          },
+          "description": "Human-declared required checks. Default: none, which forces admission guard A2 (PR-only, never auto-merged)."
+        },
+        "safety_paths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Device-safety paths (spec/005 section 2.3-2). A repo whose type is station/controller/vision/cim/studio, or whose delivery_owner is station-control, may not appear in any dev_grants entry until this is registered. Once registered, any change touching these paths always goes to human review."
+        },
+        "protected_paths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Added on top of the runner's default protected-path list (never replaces it)."
+        },
+        "publishes_on_merge": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether a push to the default branch publishes an artifact (image, package). Relevant to residual risk R3 — a merge cannot be unpublished by git revert alone."
+        },
+        "commit": {
+          "type": "object",
+          "properties": {
+            "co_authored_by": { "type": "string" },
+            "signoff": { "type": "boolean" }
+          },
+          "description": "Attribution/DCO requirements for commits the runner makes in this repo. Default: no attribution line, no DCO sign-off required."
+        },
+        "local_service": {
+          "description": "Step 5 (local build/boot) parameters: build/start command, health-check URL, an env-var denylist to refuse anything pointing at production. Default: absent, so step 5 is skipped and the run report says why.",
+          "type": ["object", "null"]
+        },
+        "build": {
+          "description": "Step 6 (`./dev build`) entry point. For an aggregate submodule, points at the aggregate repo's own /release. A repo with no established image-publish pipeline is null.",
+          "default": null,
+          "type": ["object", "null"],
+          "properties": {
+            "note": { "type": "string" }
+          }
+        }
+      }
+    },
+    "issueTerminalState": {
+      "type": "string",
+      "enum": [
+        "MERGED",
+        "PR_GREEN",
+        "HUMAN_MERGE_REQUIRED",
+        "HUMAN_REQUIRED",
+        "NEEDS_TRIAGE",
+        "NO_ACTION",
+        "BLOCKED",
+        "FAILED"
+      ],
+      "description": "Terminal state of a single issue processed by /dev. MERGED: merged under a standing authorization. PR_GREEN: a PR was opened, CI is green, awaiting human merge. HUMAN_MERGE_REQUIRED: a guard sent it to human review after review/CI work. HUMAN_REQUIRED: needs a human decision before any PR work. NEEDS_TRIAGE: ambiguous, needs scoping. NO_ACTION: correctly nothing to do (e.g. repo not enabled, excluded type). BLOCKED: stuck on an external dependency. FAILED: an internal error, not a safety refusal."
+    },
+    "exitCode": {
+      "type": "integer",
+      "enum": [0, 1, 2, 3, 4, 5],
+      "description": "Runner exit codes. 0: everything completed, every row's read-back passed. 1: argument or internal error. 2: partially completed (one or more BLOCKED/FAILED/HUMAN_* items). 3: refused outright — excluded repo type, dev.enabled is false, or admission guard A1 failed. 4: circuit breaker tripped, a pause marker was written. 5: environment check failed — one of section 2.6's positive controls did not come back clean; never run unattended, never auto-merge."
+    }
+  }
+}
