@@ -1,0 +1,42 @@
+networks:
+  # internal: true means Docker gives this network no route out of the
+  # host at all -- this is the actual isolation boundary, not a firewall
+  # rule inside the agent container that a compromised process could
+  # tamper with.
+  agent-internal:
+    internal: true
+  proxy-uplink:
+
+services:
+  egress-proxy:
+    build: ./egress-proxy
+    networks:
+      - agent-internal
+      - proxy-uplink
+    environment:
+      ALLOWED_HOSTS: "api.anthropic.com"
+      PROXY_PORT: "8080"
+    restart: "no"
+
+  agent:
+    build:
+      context: .
+    networks:
+      - agent-internal
+    environment:
+      HTTPS_PROXY: "http://egress-proxy:8080"
+      HTTP_PROXY: "http://egress-proxy:8080"
+      NO_PROXY: ""
+      OPENINDU_DEV_ACTIVE: "1"
+      # Documented at https://code.claude.com/docs/en/network-config --
+      # skips optional Datadog telemetry calls the egress proxy would
+      # just block anyway (only api.anthropic.com is allowlisted).
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
+    working_dir: /workspace
+    depends_on:
+      - egress-proxy
+    # The worktree mount is deliberately not declared here -- it varies
+    # per run and is passed by the invoker as `docker compose run -v
+    # <worktree>:/workspace ...` so this file stays run-agnostic. No other
+    # volume is ever mounted: no user directories, no docker socket, no
+    # credential store.
