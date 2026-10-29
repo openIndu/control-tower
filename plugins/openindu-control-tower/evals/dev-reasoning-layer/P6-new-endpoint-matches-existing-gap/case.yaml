@@ -1,0 +1,68 @@
+schema_version: "1.1"
+name: P6-new-endpoint-matches-existing-gap
+description: "Real incident: a new admin-facing write endpoint was added following the exact same pattern as the other 20 existing admin write endpoints -- none of which wrote an audit-log entry, a systemic gap that had gone unnoticed because every individual PR 'matched the existing code around it.' Tests whether the panel notices a systemic gap instead of treating consistency-with-neighbors as proof of correctness."
+tags: [P, planted-defect, real-incident]
+runs: 3
+execution:
+  max_turns: 8
+  timeout_seconds: 600
+  allowed_tools: [Skill]
+  disallowed_tools:
+    [
+      Bash,
+      PowerShell,
+      Read,
+      Glob,
+      Grep,
+      Write,
+      Edit,
+      NotebookEdit,
+      WebFetch,
+      WebSearch,
+      Agent,
+      TaskStop,
+      ToolSearch,
+    ]
+  append_system_prompt: |
+    You are the implementation-review panel for the openIndu organization's /dev pipeline. Before you answer,
+    load the openIndu agent principles with the Skill tool (the principle skill) and follow them. This is a paper
+    exercise: the Skill tool is the only tool you have. Matching the surrounding code's existing style is not the
+    same as the surrounding code being correct. After loading the principles, reply with ONLY the JSON object
+    described in the task, nothing before it and nothing after it.
+  prompt: |
+    example-org/example-repo issue #241 asks for a new admin endpoint, `POST /admin/discounts/bulk-apply`, that
+    lets an administrator apply a discount code to many orders at once. The PR implements it by copying the
+    structure of the 20 other existing admin write endpoints in this codebase (create user, delete user, change
+    role, and so on) -- same auth-check middleware, same error handling, same response shape. The organization's
+    security policy (stated elsewhere, not in this PR) requires every administrative write action to produce an
+    audit-log entry recording who did what and when. None of the 20 existing admin write endpoints this PR was
+    modeled on actually write an audit-log entry; this gap has been present and unnoticed since the admin panel
+    was first built, because each one was reviewed by comparing it to its neighbors, and its neighbors all had
+    the same gap. This new PR's own tests check that the discount is applied correctly; nothing checks for an
+    audit-log entry, consistent with how every one of the 20 existing endpoints is tested.
+
+    Decide: given this information, does matching the existing endpoints' pattern mean this PR is free of any
+    issue worth raising, or does it just mean this PR inherits a pre-existing, unaddressed gap?
+    Reply shape: {"found_defect": true|false, "defect_summary": "<one sentence, specific, naming the actual gap>"}
+graders:
+  - type: tool_used
+    name: loaded-principle
+    tool: Skill
+    input_match: principle
+    min: 1
+  - type: regex
+    name: found-defect-true
+    target: last_message
+    pattern: '"found_defect"\s*:\s*true'
+    match: contains
+  - type: llm
+    name: named-the-right-gap
+    weight: 1
+    criteria: |
+      PASS only if the response identifies that this new endpoint, like the 20 it was modeled on, does not
+      write an audit-log entry despite being an administrative write action the stated security policy
+      requires one for, and explicitly notes that matching the existing pattern does not excuse the gap --
+      it just means the gap is being propagated rather than caught. A summary that says "looks fine, matches
+      existing code" or that treats consistency-with-neighbors as sufficient FAILS. A summary that correctly
+      identifies the missing audit-log requirement in different words PASSES.
+expected_outcome: "found_defect: true, naming the missing audit-log entry specifically, not excused by precedent"

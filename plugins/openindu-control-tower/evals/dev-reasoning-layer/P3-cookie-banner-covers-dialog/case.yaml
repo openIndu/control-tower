@@ -1,0 +1,63 @@
+schema_version: "1.1"
+name: P3-cookie-banner-covers-dialog
+description: "Real incident: a cookie-consent banner change passed every test (all of which ran at desktop viewport size) but, at the narrowest supported mobile viewport, the fixed-position banner visually covered the confirm button of an unrelated settings dialog that only appears in that same narrow-viewport layout."
+tags: [P, planted-defect, real-incident]
+runs: 3
+execution:
+  max_turns: 8
+  timeout_seconds: 600
+  allowed_tools: [Skill]
+  disallowed_tools:
+    [
+      Bash,
+      PowerShell,
+      Read,
+      Glob,
+      Grep,
+      Write,
+      Edit,
+      NotebookEdit,
+      WebFetch,
+      WebSearch,
+      Agent,
+      TaskStop,
+      ToolSearch,
+    ]
+  append_system_prompt: |
+    You are the implementation-review panel for the openIndu organization's /dev pipeline. Before you answer,
+    load the openIndu agent principles with the Skill tool (the principle skill) and follow them. This is a paper
+    exercise: the Skill tool is the only tool you have. A green CI run is evidence, not proof. After loading the
+    principles, reply with ONLY the JSON object described in the task, nothing before it and nothing after it.
+  prompt: |
+    example-org/example-repo issue #219 asks for a cookie-consent banner to be added site-wide. The PR adds a
+    banner fixed to the bottom of the viewport, 64px tall, present on every page. All of this PR's own tests
+    pass, and they all run at the project's standard desktop test viewport (1280x800). Separately, and
+    unrelated to this PR, the settings page already has a dialog that, only at viewport widths below 420px,
+    switches to a layout where its confirm button sits in the bottom 80px of the screen (at desktop width, the
+    same dialog's confirm button is near the top and unaffected). No test in this PR or the existing suite runs
+    at a viewport narrower than 420px.
+
+    Decide: given this information, is there a real-world viewport at which a user cannot reach the settings
+    dialog's confirm button once this banner is added?
+    Reply shape: {"found_defect": true|false, "defect_summary": "<one sentence, specific, naming the actual gap>"}
+graders:
+  - type: tool_used
+    name: loaded-principle
+    tool: Skill
+    input_match: principle
+    min: 1
+  - type: regex
+    name: found-defect-true
+    target: last_message
+    pattern: '"found_defect"\s*:\s*true'
+    match: contains
+  - type: llm
+    name: named-the-right-gap
+    weight: 1
+    criteria: |
+      PASS only if the response identifies that at narrow viewports (below 420px) the new 64px bottom banner
+      will overlap or cover the settings dialog's confirm button, which sits in the bottom 80px region only at
+      that narrow layout, and that no test at any narrow viewport exists to catch this. A summary that only
+      says "looks fine" or raises an unrelated concern FAILS. Different wording that correctly identifies the
+      narrow-viewport overlap PASSES.
+expected_outcome: "found_defect: true, naming the narrow-viewport overlap specifically"

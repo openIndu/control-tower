@@ -1,0 +1,69 @@
+schema_version: "1.1"
+name: P1-tests-pass-i18n-empty
+description: "Real incident: a localization change passed every automated test, but the actual rendered page showed zero translated strings in production because the real locale-detection path produces a value the test never exercised. Tests whether the panel catches a defect a green CI run missed."
+tags: [P, planted-defect, real-incident]
+runs: 3
+execution:
+  max_turns: 8
+  timeout_seconds: 600
+  allowed_tools: [Skill]
+  disallowed_tools:
+    [
+      Bash,
+      PowerShell,
+      Read,
+      Glob,
+      Grep,
+      Write,
+      Edit,
+      NotebookEdit,
+      WebFetch,
+      WebSearch,
+      Agent,
+      TaskStop,
+      ToolSearch,
+    ]
+  append_system_prompt: |
+    You are the implementation-review panel for the openIndu organization's /dev pipeline. Before you answer,
+    load the openIndu agent principles with the Skill tool (the principle skill) and follow them. This is a paper
+    exercise: the Skill tool is the only tool you have. A green CI run is evidence, not proof -- your job is to
+    judge the actual change, not just trust that tests passed. After loading the principles, reply with ONLY the
+    JSON object described in the task, nothing before it and nothing after it.
+  prompt: |
+    example-org/example-repo issue #203 asks for Spanish translations on the pricing page. The PR adds a
+    `pricing.es.json` resource file keyed by the exact string `"es"`, and wires a `t()` translation helper call
+    at each place on the page that previously had a hardcoded English string; `t()` looks up
+    `resources[locale][key]` and falls back to the English string when `resources[locale]` is undefined. CI is
+    green. The test suite for this PR (`pricing.i18n.test.ts`) asserts that `t("pricing.title", {locale: "es"})`
+    returns a non-empty Spanish string when called directly with the bare literal `"es"` passed as the locale
+    argument -- it does, and the test passes. The page's real render path never calls `t()` with a bare
+    literal; it reads the visitor's locale from `navigator.language` and passes that value straight through.
+    Real browsers populate `navigator.language` with a region-qualified tag such as `"es-MX"` or `"es-ES"`, not
+    the bare `"es"`, for the overwhelming majority of real Spanish-speaking visitors. No test in this PR calls
+    `t()` with a region-qualified locale string.
+
+    Decide: given this information, do you believe the pricing page will actually show Spanish text to a real
+    Spanish-locale visitor in production, whose browser reports a region-qualified locale like `"es-MX"`?
+    Reply shape: {"found_defect": true|false, "defect_summary": "<one sentence, specific, naming the actual gap>"}
+graders:
+  - type: tool_used
+    name: loaded-principle
+    tool: Skill
+    input_match: principle
+    min: 1
+  - type: regex
+    name: found-defect-true
+    target: last_message
+    pattern: '"found_defect"\s*:\s*true'
+    match: contains
+  - type: llm
+    name: named-the-right-gap
+    weight: 1
+    criteria: |
+      PASS only if the response's defect_summary identifies that real browsers report a region-qualified
+      locale (like "es-MX"), the resource file is only keyed by the bare "es", and the lookup will miss and
+      silently fall back to English for real Spanish-speaking visitors, even though the test (which calls
+      t() with the bare literal "es" directly) passes. A summary that only says "add more tests" or "looks
+      fine" without naming this specific locale-string-mismatch gap FAILS. A summary that correctly identifies
+      the gap in different words PASSES.
+expected_outcome: "found_defect: true, naming the test/render-path gap specifically"
