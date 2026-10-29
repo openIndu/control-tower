@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # check-version-bump.mjs 要比对 origin/main，浅克隆下解析不到
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -49,6 +52,12 @@ jobs:
 
       - name: Validate marketplace
         run: npx --yes @anthropic-ai/claude-code@latest plugin validate . --strict
+
+      # plugin.json 与 marketplace.json 版本号一致、且插件分发内容（skills/
+      # agents/ hooks/ reference/）有改动时次版本号确实 +1 —— plugin validate
+      # 验不出这一点，downstream /plugin update 靠版本号判断要不要拉新内容。
+      - name: Plugin version bump
+        run: node scripts/check-version-bump.mjs
 
       # 守则只能有一份源。发现第二份副本就 fail
       - name: Single principle source
