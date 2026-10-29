@@ -1,4 +1,6 @@
 import { allRequiredChecksGreen } from "./ci-status.mjs";
+import { changedProtectedPaths, pathsOutsideDeclaredScope } from "./path-rules.mjs";
+import { checkTestIntegrity } from "./test-integrity.mjs";
 
 // G1: PR head SHA = reviewed SHA = CI-evaluated SHA. The one exception is an
 // update-branch/rebase that changes the head but leaves the PR's own diff
@@ -52,6 +54,40 @@ export function guardG3({ unresolvedMustFixCount }) {
     };
   }
   return { pass: true };
+}
+
+// G4: changed paths must stay inside the plan's declared scope (or be a
+// test/doc file) and must not touch a protected path; no deleted tests, no
+// newly added skip/xfail/only, no lowered coverage threshold.
+export function guardG4({
+  changedFiles,
+  declaredPlanPaths,
+  extraProtectedPatterns,
+  unifiedDiff,
+  baseCoverageThresholds,
+  headCoverageThresholds,
+}) {
+  const changedPaths = changedFiles.map((file) => file.path);
+  const findings = [];
+  const outside = pathsOutsideDeclaredScope(changedPaths, declaredPlanPaths);
+  if (outside.length > 0) {
+    findings.push(`path(s) outside declared scope: ${outside.join(", ")}`);
+  }
+  const protectedHits = changedProtectedPaths(changedPaths, extraProtectedPatterns);
+  if (protectedHits.length > 0) {
+    findings.push(`touches protected path(s): ${protectedHits.join(", ")}`);
+  }
+  findings.push(
+    ...checkTestIntegrity({
+      changedFiles,
+      unifiedDiff,
+      baseCoverageThresholds,
+      headCoverageThresholds,
+    }),
+  );
+  return findings.length > 0
+    ? { pass: false, reason: findings.join("; ") + " (G4)" }
+    : { pass: true };
 }
 
 // G5: size <=400 lines AND <=1 module boundary -- the AND is deliberately

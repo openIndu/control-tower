@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { guardG1, guardG2, guardG3, guardG5, guardG6 } from "./guards-core.mjs";
+import { guardG1, guardG2, guardG3, guardG4, guardG5, guardG6 } from "./guards-core.mjs";
 
 // --- G1 --------------------------------------------------------------
 test("G1 passes when head, reviewed and CI-evaluated SHA all match", () =>
@@ -59,6 +59,49 @@ test("G3 passes with zero unresolved must-fix comments", () =>
   assert.equal(guardG3({ unresolvedMustFixCount: 0 }).pass, true));
 test("G3 fails with at least one unresolved must-fix comment", () =>
   assert.equal(guardG3({ unresolvedMustFixCount: 1 }).pass, false));
+
+// --- G4 --------------------------------------------------------------
+const cleanG4 = {
+  changedFiles: [{ path: "src/app.py", status: "modified" }],
+  declaredPlanPaths: ["src/**"],
+  unifiedDiff: "+ok()\n",
+  baseCoverageThresholds: { lines: 80 },
+  headCoverageThresholds: { lines: 80 },
+};
+test("G4 passes on an in-scope, unprotected, integrity-clean change", () =>
+  assert.equal(guardG4(cleanG4).pass, true));
+test("G4 fails on a path outside the declared plan scope", () =>
+  assert.equal(
+    guardG4({ ...cleanG4, changedFiles: [{ path: "unrelated/x.py", status: "modified" }] })
+      .pass,
+    false,
+  ));
+test("G4 fails on a protected-path hit even if nominally in scope", () =>
+  assert.equal(
+    guardG4({
+      ...cleanG4,
+      declaredPlanPaths: ["**"],
+      changedFiles: [{ path: "CODEOWNERS", status: "modified" }],
+    }).pass,
+    false,
+  ));
+test("G4 fails on a deleted test file", () =>
+  assert.equal(
+    guardG4({
+      ...cleanG4,
+      changedFiles: [{ path: "src/app.test.py", status: "removed" }],
+    }).pass,
+    false,
+  ));
+test("G4 allows a test/doc-only change outside the declared plan paths", () =>
+  assert.equal(
+    guardG4({
+      ...cleanG4,
+      declaredPlanPaths: ["src/core/**"],
+      changedFiles: [{ path: "README.md", status: "modified" }],
+    }).pass,
+    true,
+  ));
 
 // --- G5 --------------------------------------------------------------
 test("G5 passes at or under 400 lines and 1 module boundary", () =>
