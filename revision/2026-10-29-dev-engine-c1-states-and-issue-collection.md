@@ -4,7 +4,7 @@ slug: dev-engine-c1-states-and-issue-collection
 type: other
 related_spec: 005-org-dev-workflow
 author: control-tower
-pr: openIndu/control-tower#TBD
+pr: openIndu/control-tower#20
 ---
 
 # engine: terminal states, exit codes, and issue collection's --repo scope (spec/005 stage 4, PR-C1)
