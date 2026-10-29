@@ -26,15 +26,15 @@ openIndu is a submodule-aggregate architecture. Sub-repo merge ≠ live. Miss an
 
 Use `/route` to find which repo the change is in, then:
 
-| Change location                                          | Applies         | Note                                                                                                                        |
-| -------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `openindu-backend` / `-admin` / `-portal`                | ① to ⑥ **all**  | submodule sub-repos; image rebuild needed                                                                                   |
-| `openindu-website` (aggregate itself)                    | ① ② ④ ⑤ ⑥       | no ③; it IS the aggregate                                                                                                   |
-| `infra-deploy` (K8s manifests only)                      | ⑤ ⑥             | no ④ unless image changes                                                                                                   |
-| `control-tower`                                          | ① ②             | control layer, not in cluster; downstream `/plugin update`                                                                  |
-| `openindu-studio`                                        | ① ②             | independent library; not in the Website aggregate and has no image                                                          |
-| `openindu-platform` / `-controller` / `openindu-station` | ① ② + as needed | not in website aggregate; per their own release flow                                                                        |
-| `openindu-vision` / `openindu-cim`                       | ① ② ③           | submodules of `openindu-station` (planned; sources still in-tree), no image → ends at ③ (the pointer bump PR in the parent) |
+| Change location                                          | Applies         | Note                                                                                                                                                                         |
+| -------------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `openindu-backend` / `-admin` / `-portal`                | ① to ⑥ **all**  | submodule sub-repos; image rebuild needed                                                                                                                                    |
+| `openindu-website` (aggregate itself)                    | ① ② ④ ⑤ ⑥       | no ③; it IS the aggregate                                                                                                                                                    |
+| `infra-deploy` (K8s manifests only)                      | ⑤ ⑥             | no ④ unless image changes                                                                                                                                                    |
+| `control-tower`                                          | ① ②             | control layer, not in cluster; downstream `/plugin update`                                                                                                                   |
+| `openindu-studio`                                        | ① ②             | not in the Website aggregate; builds two images (`server`, `web`) but has no registered Container Registry target or infra-deploy manifest yet, so delivery still ends at ①② |
+| `openindu-platform` / `-controller` / `openindu-station` | ① ② + as needed | not in website aggregate; per their own release flow                                                                                                                         |
+| `openindu-vision` / `openindu-cim`                       | ① ② ③           | submodules of `openindu-station` (planned; sources still in-tree), no image → ends at ③ (the pointer bump PR in the parent)                                                  |
 
 Mark non-applicable boxes **N/A**, not ✅ — the two mean different things.
 
