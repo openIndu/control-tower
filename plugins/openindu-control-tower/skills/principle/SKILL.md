@@ -102,6 +102,8 @@ MUST:
   | L2   | persistent write | merge to trunk, config change, outbound message, billed API     | single approver                              |
   | L3   | high-risk        | prod deploy, data deletion, payment,对外承诺, permission change | dual approval + rollback plan + dry-run diff |
 
+  Merge to trunk, and only that L2 action, may be authorized in advance by a standing authorization (RULE 5.2). Config changes, outbound messages and billed API calls still need a single approver; approving a run's budget covers all billed API calls inside that run.
+
 - All actions satisfy the "three ables": traceable / replayable / rollback-able
 - Signals that force human downgrade (any one triggers):
   - LLM output low-confidence or self-expresses uncertainty
@@ -144,12 +146,25 @@ MUST NOT: do not go live on "looks fine"; do not let the eval set become a decor
 
 MUST:
 
-- Every PR an agent produces must pass human review before merge (L2+)
+- Every PR an agent produces must pass human review before merge (L2+), unless it is merged under a standing authorization (see below)
 - Keep review units small (RULE 4's 400-line上限); a reviewer can fully understand in 15 min
 - Review lenses must cover: correctness, security, maintainability, architectural consistency
 - Review records archived, can feed future eval sets
+- Standing authorization (clause id SA-1). A standing authorization is a maintainer's time-boxed advance approval to merge to the default branch of individually listed repos. It is recorded in route.json (`dev_grants`: `id`, `approved_by`, `single_approver`, `approved_on`, `expires_on` (at most 90 days after `approved_on`), `ref`, `principle_ref`, `repos`). A repo that is not listed, including one created later, does not inherit it; an expired, unreadable or revoked grant authorizes nothing. A repo whose artifacts reach physical devices is listed only after its safety paths are registered. Granting, widening or renewing a standing authorization is an L3 action (RULE 4) that only the maintainer may decide; an agent faced with it always escalates, and never decides or records it on the maintainer's behalf. In an organization with a single maintainer, that person's own approval is sufficient on its own — a second approver is not required — and the grant records this (`single_approver: true`). Revoking it is always allowed and takes effect before the next merge.
+- Under a standing authorization the merge is executed only by deterministic code started by the owner (`approved_by` themselves), never by an agent, and only when every guard passes. The guards are a minimum: a repo may add guards and may never remove them.
+  - The head SHA is the reviewed SHA and the CI-evaluated SHA. The only exception is an update or rebase onto a newer base that leaves the PR's own diff unchanged (same patch-id): the review carries over and CI must run again on the new head. The default branch's current head is green and contained in the PR.
+  - Every required check, declared by a human and including tests and secret scanning, concluded SUCCESS. A missing, skipped or pending check is not green.
+  - An independent multi-lens review (correctness, security, maintainability, architectural consistency; separate invocations that do not share the implementer's context) left no unresolved must-fix finding. An agent review can veto a merge and can never promote one.
+  - The change is within RULE 4's size cap and its risk tier is L2 or lower; a model may raise the tier and may never lower it.
+  - The issue's author and every commenter whose text reached an agent have write permission on the repo, and the text is unchanged since it was snapshotted.
+  - The owner of every changed path (CODEOWNERS) is the approver (RULE 5.3).
+  - The grant is read live from control-tower's default branch at merge time, and that branch still carries this clause (SA-1); a failed read means no merge.
+- The merging code and the agents it drives hold separate credentials: agents hold no write, merge or deploy credentials and run isolated from the maintainer's credential stores. Nothing may bypass server-side protections: no admin override, no change to branch protection or repository settings.
+- A standing authorization never covers L3 actions; security-related decisions (RULE 5.4); changes to principles, agent definitions, hooks, CI configuration, permissions, secrets, database migrations, dependency manifests and lockfiles, submodule pointers, AI instruction files or deployment manifests; device-safety changes; deleting or weakening tests; or repos of type control-tower, aggregate, gitops, fork or meta.
+- A tripped circuit breaker (a red default branch after a merge, a merge not performed by the code, repeated blocked items) or any revert of a merge made under the authorization, which the code detects, suspends the authorization until the maintainer clears it by hand. The maintainer confirms each run's merge report within 72 hours with a confirmation record made personally by `approved_by`; without one, the next run only opens PRs.
+- The reasoning layer used under a standing authorization must pass a RULE 5.1 eval (at least 20 representative cases, programmatic grading, regression-compared) before a repo is first listed.
 
-MUST NOT: do not let another agent be the sole reviewer for L2+ changes; do not merge AI-generated code exempt from review.
+MUST NOT: do not let another agent be the sole reviewer for L2+ changes, except under a standing authorization, where the independent review plus the deterministic CI gates take the place of the human review and the maintainer who granted it stays accountable; do not merge AI-generated code exempt from review.
 
 ### 5.3 Collaboration
 

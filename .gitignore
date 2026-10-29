@@ -39,3 +39,6 @@ team/communications/TASK_LOG.md
 # OS
 Thumbs.db
 ehthumbs.db
+
+# claude plugin eval — auto-generated timestamped report dirs (not the hand-placed results/*.json)
+plugins/openindu-control-tower/evals/results/
