@@ -4,7 +4,7 @@ slug: dev-engine-c4a-pause-codeowners
 type: other
 related_spec: 005-org-dev-workflow
 author: control-tower
-pr: openIndu/control-tower#TBD
+pr: openIndu/control-tower#24
 ---
 
 # engine: .dev-pause primitive and CODEOWNERS parsing (spec/005 stage 4, PR-C4a)
