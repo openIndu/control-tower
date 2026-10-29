@@ -22,12 +22,13 @@ const HIGH_PRIORITY_LABELS = new Set([
 ]);
 
 export function parseArgs(argv) {
-  const options = { org: "openIndu", state: "open", output: null };
+  const options = { org: "openIndu", state: "open", output: null, repo: null };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === "--org") options.org = argv[++index];
     else if (argument === "--state") options.state = argv[++index];
     else if (argument === "--output") options.output = argv[++index];
+    else if (argument === "--repo") options.repo = argv[++index];
     else if (argument === "--help") options.help = true;
     else throw new Error(`Unknown argument: ${argument}`);
   }
@@ -35,6 +36,7 @@ export function parseArgs(argv) {
   if (!["open", "closed", "all"].includes(options.state)) {
     throw new Error("--state must be open, closed, or all");
   }
+  if (options.repo === undefined) throw new Error("--repo requires a value");
   return options;
 }
 
@@ -111,15 +113,20 @@ function ghJson(endpoint, fields = {}) {
   return flattenPages(JSON.parse(raw));
 }
 
+function toRepoSummary({ name, archived, has_issues: hasIssues }) {
+  return { name, archived, hasIssues };
+}
+
 export function run(options, github = ghJson) {
-  const repositories = github(`orgs/${encodeURIComponent(options.org)}/repos`, {
-    per_page: 100,
-    type: "all",
-  }).map(({ name, archived, has_issues: hasIssues }) => ({
-    name,
-    archived,
-    hasIssues,
-  }));
+  const repositories = options.repo
+    ? github(
+        `repos/${encodeURIComponent(options.org)}/${encodeURIComponent(options.repo)}`,
+        {},
+      ).map(toRepoSummary)
+    : github(`orgs/${encodeURIComponent(options.org)}/repos`, {
+        per_page: 100,
+        type: "all",
+      }).map(toRepoSummary);
   const { issues, errors } = collectIssues(repositories, (repository) =>
     github(
       `repos/${encodeURIComponent(options.org)}/${encodeURIComponent(repository.name)}/issues`,
@@ -129,6 +136,7 @@ export function run(options, github = ghJson) {
   return {
     schemaVersion: 1,
     organization: options.org,
+    repo: options.repo,
     state: options.state,
     generatedAt: new Date().toISOString(),
     complete: errors.length === 0,
@@ -140,7 +148,7 @@ export function run(options, github = ghJson) {
 }
 
 function usage() {
-  return "Usage: collect-org-issues.mjs [--org openIndu] [--state open|closed|all] [--output FILE]";
+  return "Usage: collect-org-issues.mjs [--org openIndu] [--repo NAME] [--state open|closed|all] [--output FILE]";
 }
 
 function main() {
