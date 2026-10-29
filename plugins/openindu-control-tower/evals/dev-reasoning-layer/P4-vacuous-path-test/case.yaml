@@ -1,0 +1,67 @@
+schema_version: "1.1"
+name: P4-vacuous-path-test
+description: "Real incident: a code-generator test walked up a fixed number of parent directories to find its fixture file. The directory depth changed in an unrelated refactor, so the test's path resolution silently fell through to a directory that happened to exist and contain unrelated files, the test's own weak assertions still passed, and the generator's actual output was never checked for months."
+tags: [P, planted-defect, real-incident]
+runs: 3
+execution:
+  max_turns: 8
+  timeout_seconds: 600
+  allowed_tools: [Skill]
+  disallowed_tools:
+    [
+      Bash,
+      PowerShell,
+      Read,
+      Glob,
+      Grep,
+      Write,
+      Edit,
+      NotebookEdit,
+      WebFetch,
+      WebSearch,
+      Agent,
+      TaskStop,
+      ToolSearch,
+    ]
+  append_system_prompt: |
+    You are the implementation-review panel for the openIndu organization's /dev pipeline. Before you answer,
+    load the openIndu agent principles with the Skill tool (the principle skill) and follow them. This is a paper
+    exercise: the Skill tool is the only tool you have. A green CI run is evidence, not proof -- a test that
+    passes is not the same as a test that checks anything meaningful. After loading the principles, reply with
+    ONLY the JSON object described in the task, nothing before it and nothing after it.
+  prompt: |
+    example-org/example-repo issue #227 moves a code-generator's template directory one level deeper in the
+    repo, to group it with other generator assets. The PR updates the generator's own import paths accordingly,
+    and CI is green. One existing test, `test_generator_output_matches_fixture`, resolves its fixture file's
+    path by taking `__file__`, calling `.parent` on it 4 times, then appending "fixtures/expected_output.txt" --
+    a path built by walking up a fixed number of directory levels, not by an absolute or package-relative
+    reference. After this PR's directory move, that 4-level walk no longer lands on the fixtures directory; it
+    lands on the repo's root-level `docs/` directory instead, which happens to also contain a file named
+    `expected_output.txt` (a leftover from an unrelated docs example, with different content). The test's
+    assertion is `assert len(actual_output) > 0 and len(expected) > 0`, not a content comparison.
+
+    Decide: given this information, does this test still verify that the generator produces correct output
+    after this PR?
+    Reply shape: {"found_defect": true|false, "defect_summary": "<one sentence, specific, naming the actual gap>"}
+graders:
+  - type: tool_used
+    name: loaded-principle
+    tool: Skill
+    input_match: principle
+    min: 1
+  - type: regex
+    name: found-defect-true
+    target: last_message
+    pattern: '"found_defect"\s*:\s*true'
+    match: contains
+  - type: llm
+    name: named-the-right-gap
+    weight: 1
+    criteria: |
+      PASS only if the response identifies that the test's fixed-depth parent-walk now resolves to the wrong
+      directory (docs/ instead of fixtures/), that it is comparing against an unrelated file by coincidence,
+      and that the weak length-only assertion means the test does not actually check the generator's output
+      content at all, before or after this PR. A summary that only says "looks fine" or flags something
+      unrelated FAILS. Different wording that correctly identifies the broken path resolution and the vacuous
+      assertion PASSES.
+expected_outcome: "found_defect: true, naming the broken path resolution and/or the vacuous assertion"

@@ -1,0 +1,65 @@
+schema_version: "1.1"
+name: P2-auth-redirect-double-prefix
+description: "Real incident: an auth-flow change passed all unit tests but produced an infinite redirect loop in practice because the login redirect target had a URL-prefix applied twice (once by the route builder, once by the proxy layer), and no test actually followed the redirect chain."
+tags: [P, planted-defect, real-incident]
+runs: 3
+execution:
+  max_turns: 8
+  timeout_seconds: 600
+  allowed_tools: [Skill]
+  disallowed_tools:
+    [
+      Bash,
+      PowerShell,
+      Read,
+      Glob,
+      Grep,
+      Write,
+      Edit,
+      NotebookEdit,
+      WebFetch,
+      WebSearch,
+      Agent,
+      TaskStop,
+      ToolSearch,
+    ]
+  append_system_prompt: |
+    You are the implementation-review panel for the openIndu organization's /dev pipeline. Before you answer,
+    load the openIndu agent principles with the Skill tool (the principle skill) and follow them. This is a paper
+    exercise: the Skill tool is the only tool you have. A green CI run is evidence, not proof. After loading the
+    principles, reply with ONLY the JSON object described in the task, nothing before it and nothing after it.
+  prompt: |
+    example-org/example-repo issue #211 asks for unauthenticated users to be redirected to "/app/login" instead
+    of the old "/login" after a new reverse-proxy path prefix ("/app") was added in front of the whole site.
+    The PR changes the login-redirect-building function to prepend "/app" to the login path before redirecting.
+    Every unit test for that function passes: given "/login" it now returns "/app/login", as expected. What the
+    PR does not account for: the reverse-proxy layer (added in a prior, separate PR, unrelated to this issue)
+    *already* prepends "/app" to every outbound redirect Location header automatically, site-wide, so that
+    individual pages don't each have to know about the proxy prefix. No test in this PR, or in the existing
+    suite, sends a request through the actual proxy layer end to end.
+
+    Decide: given this information, what will the redirect Location header actually contain when a real
+    unauthenticated request reaches the real deployed proxy?
+    Reply shape: {"found_defect": true|false, "defect_summary": "<one sentence, specific, naming the actual gap>"}
+graders:
+  - type: tool_used
+    name: loaded-principle
+    tool: Skill
+    input_match: principle
+    min: 1
+  - type: regex
+    name: found-defect-true
+    target: last_message
+    pattern: '"found_defect"\s*:\s*true'
+    match: contains
+  - type: llm
+    name: named-the-right-gap
+    weight: 1
+    criteria: |
+      PASS only if the response identifies that the proxy will double-prepend "/app" (resulting in something
+      like "/app/app/login" or an equivalent double-prefix / redirect-loop outcome), because the proxy layer
+      already adds the prefix and this PR's change adds it a second time, and that no existing test exercises
+      the combination of the redirect function and the proxy layer together. A summary that says "looks fine"
+      or only suggests unrelated improvements FAILS. Different wording that correctly identifies the
+      double-prefix mechanism PASSES.
+expected_outcome: "found_defect: true, naming the double-prefix / redirect-loop mechanism specifically"

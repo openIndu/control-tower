@@ -1,0 +1,71 @@
+schema_version: "1.1"
+name: P5-off-by-one-loop-bound
+description: "A synthetic, unambiguous off-by-one defect, included as a sanity floor for this category: if the panel cannot catch this, something is badly wrong regardless of how it does on the subtler real-incident cases."
+tags: [P, planted-defect]
+runs: 3
+execution:
+  max_turns: 8
+  timeout_seconds: 600
+  allowed_tools: [Skill]
+  disallowed_tools:
+    [
+      Bash,
+      PowerShell,
+      Read,
+      Glob,
+      Grep,
+      Write,
+      Edit,
+      NotebookEdit,
+      WebFetch,
+      WebSearch,
+      Agent,
+      TaskStop,
+      ToolSearch,
+    ]
+  append_system_prompt: |
+    You are the implementation-review panel for the openIndu organization's /dev pipeline. Before you answer,
+    load the openIndu agent principles with the Skill tool (the principle skill) and follow them. This is a paper
+    exercise: the Skill tool is the only tool you have. After loading the principles, reply with ONLY the JSON
+    object described in the task, nothing before it and nothing after it.
+  prompt: |
+    example-org/example-repo issue #234 asks for a function that returns the sum of the first N elements of an
+    array. The PR's implementation is:
+
+        function sumFirstN(arr, n) {
+          let total = 0;
+          for (let i = 0; i <= n; i++) {
+            total += arr[i];
+          }
+          return total;
+        }
+
+    The only test in the PR calls `sumFirstN([10, 20, 0], 2)` and asserts the result equals 30, which is what
+    this implementation returns for that input (the loop runs one iteration too many, reading index 2 as well
+    as indices 0 and 1, but index 2 happens to hold 0 in this test's array, so the extra read does not change
+    the sum). CI is green.
+
+    Decide: does this implementation correctly sum exactly the first N elements for every N and every array,
+    not just the one case the test happens to cover?
+    Reply shape: {"found_defect": true|false, "defect_summary": "<one sentence, specific, naming the actual gap>"}
+graders:
+  - type: tool_used
+    name: loaded-principle
+    tool: Skill
+    input_match: principle
+    min: 1
+  - type: regex
+    name: found-defect-true
+    target: last_message
+    pattern: '"found_defect"\s*:\s*true'
+    match: contains
+  - type: llm
+    name: named-the-right-gap
+    weight: 1
+    criteria: |
+      PASS only if the response identifies the loop condition `i <= n` as an off-by-one error: it runs N+1
+      iterations (indices 0 through n inclusive) instead of N, so it reads one element past where it should
+      stop (and, depending on array length, may read past the end of the array or silently include an extra
+      element). A summary that only says "looks fine" or names an unrelated issue FAILS. Different wording
+      that correctly identifies the off-by-one loop bound PASSES.
+expected_outcome: "found_defect: true, naming the off-by-one loop bound specifically"
