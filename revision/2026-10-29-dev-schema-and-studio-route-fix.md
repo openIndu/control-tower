@@ -4,7 +4,7 @@ slug: dev-schema-and-studio-route-fix
 type: route
 related_spec: 005-org-dev-workflow
 author: control-tower
-pr: openIndu/control-tower#TBD
+pr: openIndu/control-tower#19
 ---
 
 # route: add the /dev data contract (dev.schema.json) and fix openindu-studio's stale entry
