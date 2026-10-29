@@ -27,11 +27,12 @@ const issue = {
     "https://api.github.com/repos/openIndu/control-tower/issues/9/comments",
 };
 
-test("defaults to open issues in openIndu", () =>
+test("defaults to open issues in openIndu, no repo scope", () =>
   assert.deepEqual(parseArgs([]), {
     org: "openIndu",
     state: "open",
     output: null,
+    repo: null,
   }));
 test("accepts organization override", () =>
   assert.equal(parseArgs(["--org", "acme"]).org, "acme"));
@@ -41,12 +42,16 @@ test("accepts all state", () =>
   assert.equal(parseArgs(["--state", "all"]).state, "all"));
 test("accepts output path", () =>
   assert.equal(parseArgs(["--output", "out.json"]).output, "out.json"));
+test("accepts a repo scope", () =>
+  assert.equal(parseArgs(["--repo", "openindu-studio"]).repo, "openindu-studio"));
 test("rejects unknown arguments", () =>
   assert.throws(() => parseArgs(["--wat"]), /Unknown argument/));
 test("rejects missing organization", () =>
   assert.throws(() => parseArgs(["--org", ""]), /requires a value/));
 test("rejects invalid state", () =>
   assert.throws(() => parseArgs(["--state", "draft"]), /must be/));
+test("rejects a repo flag with no value", () =>
+  assert.throws(() => parseArgs(["--repo"]), /requires a value/));
 test("flattens paginated arrays", () =>
   assert.deepEqual(flattenPages([[1], [2, 3]]), [1, 2, 3]));
 test("accepts an unwrapped array", () =>
@@ -154,4 +159,29 @@ test("run reports a complete empty organization", () => {
   const result = run({ org: "empty", state: "open" }, () => []);
   assert.equal(result.complete, true);
   assert.equal(result.issueCount, 0);
+});
+test("run scoped to --repo fetches that one repository, not the org listing", () => {
+  const calledEndpoints = [];
+  const github = (endpoint) => {
+    calledEndpoints.push(endpoint);
+    if (endpoint.startsWith("orgs/")) throw new Error("must not list the org");
+    if (endpoint === "repos/openIndu/openindu-studio")
+      return [{ name: "openindu-studio", archived: false, has_issues: true }];
+    return [issue];
+  };
+  const result = run(
+    { org: "openIndu", state: "open", repo: "openindu-studio" },
+    github,
+  );
+  assert.equal(result.repo, "openindu-studio");
+  assert.equal(result.repositoryCount, 1);
+  assert.equal(result.issueCount, 1);
+  assert.deepEqual(calledEndpoints, [
+    "repos/openIndu/openindu-studio",
+    "repos/openIndu/openindu-studio/issues",
+  ]);
+});
+test("run without --repo still echoes a null repo scope", () => {
+  const result = run({ org: "empty", state: "open", repo: null }, () => []);
+  assert.equal(result.repo, null);
 });
