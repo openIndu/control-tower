@@ -4,7 +4,7 @@ slug: dev-engine-c3-ci-status-guards
 type: other
 related_spec: 005-org-dev-workflow
 author: control-tower
-pr: openIndu/control-tower#TBD
+pr: openIndu/control-tower#22
 ---
 
 # engine: CI status classification and guards G1/G2/G3/G5/G6 (spec/005 stage 4, PR-C3)
