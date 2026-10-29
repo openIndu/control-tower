@@ -4,7 +4,7 @@ slug: dev-engine-c2-route-admission
 type: other
 related_spec: 005-org-dev-workflow
 author: control-tower
-pr: openIndu/control-tower#TBD
+pr: openIndu/control-tower#21
 ---
 
 # engine: route/grant live-read and admission A1-A3 (spec/005 stage 4, PR-C2/4)
