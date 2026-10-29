@@ -4,7 +4,7 @@ slug: dev-engine-c3b-protected-paths-test-integrity
 type: other
 related_spec: 005-org-dev-workflow
 author: control-tower
-pr: openIndu/control-tower#TBD
+pr: openIndu/control-tower#23
 ---
 
 # engine: protected paths and test-integrity detection, guard G4 (spec/005 stage 4, PR-C3b)
