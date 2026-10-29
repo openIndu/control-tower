@@ -4,7 +4,7 @@ slug: dev-engine-c4b-guards-g7-g11
 type: other
 related_spec: 005-org-dev-workflow
 author: control-tower
-pr: openIndu/control-tower#TBD
+pr: openIndu/control-tower#25
 ---
 
 # engine: guards G7-G11 (spec/005 stage 4, PR-C4b)
