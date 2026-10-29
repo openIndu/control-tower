@@ -4,7 +4,7 @@ slug: dev-engine-c4c-circuit-breaker-ack-redaction-ci
 type: other
 related_spec: 005-org-dev-workflow
 author: control-tower
-pr: openIndu/control-tower#TBD
+pr: openIndu/control-tower#26
 ---
 
 # engine: circuit breaker, ./dev ack, log redaction, ci.yml wiring (spec/005 stage 4, PR-C4c)
