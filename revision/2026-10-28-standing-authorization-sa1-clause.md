@@ -4,7 +4,7 @@ slug: standing-authorization-sa1-clause
 type: principle
 related_spec: 006-standing-merge-authorization
 author: control-tower
-pr: openIndu/control-tower#TBD
+pr: openIndu/control-tower#17
 ---
 
 # Principle: add the SA-1 standing-authorization clause to RULE 5.2
