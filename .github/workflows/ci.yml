@@ -51,11 +51,16 @@ jobs:
       # 这些单元测试做回归判断（RULE 2）。一直在本地跑绿，但从没接入 CI——
       # 也就是说引擎代码改坏了不会有任何红灯，挂上。issue 收集脚本的测试
       # （C1 阶段新增 --repo 时写的）同理，一并接上。
+      #
+      # 阶段 7（PR-F8-1）：skills/dev/scripts/dev.mjs 是真正的 runner 入口，
+      # 不在 engine/ 目录下，上面的 glob 覆盖不到——单独补一条，否则这份
+      # PR 会悄悄产出一个本地测过但 CI 永远不跑的文件。
       - name: /dev engine unit tests
         run: |
           fail=0
           for f in plugins/openindu-control-tower/engine/*.test.mjs \
-                   plugins/openindu-control-tower/skills/issue-pipeline/scripts/collect-org-issues.test.mjs; do
+                   plugins/openindu-control-tower/skills/issue-pipeline/scripts/collect-org-issues.test.mjs \
+                   plugins/openindu-control-tower/skills/dev/scripts/*.test.mjs; do
             echo "::group::$f"
             node "$f" || fail=1
             echo "::endgroup::"
