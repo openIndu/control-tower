@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
@@ -18,6 +19,11 @@ import { invokeAgent } from "./carrier/run-agent.mjs";
 // set low; it is a documented default, not a value the spec mandates.
 export const DEFAULT_PLAN_REVIEW_BUDGET_USD = 1.0;
 
+// implement/fix are coding tasks (read files, write files, run the repo's own
+// build/test/lint commands), not a short written judgment -- a documented,
+// higher default for the same reason DEFAULT_PLAN_REVIEW_BUDGET_USD is low.
+export const DEFAULT_IMPLEMENT_FIX_BUDGET_USD = 5.0;
+
 const PROPOSAL_SCHEMA = {
   type: "object",
   properties: { summary: { type: "string" } },
@@ -31,6 +37,19 @@ const REVIEW_SCHEMA = {
     mustFix: { type: "array", items: { type: "string" } },
   },
   required: ["score"],
+};
+
+// implement-review.mjs's runStep3() review() callback contract: {mustFixItems}
+// -- a different field name than step 2's REVIEW_SCHEMA.mustFix, because this
+// reviews the actual diff, not a written proposal, and runStep3 only ever reads
+// result.mustFixItems (never a score) -- see implement-review.mjs's own review()
+// call site.
+const IMPLEMENT_REVIEW_SCHEMA = {
+  type: "object",
+  properties: {
+    mustFixItems: { type: "array", items: { type: "string" } },
+  },
+  required: ["mustFixItems"],
 };
 
 // tier-resolution.mjs's resolveTier() contract: the scoping proposal must
@@ -105,6 +124,28 @@ function parseStructuredResponse(invokeResult) {
     );
   }
   return JSON.parse(invokeResult.text);
+}
+
+// implement/fix have no structured output to parse (they write files and run
+// shell commands; nothing downstream reads their return value -- see
+// implement-review.mjs's runStep3, which awaits implement()/fix() without
+// capturing a result), but a failed carrier call must still surface as a
+// thrown error, not a silent no-op.
+function assertInvokeSucceeded(invokeResult) {
+  if (!invokeResult.success) {
+    throw new Error(
+      `carrier invocation did not succeed (subtype=${invokeResult.subtype ?? "unknown"}): ${JSON.stringify(invokeResult.errors ?? [])}`,
+    );
+  }
+  return invokeResult;
+}
+
+function defaultComputeWorkingTreeDiff(worktreePath) {
+  return execFileSync("git", ["diff", "HEAD"], {
+    cwd: worktreePath,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
 }
 
 // context: { worktreePath, systemPromptFilePath, promptDir, maxBudgetUsd }.
@@ -198,6 +239,167 @@ export function buildRealGenerateScopingProposal(
       maxBudgetUsd,
       promptFilePath,
       jsonSchema: SCOPING_SCHEMA,
+    });
+    const result = await invoke({
+      composeArgs,
+      claudeArgs,
+      promptFilePath,
+      cwd: worktreePath,
+    });
+    return parseStructuredResponse(result);
+  };
+}
+
+// implement-review.mjs's runStep3() implement() callback. role "implement" gets
+// Bash (roleNeedsBash), scoped to exactly allowedToolCommands -- there is no
+// default allowlist here; a caller that omits it gets invoker.mjs's own
+// "--allowedTools" with nothing after it, which is a caller bug this function
+// does not paper over by guessing a list. implement only writes files; it does
+// not commit -- commitAndPush (step 4) is the single place a commit happens,
+// per git-ops.mjs's own design note.
+export function buildRealImplement(context, { invoke = invokeAgent } = {}) {
+  const {
+    worktreePath,
+    systemPromptFilePath,
+    promptDir,
+    allowedToolCommands,
+    maxBudgetUsd = DEFAULT_IMPLEMENT_FIX_BUDGET_USD,
+  } = context;
+  return async function implement(winningProposal, issue) {
+    const promptFilePath = writeTextFile(
+      join(promptDir, "implement.txt"),
+      [
+        `Implement the following solution for issue #${issue.number}: ${issue.title}, in the current working directory.`,
+        "Write and edit the files the solution needs. Do not run any git commit or git push -- committing happens separately, later.",
+        "",
+        "Issue body:",
+        issue.body ?? "",
+        "",
+        "Solution to implement:",
+        winningProposal.summary,
+      ].join("\n"),
+    );
+    const { composeArgs, claudeArgs } = buildDockerComposeRunArgs({
+      worktreePath,
+      role: "implement",
+      systemPromptFilePath,
+      allowedToolCommands,
+      maxBudgetUsd,
+      promptFilePath,
+    });
+    const result = await invoke({
+      composeArgs,
+      claudeArgs,
+      promptFilePath,
+      cwd: worktreePath,
+    });
+    return assertInvokeSucceeded(result);
+  };
+}
+
+// implement-review.mjs's runStep3() fix() callback. Same role/allowlist shape as
+// implement -- a fix is just more editing in the same worktree, never a commit.
+// failureDescription is whatever runStep3 passed: either {reason:
+// "local-gate-failure", gateResult} or {reason: "review-must-fix",
+// mustFixItems}; runCiRetryLoop's attemptFix(attempt) (step 4, PR-F8-6) is
+// expected to wrap this same function with its own CI-failure description, not
+// a separate carrier callback.
+function formatFailureDescription(failureDescription) {
+  if (failureDescription.reason === "local-gate-failure") {
+    const failed = failureDescription.gateResult.results.filter((r) => !r.pass);
+    return failed
+      .map((r) => `Command failed: ${r.command}\nOutput:\n${r.output}`)
+      .join("\n\n");
+  }
+  if (failureDescription.reason === "review-must-fix") {
+    return failureDescription.mustFixItems
+      .map((item) => `- ${item}`)
+      .join("\n");
+  }
+  return JSON.stringify(failureDescription);
+}
+
+export function buildRealFix(context, { invoke = invokeAgent } = {}) {
+  const {
+    worktreePath,
+    systemPromptFilePath,
+    promptDir,
+    allowedToolCommands,
+    maxBudgetUsd = DEFAULT_IMPLEMENT_FIX_BUDGET_USD,
+  } = context;
+  return async function fix(failureDescription, issue) {
+    const promptFilePath = writeTextFile(
+      join(promptDir, `fix-${Date.now()}.txt`),
+      [
+        `Issue #${issue.number}: ${issue.title}. Your previous implementation in this working directory has a problem. Fix it in place. Do not run any git commit or git push.`,
+        "",
+        `Reason: ${failureDescription.reason}`,
+        "",
+        formatFailureDescription(failureDescription),
+      ].join("\n"),
+    );
+    const { composeArgs, claudeArgs } = buildDockerComposeRunArgs({
+      worktreePath,
+      role: "fix",
+      systemPromptFilePath,
+      allowedToolCommands,
+      maxBudgetUsd,
+      promptFilePath,
+    });
+    const result = await invoke({
+      composeArgs,
+      claudeArgs,
+      promptFilePath,
+      cwd: worktreePath,
+    });
+    return assertInvokeSucceeded(result);
+  };
+}
+
+// implement-review.mjs's runStep3() review() callback -- reviews the actual
+// diff produced by implement/fix, not a written proposal (that is step 2's
+// buildRealReviewProposal, a different schema and a different call site). The
+// diff is computed here (git diff HEAD, i.e. everything implement/fix changed
+// since the worktree was created) and embedded as prompt text, so this role can
+// stay Bash-free like step 2's review -- it judges text, it does not explore
+// the filesystem itself.
+export function buildRealReviewImplementation(
+  context,
+  {
+    invoke = invokeAgent,
+    computeWorkingTreeDiff = defaultComputeWorkingTreeDiff,
+  } = {},
+) {
+  const {
+    worktreePath,
+    systemPromptFilePath,
+    promptDir,
+    maxBudgetUsd = DEFAULT_PLAN_REVIEW_BUDGET_USD,
+  } = context;
+  return async function review(perspective, issue) {
+    const diff = computeWorkingTreeDiff(worktreePath);
+    const promptFilePath = writeTextFile(
+      join(promptDir, `impl-review-${perspective}-${Date.now()}.txt`),
+      [
+        `You are reviewing an implementation from the "${perspective}" perspective, for the following issue.`,
+        "",
+        `Issue #${issue.number}: ${issue.title}`,
+        "",
+        issue.body ?? "",
+        "",
+        "Diff to review:",
+        diff,
+        "",
+        'Respond with exactly one JSON object matching this shape: {"mustFixItems": [<strings, empty array if nothing must be fixed>]}. No other text.',
+      ].join("\n"),
+    );
+    const { composeArgs, claudeArgs } = buildDockerComposeRunArgs({
+      worktreePath,
+      role: "review",
+      systemPromptFilePath,
+      maxBudgetUsd,
+      promptFilePath,
+      jsonSchema: IMPLEMENT_REVIEW_SCHEMA,
     });
     const result = await invoke({
       composeArgs,

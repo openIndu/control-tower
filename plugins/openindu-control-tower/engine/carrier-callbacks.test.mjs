@@ -5,8 +5,11 @@ import { join } from "node:path";
 import test from "node:test";
 
 import {
+  buildRealFix,
   buildRealGenerateProposal,
   buildRealGenerateScopingProposal,
+  buildRealImplement,
+  buildRealReviewImplementation,
   buildRealReviewProposal,
   buildSystemPromptText,
   DEFAULT_PLAN_REVIEW_BUDGET_USD,
@@ -228,6 +231,169 @@ test("buildRealGenerateScopingProposal writes a dedicated scoping prompt, reques
     assert.ok(
       !seenArgs.claudeArgs.includes("--tools"),
       "scoping call must not get Bash",
+    );
+    assert.ok(seenArgs.claudeArgs.includes("--json-schema"));
+  });
+});
+
+test("buildRealImplement writes a prompt naming the issue and the winning proposal, requests the implement role with the given allowlist, and does not ask for a commit", async () => {
+  await withTempDir(async (dir) => {
+    let seenArgs = null;
+    const implement = buildRealImplement(
+      {
+        worktreePath: "/wt",
+        systemPromptFilePath: "/wt/sp.txt",
+        promptDir: dir,
+        allowedToolCommands: ["npm test", "npm run lint"],
+      },
+      {
+        invoke: async (args) => {
+          seenArgs = args;
+          return { success: true, text: null };
+        },
+      },
+    );
+    await implement(
+      { summary: "Add a null check in parseThing" },
+      { number: 9, title: "Crash on empty input", body: "it throws" },
+    );
+    const promptFilePath = join(dir, "implement.txt");
+    assert.equal(existsSync(promptFilePath), true);
+    const text = readFileSync(promptFilePath, "utf8");
+    assert.match(text, /issue #9: Crash on empty input/);
+    assert.match(text, /Add a null check in parseThing/);
+    assert.match(text, /Do not run any git commit/);
+    assert.ok(seenArgs.claudeArgs.includes("--tools"));
+    assert.ok(seenArgs.claudeArgs.includes("npm test"));
+    assert.ok(seenArgs.claudeArgs.includes("npm run lint"));
+  });
+});
+
+test("buildRealImplement throws when the carrier invocation does not succeed", async () => {
+  await withTempDir(async (dir) => {
+    const implement = buildRealImplement(
+      {
+        worktreePath: "/wt",
+        systemPromptFilePath: "/wt/sp.txt",
+        promptDir: dir,
+        allowedToolCommands: [],
+      },
+      {
+        invoke: async () => ({
+          success: false,
+          subtype: "error",
+          errors: ["boom"],
+        }),
+      },
+    );
+    await assert.rejects(
+      () => implement({ summary: "x" }, { number: 1, title: "t", body: "b" }),
+      /did not succeed/,
+    );
+  });
+});
+
+test("buildRealFix (local-gate-failure) includes only the failing command's output in the prompt", async () => {
+  await withTempDir(async (dir) => {
+    let capturedPromptFile = null;
+    const fix = buildRealFix(
+      {
+        worktreePath: "/wt",
+        systemPromptFilePath: "/wt/sp.txt",
+        promptDir: dir,
+        allowedToolCommands: ["npm test"],
+      },
+      {
+        invoke: async (args) => {
+          capturedPromptFile = args.promptFilePath;
+          return { success: true, text: null };
+        },
+      },
+    );
+    await fix(
+      {
+        reason: "local-gate-failure",
+        gateResult: {
+          pass: false,
+          results: [
+            { command: "npm test", pass: false, output: "1 failing" },
+            { command: "npm run lint", pass: true, output: "lint clean" },
+          ],
+        },
+      },
+      { number: 3, title: "Flaky", body: "b" },
+    );
+    const text = readFileSync(capturedPromptFile, "utf8");
+    assert.match(text, /npm test/);
+    assert.match(text, /1 failing/);
+    assert.ok(
+      !text.includes("lint clean"),
+      "a passing gate's output must not be included",
+    );
+  });
+});
+
+test("buildRealFix (review-must-fix) lists every must-fix item in the prompt", async () => {
+  await withTempDir(async (dir) => {
+    let capturedPromptFile = null;
+    const fix = buildRealFix(
+      {
+        worktreePath: "/wt",
+        systemPromptFilePath: "/wt/sp.txt",
+        promptDir: dir,
+        allowedToolCommands: [],
+      },
+      {
+        invoke: async (args) => {
+          capturedPromptFile = args.promptFilePath;
+          return { success: true, text: null };
+        },
+      },
+    );
+    await fix(
+      {
+        reason: "review-must-fix",
+        mustFixItems: ["handle the null case", "add a test"],
+      },
+      { number: 3, title: "t", body: "b" },
+    );
+    const text = readFileSync(capturedPromptFile, "utf8");
+    assert.match(text, /handle the null case/);
+    assert.match(text, /add a test/);
+  });
+});
+
+test("buildRealReviewImplementation computes the working-tree diff, embeds it, and requests a Bash-free review role", async () => {
+  await withTempDir(async (dir) => {
+    let seenArgs = null;
+    const review = buildRealReviewImplementation(
+      {
+        worktreePath: "/wt",
+        systemPromptFilePath: "/wt/sp.txt",
+        promptDir: dir,
+      },
+      {
+        computeWorkingTreeDiff: () => "diff --git a/x.js b/x.js\n+added line",
+        invoke: async (args) => {
+          seenArgs = args;
+          return {
+            success: true,
+            text: JSON.stringify({ mustFixItems: ["fix x"] }),
+          };
+        },
+      },
+    );
+    const result = await review("security", {
+      number: 5,
+      title: "t",
+      body: "b",
+    });
+    assert.deepEqual(result, { mustFixItems: ["fix x"] });
+    const text = readFileSync(seenArgs.promptFilePath, "utf8");
+    assert.match(text, /added line/);
+    assert.ok(
+      !seenArgs.claudeArgs.includes("--tools"),
+      "implementation review must not get Bash",
     );
     assert.ok(seenArgs.claudeArgs.includes("--json-schema"));
   });
