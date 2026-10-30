@@ -11,6 +11,7 @@ import {
   buildRealImplement,
   buildRealReviewImplementation,
   buildRealReviewProposal,
+  buildRealSummarizeAcceptanceCriteria,
   buildSystemPromptText,
   DEFAULT_PLAN_REVIEW_BUDGET_USD,
 } from "./carrier-callbacks.mjs";
@@ -427,5 +428,45 @@ test("buildRealReviewImplementation computes the working-tree diff, embeds it, a
       "implementation review must not get Bash",
     );
     assert.ok(seenArgs.claudeArgs.includes("--json-schema"));
+  });
+});
+
+test("buildRealSummarizeAcceptanceCriteria writes a per-issue checklist prompt, requests a Bash-free plan role, and returns the checklist items unwrapped", async () => {
+  await withTempDir(async (dir) => {
+    let seenArgs = null;
+    const summarize = buildRealSummarizeAcceptanceCriteria(
+      {
+        worktreePath: "/wt",
+        systemPromptFilePath: "/wt/sp.txt",
+        promptDir: dir,
+      },
+      {
+        invoke: async (args) => {
+          seenArgs = args;
+          return {
+            success: true,
+            text: JSON.stringify({
+              checklistItems: ["Log in", "Check the new field"],
+            }),
+          };
+        },
+      },
+    );
+    const result = await summarize({
+      number: 11,
+      title: "Add profile field",
+      body: "Users can set a bio.",
+    });
+    assert.deepEqual(result, ["Log in", "Check the new field"]);
+    const promptFilePath = join(dir, "verify-checklist-11.txt");
+    assert.equal(existsSync(promptFilePath), true);
+    assert.match(
+      readFileSync(promptFilePath, "utf8"),
+      /Issue #11: Add profile field/,
+    );
+    assert.ok(
+      !seenArgs.claudeArgs.includes("--tools"),
+      "verify-checklist call must not get Bash",
+    );
   });
 });
