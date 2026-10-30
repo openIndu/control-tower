@@ -230,6 +230,61 @@ test("runStep4 with resumeState.merged:true skips straight to readback, calling 
   assert.deepEqual(calls, []);
 });
 
+test("runStep4 with stopAfterCiGreen:true stops at PR_GREEN once CI is green, never calling promote or merge", async () => {
+  let promoteCalled = false;
+  let mergeCalled = false;
+  const deps = happyPathDeps({
+    promote: async () => {
+      promoteCalled = true;
+    },
+    merge: async () => {
+      mergeCalled = true;
+    },
+  });
+  const result = await runStep4(
+    {
+      resumeState: {},
+      pauseFilePath: "/nonexistent/.dev-pause",
+      stopAfterCiGreen: true,
+    },
+    deps,
+  );
+  assert.equal(result.outcome, "PR_GREEN");
+  assert.equal(result.prNumber, 100);
+  assert.equal(promoteCalled, false);
+  assert.equal(mergeCalled, false);
+});
+
+test("runStep4 with stopAfterCiGreen:true still reports HUMAN_MERGE_REQUIRED if CI never turns green", async () => {
+  const deps = happyPathDeps({
+    pollChecks: async () => ({
+      settled: true,
+      checks: [{ name: "ci", conclusion: "FAILURE" }],
+    }),
+  });
+  const result = await runStep4(
+    {
+      resumeState: {},
+      pauseFilePath: "/nonexistent/.dev-pause",
+      stopAfterCiGreen: true,
+    },
+    deps,
+  );
+  assert.equal(result.outcome, "HUMAN_MERGE_REQUIRED");
+});
+
+test("runStep4 with stopAfterCiGreen:true but resumeState.merged:true (an earlier run already merged without --no-merge) still finishes through to MERGED, not PR_GREEN", async () => {
+  const result = await runStep4(
+    {
+      resumeState: { openedPr: true, prNumber: 100, merged: true },
+      pauseFilePath: "/nonexistent/.dev-pause",
+      stopAfterCiGreen: true,
+    },
+    happyPathDeps(),
+  );
+  assert.equal(result.outcome, "MERGED");
+});
+
 test("runStep4 with resumeState.openedPr:true but not merged reuses the existing PR number instead of opening a new one", async () => {
   let openPrCalled = false;
   const deps = happyPathDeps({

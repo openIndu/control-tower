@@ -23,7 +23,7 @@ import {
 // persist anything itself -- the caller applies the returned outcome to run-state
 // and saves it; keeping persistence out of here keeps this module a pure sequencer.
 export async function runStep4(
-  { resumeState = {}, pauseFilePath },
+  { resumeState = {}, pauseFilePath, stopAfterCiGreen = false },
   {
     commitAndPush,
     openPr,
@@ -45,6 +45,32 @@ export async function runStep4(
   const prNumber = resumeState.openedPr
     ? resumeState.prNumber
     : (await openPr()).prNumber;
+
+  // --no-merge (spec/005 section 2.1's control switches): stop once CI is
+  // green, never touch promotion/merge at all. A resumed run that already
+  // merged under an earlier invocation that did not pass --no-merge still
+  // finishes the readback/circuit-breaker tail below -- stopAfterCiGreen
+  // only short-circuits the not-yet-merged path, it does not undo a merge
+  // that already happened.
+  if (stopAfterCiGreen && !resumeState.merged) {
+    const ciResult = await runCiRetryLoop({
+      checkCi: async () => {
+        const { settled, checks } = await pollChecks(prNumber);
+        return {
+          green: settled && checks.every((c) => c.conclusion === "SUCCESS"),
+        };
+      },
+      attemptFix: attemptCiFix,
+    });
+    if (ciResult.outcome !== "green") {
+      return {
+        outcome: "HUMAN_MERGE_REQUIRED",
+        prNumber,
+        reason: `CI did not turn green after ${ciResult.attempts} fix attempt(s)`,
+      };
+    }
+    return { outcome: "PR_GREEN", prNumber };
+  }
 
   if (!resumeState.merged) {
     const ciResult = await runCiRetryLoop({
