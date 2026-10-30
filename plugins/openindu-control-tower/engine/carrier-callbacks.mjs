@@ -39,6 +39,17 @@ const REVIEW_SCHEMA = {
   required: ["score"],
 };
 
+// local-service.mjs's generateVerifyChecklist() summarizeAcceptanceCriteria()
+// callback contract: returns the checklistItems array directly (not wrapped),
+// per that function's own usage (`for (const item of checklistItems)`).
+const ACCEPTANCE_CRITERIA_SCHEMA = {
+  type: "object",
+  properties: {
+    checklistItems: { type: "array", items: { type: "string" } },
+  },
+  required: ["checklistItems"],
+};
+
 // implement-review.mjs's runStep3() review() callback contract: {mustFixItems}
 // -- a different field name than step 2's REVIEW_SCHEMA.mustFix, because this
 // reviews the actual diff, not a written proposal, and runStep3 only ever reads
@@ -463,5 +474,52 @@ export function buildRealReviewProposal(
       cwd: worktreePath,
     });
     return parseStructuredResponse(result);
+  };
+}
+
+// local-service.mjs's generateVerifyChecklist() calls this once per merged
+// issue, after step 5's shared verification worktree (the current default
+// branch, every issue already merged in) is up. Bash-free "plan" role, same as
+// the other judgment-only calls -- turning acceptance criteria already in the
+// issue body into checklist items needs no code exploration.
+export function buildRealSummarizeAcceptanceCriteria(
+  context,
+  { invoke = invokeAgent } = {},
+) {
+  const {
+    worktreePath,
+    systemPromptFilePath,
+    promptDir,
+    maxBudgetUsd = DEFAULT_PLAN_REVIEW_BUDGET_USD,
+  } = context;
+  return async function summarizeAcceptanceCriteria(issue) {
+    const promptFilePath = writeTextFile(
+      join(promptDir, `verify-checklist-${issue.number}.txt`),
+      [
+        `Issue #${issue.number}: ${issue.title} has been implemented and merged.`,
+        "Turn its acceptance criteria into a short list of concrete, manually-checkable items a human can tick off while verifying the live result.",
+        "",
+        "Issue body:",
+        issue.body ?? "",
+        "",
+        'Respond with exactly one JSON object matching this shape: {"checklistItems": [<short imperative strings, e.g. "Log in and confirm the new field appears">]}. No other text.',
+      ].join("\n"),
+    );
+    const { composeArgs, claudeArgs } = buildDockerComposeRunArgs({
+      worktreePath,
+      role: "plan",
+      systemPromptFilePath,
+      maxBudgetUsd,
+      promptFilePath,
+      jsonSchema: ACCEPTANCE_CRITERIA_SCHEMA,
+    });
+    const result = await invoke({
+      composeArgs,
+      claudeArgs,
+      promptFilePath,
+      cwd: worktreePath,
+    });
+    const { checklistItems } = parseStructuredResponse(result);
+    return checklistItems;
   };
 }
