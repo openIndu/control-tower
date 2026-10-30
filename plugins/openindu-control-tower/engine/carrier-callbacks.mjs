@@ -316,6 +316,20 @@ function formatFailureDescription(failureDescription) {
       .map((item) => `- ${item}`)
       .join("\n");
   }
+  // step 4's attemptCiFix (PR-F8-6): CI failed after the PR was opened. The
+  // caller is responsible for pre-filtering failingChecks to the non-green
+  // ones before constructing this object (same contract as review-must-fix's
+  // mustFixItems above) -- this function does not re-filter by conclusion
+  // itself. This is the most actionable detail available without fetching
+  // full job logs (not done here, same scope boundary as pollChecks/G2's own
+  // check-name-level granularity).
+  if (failureDescription.reason === "ci-failure") {
+    return failureDescription.failingChecks
+      .map(
+        (c) => `CI check failed: ${c.name} (${c.conclusion ?? "not settled"})`,
+      )
+      .join("\n");
+  }
   return JSON.stringify(failureDescription);
 }
 

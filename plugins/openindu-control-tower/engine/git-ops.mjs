@@ -23,6 +23,16 @@ function defaultExecGit(args, cwd) {
 // backticks/`$(...)`/newlines in an agent-authored commit message cannot be
 // interpreted as commands -- unlike the interactive-shell `git commit -m "..."` case
 // this workspace avoids by hand, this call never passes through /bin/sh or cmd.exe.
+// commitChanges intentionally never stages anything itself (bare `git commit`,
+// no -a) -- this is the explicit staging step step 4's real commitAndPush
+// callback (PR-F8-6) runs first. Staging everything (not a declared-paths
+// subset) is deliberate: G4 already re-checks the resulting diff against the
+// plan's declared scope after the fact, so that is the one place "did this
+// touch something it shouldn't" is decided, not duplicated here.
+export function stageAllChanges(worktreePath, execGit = defaultExecGit) {
+  execGit(["add", "-A"], worktreePath);
+}
+
 export function commitChanges(
   { worktreePath, message, signoff = false },
   execGit = defaultExecGit,

@@ -363,6 +363,37 @@ test("buildRealFix (review-must-fix) lists every must-fix item in the prompt", a
   });
 });
 
+test("buildRealFix (ci-failure) names the failing checks given to it (the caller is responsible for pre-filtering to non-green ones)", async () => {
+  await withTempDir(async (dir) => {
+    let capturedPromptFile = null;
+    const fix = buildRealFix(
+      {
+        worktreePath: "/wt",
+        systemPromptFilePath: "/wt/sp.txt",
+        promptDir: dir,
+        allowedToolCommands: ["npm test"],
+      },
+      {
+        invoke: async (args) => {
+          capturedPromptFile = args.promptFilePath;
+          return { success: true, text: null };
+        },
+      },
+    );
+    await fix(
+      {
+        reason: "ci-failure",
+        attempt: 1,
+        failingChecks: [{ name: "unit-tests", conclusion: "FAILURE" }],
+      },
+      { number: 3, title: "t", body: "b" },
+    );
+    const text = readFileSync(capturedPromptFile, "utf8");
+    assert.match(text, /unit-tests/);
+    assert.match(text, /FAILURE/);
+  });
+});
+
 test("buildRealReviewImplementation computes the working-tree diff, embeds it, and requests a Bash-free review role", async () => {
   await withTempDir(async (dir) => {
     let seenArgs = null;
