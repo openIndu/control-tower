@@ -10,6 +10,7 @@ import {
   commitChanges,
   currentCommitSha,
   pushBranch,
+  stageAllChanges,
 } from "./git-ops.mjs";
 
 function git(args, cwd) {
@@ -80,6 +81,34 @@ test("commitChanges with signoff adds a Signed-off-by trailer", () => {
     );
     const logged = git(["log", "-1", "--format=%B"], scratch);
     assert.ok(logged.includes("Signed-off-by: Tester <t@example.com>"));
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
+test("stageAllChanges stages every untracked and modified file, not a subset", () => {
+  const scratch = mkdtempSync(join(tmpdir(), "git-ops-test-"));
+  try {
+    git(["init", "-q", "-b", "main", scratch]);
+    const execGit = (args, cwd) =>
+      execFileSync(
+        "git",
+        ["-c", "user.email=t@example.com", "-c", "user.name=t", ...args],
+        { cwd, encoding: "utf8" },
+      );
+    writeFileSync(join(scratch, "a.txt"), "a\n");
+    execGit(["add", "."], scratch);
+    execGit(["commit", "-q", "-m", "init"], scratch);
+    writeFileSync(join(scratch, "a.txt"), "a changed\n");
+    writeFileSync(join(scratch, "b.txt"), "b\n");
+
+    stageAllChanges(scratch, execGit);
+
+    const staged = execGit(["diff", "--cached", "--name-only"], scratch)
+      .trim()
+      .split("\n")
+      .sort();
+    assert.deepEqual(staged, ["a.txt", "b.txt"]);
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
