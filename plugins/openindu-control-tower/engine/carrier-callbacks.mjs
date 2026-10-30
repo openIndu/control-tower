@@ -33,6 +33,41 @@ const REVIEW_SCHEMA = {
   required: ["score"],
 };
 
+// tier-resolution.mjs's resolveTier() contract: the scoping proposal must
+// self-declare enough to run review-panel.mjs's baselineTier/applyLlmTierSignal/
+// requiresHumanForL3Action without any other data source (see that module's own
+// comment for why this call's self-assessment doubles as the tier-escalation
+// signal).
+const SCOPING_SCHEMA = {
+  type: "object",
+  properties: {
+    summary: { type: "string" },
+    estimatedLines: { type: "number" },
+    moduleCount: { type: "number" },
+    isDocsOrConfigOnly: { type: "boolean" },
+    touchesSensitiveArea: { type: "boolean" },
+    riskTier: { type: "string", enum: ["L0", "L1", "L2", "L3"] },
+    declaredActionTypes: { type: "array", items: { type: "string" } },
+    suggestedTier: {
+      type: ["string", "null"],
+      enum: ["lite", "standard", "high-risk", null],
+    },
+    confidence: { type: "number" },
+    reviewerStatedUncertain: { type: "boolean" },
+  },
+  required: [
+    "summary",
+    "estimatedLines",
+    "moduleCount",
+    "isDocsOrConfigOnly",
+    "touchesSensitiveArea",
+    "riskTier",
+    "declaredActionTypes",
+    "confidence",
+    "reviewerStatedUncertain",
+  ],
+};
+
 // rule1AnchorText is a fixed literal, not injected -- every carrier invocation in
 // this runner anchors on the same instruction (AGENTS.md Rule #1), so there is
 // nothing for a caller to usefully vary here.
@@ -106,6 +141,63 @@ export function buildRealGenerateProposal(
       maxBudgetUsd,
       promptFilePath,
       jsonSchema: PROPOSAL_SCHEMA,
+    });
+    const result = await invoke({
+      composeArgs,
+      claudeArgs,
+      promptFilePath,
+      cwd: worktreePath,
+    });
+    return parseStructuredResponse(result);
+  };
+}
+
+// tier-resolution.mjs's resolveTier() calls this once per issue, before tier is
+// known -- so there is no PANEL_COMPOSITION strategy name to use yet. "scoping" is
+// a fixed, dedicated strategy name for this one preliminary call, distinct from
+// any of review-panel.mjs's real proposalStrategies.
+export function buildRealGenerateScopingProposal(
+  context,
+  { invoke = invokeAgent } = {},
+) {
+  const {
+    worktreePath,
+    systemPromptFilePath,
+    promptDir,
+    maxBudgetUsd = DEFAULT_PLAN_REVIEW_BUDGET_USD,
+  } = context;
+  return async function generateScopingProposal(issue) {
+    const promptFilePath = writeTextFile(
+      join(promptDir, "proposal-scoping.txt"),
+      [
+        "You are scoping a proposed fix for the following issue before any implementation work happens.",
+        "Estimate its real shape honestly -- this estimate decides how much review scrutiny the work gets.",
+        "",
+        `Issue #${issue.number}: ${issue.title}`,
+        "",
+        issue.body ?? "",
+        "",
+        "Respond with exactly one JSON object with these fields:",
+        '{"summary": "<2-4 sentence outline of the fix>",',
+        ' "estimatedLines": <your best estimate of total changed lines, an integer>,',
+        ' "moduleCount": <how many distinct modules/packages this touches, an integer>,',
+        ' "isDocsOrConfigOnly": <true only if this is purely docs, comments, or config text, no logic change>,',
+        ' "touchesSensitiveArea": <true if this touches auth, secrets, CI config, migrations, or a public API contract>,',
+        ' "riskTier": "<L0, L1, L2, or L3, the org\'s standard risk scale>",',
+        ' "declaredActionTypes": [<any of "prod-deploy", "data-deletion", "permission-change", "secret-change", "prod-sql" that genuinely apply, otherwise an empty array>],',
+        ' "suggestedTier": "<lite, standard, or high-risk -- your own opinion of the right review tier, or null if you have no opinion beyond the facts above>",',
+        ' "confidence": <your confidence in this whole assessment, 0.0 to 1.0>,',
+        ' "reviewerStatedUncertain": <true if you genuinely cannot assess this with the information given>}',
+        "No other text.",
+      ].join("\n"),
+    );
+    const { composeArgs, claudeArgs } = buildDockerComposeRunArgs({
+      worktreePath,
+      role: "plan",
+      systemPromptFilePath,
+      maxBudgetUsd,
+      promptFilePath,
+      jsonSchema: SCOPING_SCHEMA,
     });
     const result = await invoke({
       composeArgs,
