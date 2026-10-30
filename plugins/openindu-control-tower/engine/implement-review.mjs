@@ -6,20 +6,30 @@ const MAX_REVIEW_FIX_ROUNDS = 2;
 
 // spec/005 section 2.1 step 3: "本地确定性门禁（格式 / lint / 测试）先于评审" -- local
 // gates gate whether a review even happens, they are not reviewed themselves. commands
-// are plain shell strings; which commands a repo actually needs is route/repo-specific
-// data this module does not own (no dev.schema.json field for this exists yet -- the
-// caller sources the list, this function only runs whatever list it's given).
-export function runLocalGates(commands, execShell = defaultExecShell) {
+// are plain shell strings, sourced from route.json's dev.checks (confirmed against
+// dev.schema.json: "Also the only Bash commands the implementer role may run" -- the
+// same array is both this function's localGateCommands and carrier-callbacks.mjs's
+// allowedToolCommands). cwd is appended as a trailing, optional third parameter rather
+// than inserted before execShell so every pre-existing call/test (which passes a plain
+// (command) => ... fake) keeps working unchanged -- gates must run inside the issue's
+// worktree, not whatever directory the runner process happens to be in, so the caller
+// (runStep3) always has a worktreePath to supply even though this function's own
+// signature treats it as optional.
+export function runLocalGates(commands, execShell = defaultExecShell, cwd) {
   const results = commands.map((command) => {
-    const { status, output } = execShell(command);
+    const { status, output } = execShell(command, cwd);
     return { command, pass: status === 0, output };
   });
   return { pass: results.every((r) => r.pass), results };
 }
 
-function defaultExecShell(command) {
+function defaultExecShell(command, cwd) {
   try {
-    const output = execFileSync(command, { shell: true, encoding: "utf8" });
+    const output = execFileSync(command, {
+      cwd,
+      shell: true,
+      encoding: "utf8",
+    });
     return { status: 0, output };
   } catch (error) {
     return {
@@ -48,7 +58,7 @@ function renderReviewDocument({ issueNumber, rounds }) {
 // review and fix are all injected -- same pattern as F3's proposal-review.mjs, the
 // real carrier-invocation wiring is assembled when dev.mjs is written.
 export async function runStep3(
-  { issue, tier, winningProposal, localGateCommands },
+  { issue, tier, winningProposal, localGateCommands, worktreePath },
   { implement, review, fix, execShell = defaultExecShell },
 ) {
   await implement(winningProposal, issue);
@@ -56,7 +66,11 @@ export async function runStep3(
   const rounds = [];
 
   for (let round = 0; round < MAX_REVIEW_FIX_ROUNDS; round++) {
-    const gateResult = runLocalGates(localGateCommands, execShell);
+    const gateResult = runLocalGates(
+      localGateCommands,
+      execShell,
+      worktreePath,
+    );
     if (!gateResult.pass) {
       await fix({ reason: "local-gate-failure", gateResult }, issue);
       rounds.push({

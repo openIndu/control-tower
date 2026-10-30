@@ -1,0 +1,121 @@
+import { runStep3 } from "./implement-review.mjs";
+import { runStep4 } from "./pr-and-merge.mjs";
+import { runStep2 } from "./proposal-review.mjs";
+import { resolveTier } from "./tier-resolution.mjs";
+import {
+  createIssueWorktree,
+  issueBranchName,
+  issueWorktreePath,
+} from "./worktree.mjs";
+
+// The complete per-issue pipeline for /dev's main loop: worktree -> tier
+// resolution -> step 2 (propose+review+solidify) -> step 3 (implement+review+
+// fix) -> step 4 (commit/PR/CI/merge). Ties together F3/F4/F5's already-built
+// step orchestrators and F8-3's resolveTier -- no step logic is duplicated
+// here, this module only sequences them and decides what to skip on --resume.
+//
+// run-state.mjs's issue-state shape ({openedPr, prNumber, promotedToReady,
+// merged, ...}) only tracks step 4's progress -- it has no "step 2/3 done"
+// flag, because once a PR is open the implementation is already committed and
+// pushed. So resumeIssueState.openedPr is the single switch this module uses
+// to decide whether to redo tier/step2/step3 at all: redoing them on resume
+// would re-invoke agents pointlessly (wasting budget) and would try to
+// `git worktree add` a path that already exists from the earlier run.
+
+export async function runIssuePipeline(
+  issue,
+  {
+    repoClonePath,
+    worktreeBaseDir,
+    runId,
+    baseRef,
+    devChecks = [],
+    resumeIssueState = {},
+    pauseFilePath,
+    stopAfterCiGreen = false,
+  },
+  {
+    createWorktree = createIssueWorktree,
+    generateScopingProposal,
+    generateProposal,
+    reviewProposal,
+    implement,
+    reviewImplementation,
+    fix,
+    execShell,
+    buildStep4Deps,
+  },
+) {
+  const worktreePath = issueWorktreePath({
+    baseDir: worktreeBaseDir,
+    runId,
+    issueNumber: issue.number,
+  });
+  const branchName = issueBranchName(issue.number);
+
+  let tier = null;
+  let step2Result = null;
+  let step3Result = null;
+
+  if (!resumeIssueState.openedPr) {
+    createWorktree({
+      repoPath: repoClonePath,
+      worktreePath,
+      branchName,
+      baseRef,
+    });
+
+    const tierResult = await resolveTier(issue, generateScopingProposal);
+    if (tierResult.outcome === "HUMAN_REQUIRED") {
+      return {
+        state: "HUMAN_REQUIRED",
+        reason: tierResult.reason,
+        worktreePath,
+        branchName,
+      };
+    }
+    tier = tierResult.tier;
+
+    step2Result = await runStep2(
+      { issue, tier },
+      { generateProposal, reviewProposal },
+    );
+
+    step3Result = await runStep3(
+      {
+        issue,
+        tier,
+        winningProposal: step2Result.winner,
+        localGateCommands: devChecks,
+        worktreePath,
+      },
+      { implement, review: reviewImplementation, fix, execShell },
+    );
+    if (step3Result.outcome === "BLOCKED") {
+      return {
+        state: "BLOCKED",
+        reason: "implementation review exhausted its rounds",
+        document: step3Result.document,
+        worktreePath,
+        branchName,
+        tier,
+      };
+    }
+  }
+
+  const step4Deps = buildStep4Deps({ worktreePath, branchName, issue, tier });
+  const step4Result = await runStep4(
+    { resumeState: resumeIssueState, pauseFilePath, stopAfterCiGreen },
+    step4Deps,
+  );
+
+  return {
+    state: step4Result.outcome,
+    worktreePath,
+    branchName,
+    tier,
+    solutionDocument: step2Result?.document ?? null,
+    implementationReviewDocument: step3Result?.document ?? null,
+    ...step4Result,
+  };
+}
