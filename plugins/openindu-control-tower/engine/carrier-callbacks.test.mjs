@@ -6,6 +6,7 @@ import test from "node:test";
 
 import {
   buildRealGenerateProposal,
+  buildRealGenerateScopingProposal,
   buildRealReviewProposal,
   buildSystemPromptText,
   DEFAULT_PLAN_REVIEW_BUDGET_USD,
@@ -183,5 +184,51 @@ test("buildRealReviewProposal throws when the carrier invocation returns no text
         reviewProposal("security", { id: "p1", strategy: "x", summary: "y" }),
       /no text to parse/,
     );
+  });
+});
+
+test("buildRealGenerateScopingProposal writes a dedicated scoping prompt, requests a Bash-free plan role, and returns the full self-declared scope", async () => {
+  await withTempDir(async (dir) => {
+    let seenArgs = null;
+    const scopingFacts = {
+      summary: "small docs fix",
+      estimatedLines: 5,
+      moduleCount: 1,
+      isDocsOrConfigOnly: true,
+      touchesSensitiveArea: false,
+      riskTier: "L0",
+      declaredActionTypes: [],
+      suggestedTier: null,
+      confidence: 0.95,
+      reviewerStatedUncertain: false,
+    };
+    const generateScopingProposal = buildRealGenerateScopingProposal(
+      {
+        worktreePath: "/wt",
+        systemPromptFilePath: "/wt/sp.txt",
+        promptDir: dir,
+      },
+      {
+        invoke: async (args) => {
+          seenArgs = args;
+          return { success: true, text: JSON.stringify(scopingFacts) };
+        },
+      },
+    );
+    const result = await generateScopingProposal({
+      number: 7,
+      title: "Fix typo",
+      body: "in the README",
+    });
+    assert.deepEqual(result, scopingFacts);
+
+    const promptFilePath = join(dir, "proposal-scoping.txt");
+    assert.equal(existsSync(promptFilePath), true);
+    assert.match(readFileSync(promptFilePath, "utf8"), /Issue #7: Fix typo/);
+    assert.ok(
+      !seenArgs.claudeArgs.includes("--tools"),
+      "scoping call must not get Bash",
+    );
+    assert.ok(seenArgs.claudeArgs.includes("--json-schema"));
   });
 });
