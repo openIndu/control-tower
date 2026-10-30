@@ -42,3 +42,5 @@ ehthumbs.db
 
 # claude plugin eval — auto-generated timestamped report dirs (not the hand-placed results/*.json)
 plugins/openindu-control-tower/evals/results/
+# same, for suites using --eval-dir (results land under <eval dir>/results/ instead of evals/results/)
+plugins/openindu-control-tower/evals/dev-reasoning-layer/results/
