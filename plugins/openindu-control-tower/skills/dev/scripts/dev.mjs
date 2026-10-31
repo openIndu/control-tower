@@ -34,6 +34,17 @@ import {
 } from "../../../engine/route-reader.mjs";
 import { buildRepoRunContext } from "../../../engine/run-context.mjs";
 import {
+  acquireRunLock,
+  createRunState,
+  getIssueState,
+  loadRunState,
+  markMerged,
+  markPrOpened,
+  releaseRunLock,
+  RunLockHeldError,
+  saveRunState,
+} from "../../../engine/run-state.mjs";
+import {
   defaultRepoClonePath,
   defaultWorktreeBaseDir,
   ensureRepoClone,
@@ -235,10 +246,14 @@ export async function runIntake(
 // the full pipeline under a flag that promises zero GitHub writes);
 // --max-total-budget-usd and trace-log persistence (budget-tracking.mjs's
 // withCostTracking / trace-log.mjs's withTraceLogging exist but are not
-// yet wrapped around these callbacks); run-state persistence, the run
-// lock, and --resume (run-state.mjs exists but nothing here reads or
-// writes a state.json yet, so every call passes a fresh {} resumeIssueState
-// and a null resumePrNumber); and step 5/6 sequencing + the final report.
+// yet wrapped around these callbacks); and step 5/6 sequencing + the final
+// report.
+//
+// promotedToReady is deliberately NOT tracked here, unlike openedPr/merged:
+// pr-lifecycle.mjs's promoteToReady is `gh pr ready <N>`, which is a safe
+// no-op on an already-ready PR, so a resumed run re-promoting is harmless
+// -- openedPr/merged get tracked because their real counterparts
+// (commitAndPush+openPr, and an actual merge) are not safe to repeat.
 export async function runRepo(options, overrides = {}) {
   const {
     runIntakeFn = runIntake,
@@ -254,6 +269,10 @@ export async function runRepo(options, overrides = {}) {
     resolveApprovers,
     runPipeline = runIssuePipeline,
     buildStep4DepsFn = buildRealStep4Deps,
+    acquireLock = acquireRunLock,
+    releaseLock = releaseRunLock,
+    loadState = loadRunState,
+    saveState = saveRunState,
   } = overrides;
 
   const intakeResult = await runIntakeFn(options, overrides);
@@ -278,93 +297,141 @@ export async function runRepo(options, overrides = {}) {
   const docsDir = resolveDocsDirFn(repo, runId);
   const devChecks = repoEntry.dev?.checks ?? [];
 
-  ensureClone({ org, repo, clonePath: repoClonePath });
-
-  const systemPromptFilePath = setupPrompt({
-    controlTowerRepoPath,
-    repoClonePath,
-    promptDir: join(worktreeBaseDir, runId),
-  });
-
-  const baseRunContext = buildRepoRunContext(
-    {
-      org,
-      repo,
-      baseRef,
-      defaultBranch,
-      docsDir,
-      controlTowerRepoPath,
-      controlTowerRef,
-      grantPrincipleRef,
-      repoEntry,
-    },
-    resolveApprovers ? { resolveApprovers } : {},
-  );
-
-  // G11 / spec/005 section 2.3-2: a repo with no live dev_grant, or one
-  // whose grant has expired, still gets real PRs opened and reviewed --
-  // it just never auto-merges. --no-merge forces the same stop regardless
-  // of grant state.
-  const authorization = resolveRepoAuthorization(route, repo);
-  const stopAfterCiGreen = options.noMerge || !authorization.authorized;
-  const pauseFilePath = join(
-    resolveRepoDocsDirFn(repo),
-    DEFAULT_PAUSE_FILE_NAME,
-  );
-
-  const results = [];
-  for (const issue of snapshot.issues.slice(0, options.maxIssues ?? 10)) {
-    const worktreePath = issueWorktreePath({
-      baseDir: worktreeBaseDir,
-      runId,
-      issueNumber: issue.number,
-    });
-    // A sibling of the issue's worktree, never nested inside it -- nothing
-    // here should risk being swept up by a `git add -A` run inside the
-    // worktree. Scoped per issue (not shared across the run) because
-    // carrier-callbacks.mjs's buildRealGenerateProposal names its prompt
-    // file only by strategy ("proposal-<strategy>.txt"), with no issue
-    // number in it -- two issues sharing one promptDir could collide.
-    const carrierContext = {
-      worktreePath,
-      systemPromptFilePath,
-      promptDir: join(worktreeBaseDir, runId, `issue-${issue.number}-prompts`),
-      allowedToolCommands: devChecks,
-    };
-    const callbacks = buildCarrierCallbacks(carrierContext);
-    const issueRunContext = {
-      ...baseRunContext,
-      carrier: carrierContext,
-      resumePrNumber: null,
-    };
-
-    const result = await runPipeline(
-      issue,
-      {
-        repoClonePath,
-        worktreeBaseDir,
-        runId,
-        baseRef,
-        devChecks,
-        resumeIssueState: {},
-        pauseFilePath,
-        stopAfterCiGreen,
-      },
-      {
-        ...callbacks,
-        buildStep4Deps: (issueArgs) =>
-          buildStep4DepsFn(issueRunContext, issueArgs),
-      },
-    );
-    results.push({ issueNumber: issue.number, ...result });
+  // spec/005 section 2.1: "同一仓同时只允许一个运行（锁文件）". Repo-scoped
+  // (not run-scoped), so it lives alongside .dev-pause rather than inside
+  // this run's own docsDir -- its job is to block a DIFFERENT run (a
+  // different runId) from starting concurrently against the same repo;
+  // acquireRunLock itself is idempotent for the SAME runId, which is
+  // exactly what --resume needs.
+  const lockFilePath = join(resolveRepoDocsDirFn(repo), ".dev-run.lock");
+  try {
+    acquireLock(lockFilePath, runId);
+  } catch (error) {
+    if (error instanceof RunLockHeldError) {
+      return {
+        outcome: "RUN_LOCKED",
+        exitCode: EXIT_CODES.ARGUMENT_OR_INTERNAL_ERROR,
+        reason: `another run (${error.heldByRunId}) already holds the lock for ${repo}`,
+      };
+    }
+    throw error;
   }
 
-  return {
-    outcome: "RUN_COMPLETE",
-    exitCode: exitCodeForStates(results.map((result) => result.state)),
-    runId,
-    results,
-  };
+  try {
+    ensureClone({ org, repo, clonePath: repoClonePath });
+
+    const systemPromptFilePath = setupPrompt({
+      controlTowerRepoPath,
+      repoClonePath,
+      promptDir: join(worktreeBaseDir, runId),
+    });
+
+    const baseRunContext = buildRepoRunContext(
+      {
+        org,
+        repo,
+        baseRef,
+        defaultBranch,
+        docsDir,
+        controlTowerRepoPath,
+        controlTowerRef,
+        grantPrincipleRef,
+        repoEntry,
+      },
+      resolveApprovers ? { resolveApprovers } : {},
+    );
+
+    // G11 / spec/005 section 2.3-2: a repo with no live dev_grant, or one
+    // whose grant has expired, still gets real PRs opened and reviewed --
+    // it just never auto-merges. --no-merge forces the same stop
+    // regardless of grant state.
+    const authorization = resolveRepoAuthorization(route, repo);
+    const stopAfterCiGreen = options.noMerge || !authorization.authorized;
+    const pauseFilePath = join(
+      resolveRepoDocsDirFn(repo),
+      DEFAULT_PAUSE_FILE_NAME,
+    );
+    const stateFilePath = join(docsDir, "state.json");
+
+    // --resume loads the SAME runId's state back from the SAME docsDir a
+    // prior invocation wrote it to; a fresh run starts from an empty one.
+    let runState = options.resume
+      ? loadState(stateFilePath)
+      : createRunState({ runId, repoName: repo });
+
+    const results = [];
+    for (const issue of snapshot.issues.slice(0, options.maxIssues ?? 10)) {
+      const worktreePath = issueWorktreePath({
+        baseDir: worktreeBaseDir,
+        runId,
+        issueNumber: issue.number,
+      });
+      // A sibling of the issue's worktree, never nested inside it --
+      // nothing here should risk being swept up by a `git add -A` run
+      // inside the worktree. Scoped per issue (not shared across the run)
+      // because carrier-callbacks.mjs's buildRealGenerateProposal names
+      // its prompt file only by strategy ("proposal-<strategy>.txt"),
+      // with no issue number in it -- two issues sharing one promptDir
+      // could collide.
+      const carrierContext = {
+        worktreePath,
+        systemPromptFilePath,
+        promptDir: join(
+          worktreeBaseDir,
+          runId,
+          `issue-${issue.number}-prompts`,
+        ),
+        allowedToolCommands: devChecks,
+      };
+      const callbacks = buildCarrierCallbacks(carrierContext);
+      const resumeIssueState = getIssueState(runState, issue.number);
+      const issueRunContext = {
+        ...baseRunContext,
+        carrier: carrierContext,
+        resumePrNumber: resumeIssueState.prNumber ?? null,
+      };
+
+      const result = await runPipeline(
+        issue,
+        {
+          repoClonePath,
+          worktreeBaseDir,
+          runId,
+          baseRef,
+          devChecks,
+          resumeIssueState,
+          pauseFilePath,
+          stopAfterCiGreen,
+        },
+        {
+          ...callbacks,
+          buildStep4Deps: (issueArgs) =>
+            buildStep4DepsFn(issueRunContext, issueArgs),
+        },
+      );
+
+      if (result.prNumber) {
+        runState = markPrOpened(runState, issue.number, result.prNumber);
+      }
+      if (result.state === "MERGED") {
+        runState = markMerged(runState, issue.number, {
+          mergeSha: result.mergeCommit,
+        });
+      }
+      saveState(stateFilePath, runState);
+
+      results.push({ issueNumber: issue.number, ...result });
+    }
+
+    return {
+      outcome: "RUN_COMPLETE",
+      exitCode: exitCodeForStates(results.map((result) => result.state)),
+      runId,
+      results,
+    };
+  } finally {
+    releaseLock(lockFilePath, runId);
+  }
 }
 
 function usage() {

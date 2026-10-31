@@ -3,6 +3,12 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { EXIT_CODES } from "../../../engine/exit-codes.mjs";
+import {
+  createRunState,
+  markMerged,
+  markPrOpened,
+  RunLockHeldError,
+} from "../../../engine/run-state.mjs";
 import { gatherAdmissionFacts, parseArgs, runIntake, runRepo } from "./dev.mjs";
 
 test("parseArgs requires --repo", () => {
@@ -276,6 +282,12 @@ function baseRunRepoOverrides(overrides = {}) {
     resolveRepoDocsDirFn: (repo) => `/docs/${repo}`,
     resolveApprovers: () => ["@alice"],
     buildStep4DepsFn: () => ({ stepFourDepsBuilt: true }),
+    acquireLock: () => {},
+    releaseLock: () => {},
+    loadState: () => {
+      throw new Error("loadState should not be called for a fresh run");
+    },
+    saveState: () => {},
     ...overrides,
   };
 }
@@ -464,4 +476,146 @@ test("runRepo's buildStep4Deps closure forwards the per-issue issueArgs to the i
   assert.equal(typeof capturedRunContext.carrier.promptDir, "string");
   assert.equal(capturedIssueArgs.issue.number, 1);
   assert.equal(capturedIssueArgs.tier, "T1");
+});
+
+test("runRepo returns RUN_LOCKED and never touches the pipeline when another run already holds the lock", async () => {
+  let pipelineCalled = false;
+  const result = await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      runIntakeFn: async () => fakeIntakeComplete(),
+      acquireLock: () => {
+        throw new RunLockHeldError("run-other");
+      },
+      runPipeline: async () => {
+        pipelineCalled = true;
+        return { state: "NO_ACTION" };
+      },
+    }),
+  );
+  assert.equal(result.outcome, "RUN_LOCKED");
+  assert.match(result.reason, /run-other/);
+  assert.equal(pipelineCalled, false);
+});
+
+test("runRepo releases the lock even when the pipeline throws", async () => {
+  let released = false;
+  await assert.rejects(
+    runRepo(
+      { org: "openIndu", repo: "openIndu-backend" },
+      baseRunRepoOverrides({
+        runIntakeFn: async () => fakeIntakeComplete(),
+        releaseLock: () => {
+          released = true;
+        },
+        runPipeline: async () => {
+          throw new Error("boom");
+        },
+      }),
+    ),
+    /boom/,
+  );
+  assert.equal(released, true);
+});
+
+test("runRepo starts a fresh run with an empty run-state (never calls loadState) when --resume is not passed", async () => {
+  let savedStates = [];
+  await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      runIntakeFn: async () => fakeIntakeComplete({ issueCount: 1 }),
+      saveState: (path, state) => savedStates.push({ path, state }),
+      runPipeline: async () => ({ state: "NO_ACTION" }),
+    }),
+  );
+  // baseRunRepoOverrides' loadState throws if called -- reaching this
+  // assertion at all already proves it was not called for a fresh run.
+  assert.equal(savedStates.length, 1);
+  assert.equal(savedStates[0].state.runId, "run-1");
+  assert.deepEqual(savedStates[0].state.issues, {});
+});
+
+test("runRepo loads existing run-state via --resume, and feeds that issue's prior prNumber into both resumeIssueState and the runContext override", async () => {
+  const priorState = markPrOpened(
+    createRunState({ runId: "run-1", repoName: "openIndu-backend" }),
+    1,
+    42,
+  );
+  let seenResumeIssueState;
+  let seenRunContext;
+  await runRepo(
+    { org: "openIndu", repo: "openIndu-backend", resume: "run-1" },
+    baseRunRepoOverrides({
+      runIntakeFn: async () => fakeIntakeComplete({ issueCount: 1 }),
+      loadState: () => priorState,
+      buildStep4DepsFn: (runContext) => {
+        seenRunContext = runContext;
+        return { stepFourDepsBuilt: true };
+      },
+      runPipeline: async (issue, pipelineOptions, deps) => {
+        seenResumeIssueState = pipelineOptions.resumeIssueState;
+        deps.buildStep4Deps({ issue });
+        return { state: "NO_ACTION" };
+      },
+    }),
+  );
+  assert.equal(seenResumeIssueState.openedPr, true);
+  assert.equal(seenResumeIssueState.prNumber, 42);
+  assert.equal(seenRunContext.resumePrNumber, 42);
+});
+
+test("runRepo persists markPrOpened then markMerged into the saved run-state as an issue opens a PR and merges", async () => {
+  let lastSaved;
+  await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      runIntakeFn: async () => fakeIntakeComplete({ issueCount: 1 }),
+      saveState: (path, state) => {
+        lastSaved = state;
+      },
+      runPipeline: async () => ({
+        state: "MERGED",
+        prNumber: 7,
+        mergeCommit: "abc123",
+      }),
+    }),
+  );
+  const expected = markMerged(
+    markPrOpened(
+      createRunState({
+        runId: "run-1",
+        repoName: "openIndu-backend",
+        startedAt: lastSaved.startedAt,
+      }),
+      1,
+      7,
+    ),
+    1,
+    { mergeSha: "abc123", mergedAt: lastSaved.issues[1].mergedAt },
+  );
+  assert.deepEqual(lastSaved, expected);
+});
+
+test("runRepo does not re-mark an issue's PR as freshly opened on resume when resumeIssueState already has openedPr", async () => {
+  const priorState = markPrOpened(
+    createRunState({ runId: "run-1", repoName: "openIndu-backend" }),
+    1,
+    42,
+  );
+  let lastSaved;
+  await runRepo(
+    { org: "openIndu", repo: "openIndu-backend", resume: "run-1" },
+    baseRunRepoOverrides({
+      runIntakeFn: async () => fakeIntakeComplete({ issueCount: 1 }),
+      loadState: () => priorState,
+      saveState: (path, state) => {
+        lastSaved = state;
+      },
+      runPipeline: async () => ({ state: "PR_GREEN", prNumber: 42 }),
+    }),
+  );
+  // Still marked opened (unchanged), and no spurious re-write of openedPr's
+  // bookkeeping -- the saved state after this call equals the prior state
+  // exactly (PR_GREEN doesn't trigger markMerged).
+  assert.deepEqual(lastSaved, priorState);
 });
