@@ -18,6 +18,10 @@ import {
   setupSystemPrompt,
   withTrackingWrappers,
 } from "../../../engine/carrier-setup.mjs";
+import {
+  PositiveControlFailedError,
+  runPositiveControlsOrThrow,
+} from "../../../engine/carrier/run-agent.mjs";
 import { DEFAULT_PAUSE_FILE_NAME } from "../../../engine/dev-pause.mjs";
 import {
   resolveDocsBaseDir,
@@ -91,6 +95,17 @@ export const CONTROL_TOWER_REPO_ROOT = join(
   "..",
   "..",
   "..",
+);
+
+// Where engine/carrier/docker-compose.yml lives -- run-agent.mjs's
+// runPositiveControlsOrThrow needs this as its cwd so `docker compose run`
+// picks up that compose file (spec/005 section 6 criterion #3).
+const CARRIER_DIR = join(
+  CONTROL_TOWER_REPO_ROOT,
+  "plugins",
+  "openindu-control-tower",
+  "engine",
+  "carrier",
 );
 
 // spec/005 section 2.1: "`./dev <repo>`（工作区启动器）与 `/dev <repo>`（技能）调用同一
@@ -298,6 +313,8 @@ export async function runRepo(options, overrides = {}) {
     resolveRepoDocsDirFn = resolveRepoDocsDir,
     generateRunId = () => randomUUID(),
     setupPrompt = setupSystemPrompt,
+    runPositiveControls = runPositiveControlsOrThrow,
+    carrierDir = CARRIER_DIR,
     controlTowerRepoPath = CONTROL_TOWER_REPO_ROOT,
     controlTowerRef = "main",
     grantPrincipleRef = "main",
@@ -365,6 +382,29 @@ export async function runRepo(options, overrides = {}) {
 
   try {
     ensureClone({ org, repo, clonePath: repoClonePath });
+
+    // spec/005 section 6 criterion #3 / section 2.6: isolation positive
+    // controls run once per run, inside the same carrier the agent itself
+    // uses, before the first real carrier call -- including a dry run,
+    // which still invokes the real carrier for step 2's scoping/proposal/
+    // review (it only stops short of step 3). runPositiveControlsOrThrow
+    // throws rather than returning a soft verdict specifically so a caller
+    // cannot accidentally proceed past a failed isolation check; caught
+    // here and turned into exit 5 (unattended run refused, no auto-merge),
+    // never treated as a retryable error.
+    try {
+      runPositiveControls(carrierDir);
+    } catch (error) {
+      if (error instanceof PositiveControlFailedError) {
+        return {
+          outcome: "ENVIRONMENT_CHECK_FAILED",
+          exitCode: EXIT_CODES.ENVIRONMENT_CHECK_FAILED,
+          reason: error.message,
+          output: error.output,
+        };
+      }
+      throw error;
+    }
 
     const systemPromptFilePath = setupPrompt({
       controlTowerRepoPath,

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { join } from "node:path";
 import test from "node:test";
 
+import { PositiveControlFailedError } from "../../../engine/carrier/run-agent.mjs";
 import { EXIT_CODES } from "../../../engine/exit-codes.mjs";
 import { PointsAtProductionError } from "../../../engine/local-service.mjs";
 import {
@@ -290,6 +291,12 @@ function baseRunRepoOverrides(overrides = {}) {
   return {
     ensureClone: () => ({ cloned: false }),
     worktreeBaseDir: "/base",
+    // Stubbed to the "isolated as required" shape runPositiveControlsOrThrow
+    // itself returns on success -- every test except the ones that
+    // specifically exercise this check overrides it, so none of them
+    // accidentally shell out to real `docker compose run`.
+    runPositiveControls: () => ({ allControlsFailed: true, output: "" }),
+    carrierDir: "/fake/carrier",
     setupPrompt: () => "/base/run-1/system-prompt.txt",
     generateRunId: () => "run-1",
     resolveDocsDirFn: (repo, runId) => `/docs/${repo}/${runId}`,
@@ -542,6 +549,83 @@ test("runRepo sets stopAfterCiGreen=false when the repo has a live grant and --n
     }),
   );
   assert.equal(seenStop, false);
+});
+
+test("runRepo calls runPositiveControls with carrierDir once per run, before the per-issue loop ever starts", async () => {
+  const calls = [];
+  let pipelineCalls = 0;
+  await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      carrierDir: "/real/carrier/dir",
+      runPositiveControls: (dir) => {
+        calls.push(dir);
+        return { allControlsFailed: true, output: "" };
+      },
+      runIntakeFn: async () => fakeIntakeComplete({ issueCount: 2 }),
+      runPipeline: async () => {
+        pipelineCalls += 1;
+        return { state: "NO_ACTION" };
+      },
+    }),
+  );
+  assert.deepEqual(calls, ["/real/carrier/dir"]);
+  assert.equal(pipelineCalls, 2);
+});
+
+test("runRepo returns ENVIRONMENT_CHECK_FAILED with exit code 5 when a positive control unexpectedly passes, and never starts the per-issue loop", async () => {
+  let pipelineCalled = false;
+  const result = await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      runPositiveControls: () => {
+        throw new PositiveControlFailedError(
+          "control 3 (docker socket) unexpectedly succeeded",
+        );
+      },
+      runIntakeFn: async () => fakeIntakeComplete(),
+      runPipeline: async () => {
+        pipelineCalled = true;
+        return { state: "NO_ACTION" };
+      },
+    }),
+  );
+  assert.equal(result.outcome, "ENVIRONMENT_CHECK_FAILED");
+  assert.equal(result.exitCode, EXIT_CODES.ENVIRONMENT_CHECK_FAILED);
+  assert.match(result.output, /docker socket/);
+  assert.equal(pipelineCalled, false);
+});
+
+test("runRepo releases the run lock even when the positive-control check fails", async () => {
+  let released = false;
+  await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      runPositiveControls: () => {
+        throw new PositiveControlFailedError("unexpectedly succeeded");
+      },
+      runIntakeFn: async () => fakeIntakeComplete(),
+      releaseLock: () => {
+        released = true;
+      },
+    }),
+  );
+  assert.equal(released, true);
+});
+
+test("runRepo does not swallow a non-isolation error from runPositiveControls", async () => {
+  await assert.rejects(
+    runRepo(
+      { org: "openIndu", repo: "openIndu-backend" },
+      baseRunRepoOverrides({
+        runPositiveControls: () => {
+          throw new Error("docker is not installed on this machine");
+        },
+        runIntakeFn: async () => fakeIntakeComplete(),
+      }),
+    ),
+    /docker is not installed/,
+  );
 });
 
 test("runRepo's exit code reflects the batch of issue outcomes via exitCodeForStates (PARTIAL when any issue is BLOCKED)", async () => {
