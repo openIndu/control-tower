@@ -10,7 +10,14 @@ import {
   markPrOpened,
   RunLockHeldError,
 } from "../../../engine/run-state.mjs";
-import { gatherAdmissionFacts, parseArgs, runIntake, runRepo } from "./dev.mjs";
+import {
+  gatherAdmissionFacts,
+  parseArgs,
+  runAckCommand,
+  runBuildCommand,
+  runIntake,
+  runRepo,
+} from "./dev.mjs";
 
 test("parseArgs requires --repo", () => {
   assert.throws(() => parseArgs([]), /--repo requires a value/);
@@ -947,4 +954,218 @@ test("runRepo does not re-mark an issue's PR as freshly opened on resume when re
   // bookkeeping -- the saved state after this call equals the prior state
   // exactly (PR_GREEN doesn't trigger markMerged).
   assert.deepEqual(lastSaved, priorState);
+});
+
+function runStateWithIssues(issues) {
+  return { ...createRunState({ runId: "run-1", repoName: "r" }), issues };
+}
+
+test("runAckCommand acks every merged-but-unacked issue in the run, skipping ones already acked or never merged, and saves once", async () => {
+  const state = runStateWithIssues({
+    1: { merged: true, mergedAt: "2026-10-30T00:00:00.000Z", ackAt: null },
+    2: {
+      merged: true,
+      mergedAt: "2026-10-29T00:00:00.000Z",
+      ackAt: "2026-10-29T01:00:00.000Z",
+    },
+    3: { merged: false, mergedAt: null, ackAt: null },
+  });
+  let savedPath;
+  let savedState;
+  const result = await runAckCommand("run-1", {
+    findRunStateFile: () => ({
+      repo: "r",
+      stateFilePath: "/docs/r/state.json",
+    }),
+    loadState: () => state,
+    saveState: (path, newState) => {
+      savedPath = path;
+      savedState = newState;
+    },
+    fetchRoute: () =>
+      '{"repos": {"r": {"type": "backend"}}, "dev_grants": [{"repos": ["r"], "approved_by": "alice"}]}',
+    getCurrentGhLogin: () => "alice",
+    isInteractiveTerminal: () => true,
+  });
+
+  assert.equal(result.outcome, "ACK_COMPLETE");
+  assert.equal(result.exitCode, EXIT_CODES.OK);
+  assert.deepEqual(result.ackedIssueNumbers, [1]);
+  assert.equal(savedPath, "/docs/r/state.json");
+  assert.equal(savedState.issues["1"].ackAt, result.ackAt);
+  assert.equal(savedState.issues["2"].ackAt, "2026-10-29T01:00:00.000Z");
+  assert.equal(savedState.issues["3"].ackAt, null);
+});
+
+test("runAckCommand returns ARGUMENT_ERROR and never calls saveState when no run matches the given run-id", async () => {
+  let saveCalled = false;
+  const result = await runAckCommand("nonexistent-run", {
+    findRunStateFile: () => null,
+    saveState: () => {
+      saveCalled = true;
+    },
+  });
+  assert.equal(result.outcome, "ARGUMENT_ERROR");
+  assert.match(result.reason, /no run found/);
+  assert.equal(saveCalled, false);
+});
+
+test("runAckCommand picks the dev_grants entry whose repos list actually includes this run's repo, not just the first grant in the array", async () => {
+  const state = runStateWithIssues({
+    1: { merged: true, mergedAt: "2026-10-30T00:00:00.000Z", ackAt: null },
+  });
+  const result = await runAckCommand("run-1", {
+    findRunStateFile: () => ({
+      repo: "r",
+      stateFilePath: "/docs/r/state.json",
+    }),
+    loadState: () => state,
+    saveState: () => {},
+    fetchRoute: () =>
+      JSON.stringify({
+        repos: { r: { type: "backend" } },
+        dev_grants: [
+          { repos: ["other-repo"], approved_by: "bob" },
+          { repos: ["r"], approved_by: "alice" },
+        ],
+      }),
+    getCurrentGhLogin: () => "alice",
+    isInteractiveTerminal: () => true,
+  });
+  assert.equal(result.outcome, "ACK_COMPLETE");
+});
+
+test("runAckCommand returns ARGUMENT_ERROR when no dev_grants entry authorizes the run's repo", async () => {
+  const result = await runAckCommand("run-1", {
+    findRunStateFile: () => ({
+      repo: "r",
+      stateFilePath: "/docs/r/state.json",
+    }),
+    fetchRoute: () => '{"repos": {"r": {"type": "backend"}}, "dev_grants": []}',
+  });
+  assert.equal(result.outcome, "ARGUMENT_ERROR");
+  assert.match(result.reason, /no dev_grants entry authorizes r/);
+});
+
+test("runAckCommand rejects (and never loads or saves state) when the current gh login does not match approved_by", async () => {
+  let loadCalled = false;
+  let saveCalled = false;
+  const result = await runAckCommand("run-1", {
+    findRunStateFile: () => ({
+      repo: "r",
+      stateFilePath: "/docs/r/state.json",
+    }),
+    loadState: () => {
+      loadCalled = true;
+      return runStateWithIssues({});
+    },
+    saveState: () => {
+      saveCalled = true;
+    },
+    fetchRoute: () =>
+      '{"repos": {"r": {"type": "backend"}}, "dev_grants": [{"repos": ["r"], "approved_by": "alice"}]}',
+    getCurrentGhLogin: () => "mallory",
+    isInteractiveTerminal: () => true,
+  });
+  assert.equal(result.outcome, "ACK_REJECTED");
+  assert.equal(result.exitCode, EXIT_CODES.ARGUMENT_OR_INTERNAL_ERROR);
+  assert.match(result.reason, /not the approver/);
+  assert.equal(loadCalled, false);
+  assert.equal(saveCalled, false);
+});
+
+test("runAckCommand rejects when not run in an interactive terminal", async () => {
+  const result = await runAckCommand("run-1", {
+    findRunStateFile: () => ({
+      repo: "r",
+      stateFilePath: "/docs/r/state.json",
+    }),
+    fetchRoute: () =>
+      '{"repos": {"r": {"type": "backend"}}, "dev_grants": [{"repos": ["r"], "approved_by": "alice"}]}',
+    getCurrentGhLogin: () => "alice",
+    isInteractiveTerminal: () => false,
+  });
+  assert.equal(result.outcome, "ACK_REJECTED");
+  assert.match(result.reason, /interactive terminal/);
+});
+
+test("runBuildCommand returns ARGUMENT_ERROR when the repo is not in route.json", async () => {
+  const result = await runBuildCommand(
+    "ghost-repo",
+    {},
+    { fetchRoute: () => '{"repos": {}}' },
+  );
+  assert.equal(result.outcome, "ARGUMENT_ERROR");
+  assert.match(result.reason, /ghost-repo is not in route\.json/);
+});
+
+test("runBuildCommand reports N/A (and never calls runAggregateRelease) when the repo has no dev.build configured", async () => {
+  let releaseCalled = false;
+  const result = await runBuildCommand(
+    "r",
+    { confirm: true },
+    {
+      fetchRoute: () => '{"repos": {"r": {"type": "backend"}}}',
+      runAggregateRelease: () => {
+        releaseCalled = true;
+        return { imageTag: "x" };
+      },
+    },
+  );
+  assert.equal(result.outcome, "BUILD_N/A");
+  assert.equal(result.exitCode, EXIT_CODES.PARTIAL);
+  assert.equal(releaseCalled, false);
+});
+
+test("runBuildCommand reports AWAITING_CONFIRMATION (and never calls runAggregateRelease) when ready but not confirmed", async () => {
+  let releaseCalled = false;
+  const result = await runBuildCommand(
+    "r",
+    { confirm: false },
+    {
+      fetchRoute: () =>
+        '{"repos": {"r": {"type": "backend", "dev": {"build": {}}}}}',
+      runAggregateRelease: () => {
+        releaseCalled = true;
+        return { imageTag: "x" };
+      },
+    },
+  );
+  assert.equal(result.outcome, "BUILD_AWAITING_CONFIRMATION");
+  assert.equal(result.exitCode, EXIT_CODES.PARTIAL);
+  assert.equal(releaseCalled, false);
+});
+
+test("runBuildCommand calls runAggregateRelease and reports BUILT when ready and confirmed", async () => {
+  const calls = [];
+  const result = await runBuildCommand(
+    "r",
+    { confirm: true },
+    {
+      fetchRoute: () =>
+        '{"repos": {"r": {"type": "backend", "dev": {"build": {}}}}}',
+      runAggregateRelease: (args) => {
+        calls.push(args);
+        return { imageTag: "sha-abc123" };
+      },
+    },
+  );
+  assert.equal(result.outcome, "BUILD_BUILT");
+  assert.equal(result.exitCode, EXIT_CODES.OK);
+  assert.equal(result.imageTag, "sha-abc123");
+  assert.deepEqual(calls, [{ repoName: "r", devBuildConfig: {} }]);
+});
+
+test("runBuildCommand reports PENDING for an aggregate-routed build regardless of confirm, since RULE 11 step ③ cannot be checked from here", async () => {
+  const result = await runBuildCommand(
+    "r",
+    { confirm: true },
+    {
+      fetchRoute: () =>
+        '{"repos": {"r": {"type": "backend", "dev": {"build": {"aggregate": true}}}}}',
+      runAggregateRelease: () => ({ imageTag: "x" }),
+    },
+  );
+  assert.equal(result.outcome, "BUILD_PENDING");
+  assert.equal(result.exitCode, EXIT_CODES.PARTIAL);
 });

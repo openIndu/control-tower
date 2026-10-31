@@ -2,9 +2,11 @@
 
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { existsSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { evaluateAck } from "../../../engine/ack.mjs";
 import {
   ADMISSION_RESULTS,
   evaluateAdmission,
@@ -18,6 +20,7 @@ import {
 } from "../../../engine/carrier-setup.mjs";
 import { DEFAULT_PAUSE_FILE_NAME } from "../../../engine/dev-pause.mjs";
 import {
+  resolveDocsBaseDir,
   resolveDocsDir,
   resolveRepoDocsDir,
 } from "../../../engine/docs-dir.mjs";
@@ -38,6 +41,7 @@ import {
 import {
   evaluateBuildReadiness,
   renderRule11StatusChecklist,
+  runBuildStep,
 } from "../../../engine/build-step.mjs";
 import {
   createVerificationWorktree,
@@ -59,6 +63,7 @@ import {
   createRunState,
   getIssueState,
   loadRunState,
+  markAcked,
   markMerged,
   markPrOpened,
   releaseRunLock,
@@ -278,10 +283,6 @@ export async function runIntake(
 // so isDryRun skips loadState/createRunState/getIssueState/markPrOpened/
 // markMerged/saveState entirely, and --dry-run with --resume together is
 // refused explicitly below rather than silently ignoring --resume.
-//
-// Deliberately NOT yet wired here, each a stated gap rather than a silent
-// one: ./dev ack and ./dev build's own subcommand dispatch (main()'s
-// argument parsing only supports the default repo-run mode today).
 //
 // promotedToReady is deliberately NOT tracked here, unlike openedPr/merged:
 // pr-lifecycle.mjs's promoteToReady is `gh pr ready <N>`, which is a safe
@@ -655,12 +656,192 @@ export async function runRepo(options, overrides = {}) {
   }
 }
 
+// Scans every repo's dev-runs directory for runId, since ./dev ack <run-id>
+// (spec/005 section 2.1) takes only a run-id -- the caller is not expected
+// to already know which repo it belongs to. Returns null rather than
+// throwing on a miss; runAckCommand turns that into an ARGUMENT_ERROR.
+function defaultFindRunStateFile(runId, env = process.env) {
+  const baseDir = resolveDocsBaseDir(env);
+  if (!existsSync(baseDir)) return null;
+  for (const repo of readdirSync(baseDir)) {
+    const stateFilePath = join(baseDir, repo, "dev-runs", runId, "state.json");
+    if (existsSync(stateFilePath)) {
+      return { repo, stateFilePath };
+    }
+  }
+  return null;
+}
+
+function defaultGetCurrentGhLogin() {
+  return ghApi("user", ".login");
+}
+
+function defaultIsInteractiveTerminal() {
+  return Boolean(process.stdout.isTTY);
+}
+
+// spec/005 section 2.3-6: "./dev ack <run-id>" -- the approved_by maintainer
+// confirms a run's merges by running this themself, in an interactive
+// terminal, under the matching gh login. Acks every issue in the run that
+// has merged but not yet been acked (ack.mjs's evaluateAck/markAcked are
+// per-issue -- see run-state.mjs's issue-state shape -- so one invocation
+// naturally covers every merge this run made, not just one issue).
+export async function runAckCommand(
+  runId,
+  {
+    findRunStateFile = defaultFindRunStateFile,
+    loadState = loadRunState,
+    saveState = saveRunState,
+    fetchRoute = (ref) => fetchRouteText(ref),
+    getCurrentGhLogin = defaultGetCurrentGhLogin,
+    isInteractiveTerminal = defaultIsInteractiveTerminal,
+  } = {},
+) {
+  const found = findRunStateFile(runId);
+  if (!found) {
+    return {
+      outcome: "ARGUMENT_ERROR",
+      exitCode: EXIT_CODES.ARGUMENT_OR_INTERNAL_ERROR,
+      reason: `no run found with id ${runId}`,
+    };
+  }
+  const { repo, stateFilePath } = found;
+
+  const route = parseRoute(fetchRoute("main"));
+  const grant = (route.dev_grants ?? []).find((g) => g.repos?.includes(repo));
+  if (!grant) {
+    return {
+      outcome: "ARGUMENT_ERROR",
+      exitCode: EXIT_CODES.ARGUMENT_OR_INTERNAL_ERROR,
+      reason: `no dev_grants entry authorizes ${repo} -- nothing to ack`,
+    };
+  }
+
+  const ackResult = evaluateAck({
+    currentGhLogin: getCurrentGhLogin(),
+    approvedBy: grant.approved_by,
+    isInteractiveTerminal: isInteractiveTerminal(),
+  });
+  if (!ackResult.accepted) {
+    return {
+      outcome: "ACK_REJECTED",
+      exitCode: EXIT_CODES.ARGUMENT_OR_INTERNAL_ERROR,
+      reason: ackResult.reason,
+    };
+  }
+
+  let state = loadState(stateFilePath);
+  const ackedIssueNumbers = [];
+  for (const [issueNumber, issueState] of Object.entries(state.issues ?? {})) {
+    if (issueState.mergedAt && !issueState.ackAt) {
+      state = markAcked(state, issueNumber, { ackAt: ackResult.ackAt });
+      ackedIssueNumbers.push(Number(issueNumber));
+    }
+  }
+  saveState(stateFilePath, state);
+
+  return {
+    outcome: "ACK_COMPLETE",
+    exitCode: EXIT_CODES.OK,
+    runId,
+    repo,
+    ackedIssueNumbers,
+    ackAt: ackResult.ackAt,
+  };
+}
+
+function defaultRunAggregateRelease() {
+  throw new Error(
+    "runAggregateRelease has no real implementation in control-tower yet -- build-step.mjs's own header note says that mechanism lives in the aggregate repo, out of scope here. Inject a real callback to actually build.",
+  );
+}
+
+// spec/005 section 2.1/2.3-6: "./dev build <repo>" -- step 6, a separate
+// subcommand from the automatic per-issue loop, gated on userConfirmed
+// (build-step.mjs's runBuildStep itself refuses to build without it).
+// rule11Status is passed as undefined for the same reason runRepo's own
+// step-6 wiring does (see dev.mjs's RUN_COMPLETE block): whether RULE 11
+// step ③ has merged is a cross-repo fact this runner cannot check from
+// here, and evaluateBuildReadiness's own optional-chained read already
+// turns that into a conservative PENDING rather than a wrong
+// READY_TO_BUILD.
+export async function runBuildCommand(
+  repo,
+  { confirm = false } = {},
+  overrides = {},
+) {
+  const {
+    fetchRoute = (ref) => fetchRouteText(ref),
+    runAggregateRelease = defaultRunAggregateRelease,
+  } = overrides;
+
+  const route = parseRoute(fetchRoute("main"));
+  const repoEntry = route.repos?.[repo];
+  if (!repoEntry) {
+    return {
+      outcome: "ARGUMENT_ERROR",
+      exitCode: EXIT_CODES.ARGUMENT_OR_INTERNAL_ERROR,
+      reason: `${repo} is not in route.json`,
+    };
+  }
+
+  const result = await runBuildStep(
+    {
+      repoName: repo,
+      devBuildConfig: repoEntry.dev?.build ?? null,
+      rule11Status: undefined,
+      userConfirmed: confirm,
+    },
+    { runAggregateRelease },
+  );
+
+  return {
+    outcome: `BUILD_${result.status}`,
+    exitCode: result.status === "BUILT" ? EXIT_CODES.OK : EXIT_CODES.PARTIAL,
+    ...result,
+  };
+}
+
 function usage() {
-  return "Usage: dev.mjs --repo NAME [--org openIndu] [--dry-run] [--resume RUN_ID] [--no-merge] [--max-issues N] [--max-total-budget-usd N]";
+  return [
+    "Usage: dev.mjs --repo NAME [--org openIndu] [--dry-run] [--resume RUN_ID] [--no-merge] [--max-issues N] [--max-total-budget-usd N]",
+    "       dev.mjs ack <run-id>",
+    "       dev.mjs build <repo> [--confirm]",
+  ].join("\n");
 }
 
 async function main() {
-  const options = parseArgs(process.argv.slice(2));
+  const argv = process.argv.slice(2);
+
+  if (argv[0] === "ack") {
+    const runId = argv[1];
+    if (!runId) {
+      console.error(usage());
+      process.exitCode = EXIT_CODES.ARGUMENT_OR_INTERNAL_ERROR;
+      return;
+    }
+    const result = await runAckCommand(runId);
+    console.log(JSON.stringify(result, null, 2));
+    process.exitCode = result.exitCode ?? EXIT_CODES.OK;
+    return;
+  }
+
+  if (argv[0] === "build") {
+    const repo = argv[1];
+    if (!repo) {
+      console.error(usage());
+      process.exitCode = EXIT_CODES.ARGUMENT_OR_INTERNAL_ERROR;
+      return;
+    }
+    const result = await runBuildCommand(repo, {
+      confirm: argv.includes("--confirm"),
+    });
+    console.log(JSON.stringify(result, null, 2));
+    process.exitCode = result.exitCode ?? EXIT_CODES.OK;
+    return;
+  }
+
+  const options = parseArgs(argv);
   if (options.help) {
     console.log(usage());
     return;

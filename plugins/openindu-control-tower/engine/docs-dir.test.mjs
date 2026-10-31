@@ -6,12 +6,24 @@ import test from "node:test";
 
 import {
   DocumentAlreadyExistsError,
+  resolveDocsBaseDir,
   resolveDocsDir,
   resolveRepoDocsDir,
   reviewDocFileName,
   solutionDocFileName,
   writeIssueDocument,
 } from "./docs-dir.mjs";
+
+test("resolveDocsBaseDir is the direct parent resolveRepoDocsDir joins the repo name onto, for both the default and a custom OPENINDU_DOCS_DIR", () => {
+  assert.equal(
+    resolveRepoDocsDir("backend", {}),
+    join(resolveDocsBaseDir({}), "backend"),
+  );
+  assert.equal(
+    resolveDocsBaseDir({ OPENINDU_DOCS_DIR: "/custom/docs" }),
+    "/custom/docs",
+  );
+});
 
 test("resolveRepoDocsDir is the repo-level parent of resolveDocsDir's run-scoped path, for both the default and a custom OPENINDU_DOCS_DIR", () => {
   assert.equal(
