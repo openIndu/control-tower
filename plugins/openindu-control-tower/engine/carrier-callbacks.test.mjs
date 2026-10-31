@@ -330,6 +330,7 @@ test("buildRealGenerateScopingProposal writes a dedicated scoping prompt, reques
       suggestedTier: null,
       confidence: 0.95,
       reviewerStatedUncertain: false,
+      acceptanceCriteriaCrowdDerived: false,
     };
     const generateScopingProposal = buildRealGenerateScopingProposal(
       {
@@ -354,6 +355,10 @@ test("buildRealGenerateScopingProposal writes a dedicated scoping prompt, reques
     const promptFilePath = join(dir, "proposal-scoping.txt");
     assert.equal(existsSync(promptFilePath), true);
     assert.match(readFileSync(promptFilePath, "utf8"), /Issue #7: Fix typo/);
+    assert.match(
+      readFileSync(promptFilePath, "utf8"),
+      /acceptanceCriteriaCrowdDerived/,
+    );
     assert.ok(
       !seenArgs.claudeArgs.includes("--tools"),
       "scoping call must not get Bash",

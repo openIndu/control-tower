@@ -96,6 +96,7 @@ const SCOPING_SCHEMA = {
     },
     confidence: { type: "number" },
     reviewerStatedUncertain: { type: "boolean" },
+    acceptanceCriteriaCrowdDerived: { type: "boolean" },
   },
   required: [
     "summary",
@@ -107,6 +108,7 @@ const SCOPING_SCHEMA = {
     "declaredActionTypes",
     "confidence",
     "reviewerStatedUncertain",
+    "acceptanceCriteriaCrowdDerived",
   ],
 };
 
@@ -269,7 +271,8 @@ export function buildRealGenerateScopingProposal(
         ' "declaredActionTypes": [<any of "prod-deploy", "data-deletion", "permission-change", "secret-change", "prod-sql" that genuinely apply, otherwise an empty array>],',
         ' "suggestedTier": "<lite, standard, or high-risk -- your own opinion of the right review tier, or null if you have no opinion beyond the facts above>",',
         ' "confidence": <your confidence in this whole assessment, 0.0 to 1.0>,',
-        ' "reviewerStatedUncertain": <true if you genuinely cannot assess this with the information given>}',
+        ' "reviewerStatedUncertain": <true if you genuinely cannot assess this with the information given>,',
+        ' "acceptanceCriteriaCrowdDerived": <true only if the issue body itself does not state clear acceptance criteria and you would have to infer them from comment discussion instead -- false if the issue body alone already states what "done" means>}',
         "No other text.",
       ].join("\n"),
     );
