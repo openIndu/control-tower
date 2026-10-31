@@ -1,0 +1,66 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+import {
+  buildRealFix,
+  buildRealGenerateProposal,
+  buildRealGenerateScopingProposal,
+  buildRealImplement,
+  buildRealReviewImplementation,
+  buildRealReviewProposal,
+  buildSystemPromptText,
+} from "./carrier-callbacks.mjs";
+
+const PRINCIPLE_SKILL_MD_RELATIVE_PATH =
+  "plugins/openindu-control-tower/skills/principle/SKILL.md";
+
+function readTextFileOrNull(path) {
+  return existsSync(path) ? readFileSync(path, "utf8") : null;
+}
+
+// One system prompt is shared across every issue and every carrier call in
+// a run -- the principle text and the target repo's CLAUDE.md/AGENTS.md do
+// not change mid-run, so this is called once per run, not once per issue.
+export function setupSystemPrompt(
+  { controlTowerRepoPath, repoClonePath, promptDir },
+  { readTextFile = readTextFileOrNull } = {},
+) {
+  const principleText = readTextFile(
+    join(controlTowerRepoPath, PRINCIPLE_SKILL_MD_RELATIVE_PATH),
+  );
+  if (principleText === null) {
+    throw new Error(
+      `could not read the principle SKILL.md from ${controlTowerRepoPath} -- RULE 1 requires it, refusing to proceed without it`,
+    );
+  }
+  const text = buildSystemPromptText({
+    principleText,
+    repoClaudeMd: readTextFile(join(repoClonePath, "CLAUDE.md")),
+    repoAgentsMd: readTextFile(join(repoClonePath, "AGENTS.md")),
+  });
+  mkdirSync(promptDir, { recursive: true });
+  const path = join(promptDir, "system-prompt.txt");
+  writeFileSync(path, text);
+  return path;
+}
+
+// All 6 per-issue carrier callbacks runIssuePipeline's third parameter
+// needs, built from the one shared context shape every buildReal* function
+// in carrier-callbacks.mjs already takes ({worktreePath,
+// systemPromptFilePath, promptDir, allowedToolCommands, maxBudgetUsd}).
+// execShell is deliberately omitted -- implement-review.mjs's own
+// defaultExecShell already covers it; threading a redundant pass-through
+// here would be more code for zero behavior change.
+export function buildCarrierCallbacks(context, overrides = {}) {
+  return {
+    generateScopingProposal: buildRealGenerateScopingProposal(
+      context,
+      overrides,
+    ),
+    generateProposal: buildRealGenerateProposal(context, overrides),
+    reviewProposal: buildRealReviewProposal(context, overrides),
+    implement: buildRealImplement(context, overrides),
+    reviewImplementation: buildRealReviewImplementation(context, overrides),
+    fix: buildRealFix(context, overrides),
+  };
+}
