@@ -312,10 +312,15 @@ test("runRepo passes through runIntake's non-INTAKE_COMPLETE result unchanged, w
   assert.deepEqual(result, rejected);
 });
 
-test("runRepo refuses --dry-run explicitly rather than silently running the real pipeline", async () => {
+test("runRepo rejects --dry-run combined with --resume -- a dry run never writes state.json, so there is nothing to resume", async () => {
   let pipelineCalled = false;
   const result = await runRepo(
-    { org: "openIndu", repo: "openIndu-backend", dryRun: true },
+    {
+      org: "openIndu",
+      repo: "openIndu-backend",
+      dryRun: true,
+      resume: "run-1",
+    },
     baseRunRepoOverrides({
       runIntakeFn: async () => fakeIntakeComplete(),
       runPipeline: async () => {
@@ -324,8 +329,57 @@ test("runRepo refuses --dry-run explicitly rather than silently running the real
       },
     }),
   );
-  assert.equal(result.outcome, "NOT_YET_IMPLEMENTED");
+  assert.equal(result.outcome, "ARGUMENT_ERROR");
+  assert.equal(result.exitCode, EXIT_CODES.ARGUMENT_OR_INTERNAL_ERROR);
   assert.equal(pipelineCalled, false);
+});
+
+test("runRepo --dry-run passes stopAfterStep2 to the pipeline for every issue, never touches run-state, and reports DRY_RUN_COMPLETE with exitCode OK", async () => {
+  const pipelineOptionsSeen = [];
+  let saveStateCalled = false;
+  const result = await runRepo(
+    { org: "openIndu", repo: "openIndu-backend", dryRun: true },
+    baseRunRepoOverrides({
+      runIntakeFn: async () => fakeIntakeComplete({ issueCount: 2 }),
+      saveState: () => {
+        saveStateCalled = true;
+      },
+      runPipeline: async (issue, pipelineOptions) => {
+        pipelineOptionsSeen.push(pipelineOptions);
+        return {
+          dryRun: true,
+          tier: "lite",
+          solutionDocument: `solution for issue ${issue.number}`,
+        };
+      },
+    }),
+  );
+
+  assert.equal(pipelineOptionsSeen.length, 2);
+  assert.equal(pipelineOptionsSeen[0].stopAfterStep2, true);
+  assert.deepEqual(pipelineOptionsSeen[0].resumeIssueState, {});
+  assert.equal(saveStateCalled, false);
+  assert.equal(result.outcome, "DRY_RUN_COMPLETE");
+  assert.equal(result.exitCode, EXIT_CODES.OK);
+  assert.equal(result.results.length, 2);
+  assert.equal(result.results[0].dryRun, true);
+  assert.equal(result.results[1].solutionDocument, "solution for issue 2");
+});
+
+test("runRepo --dry-run reports exitCode PARTIAL when any issue's tier resolution needed a human before step 2 ran", async () => {
+  const result = await runRepo(
+    { org: "openIndu", repo: "openIndu-backend", dryRun: true },
+    baseRunRepoOverrides({
+      runIntakeFn: async () => fakeIntakeComplete({ issueCount: 2 }),
+      runPipeline: async (issue) =>
+        issue.number === 1
+          ? { state: "HUMAN_REQUIRED", reason: "ambiguous" }
+          : { dryRun: true, tier: "lite", solutionDocument: "x" },
+    }),
+  );
+
+  assert.equal(result.outcome, "DRY_RUN_COMPLETE");
+  assert.equal(result.exitCode, EXIT_CODES.PARTIAL);
 });
 
 test("runRepo creates one budget tracker for the whole run from options.maxTotalBudgetUsd, and stops starting new issues once it reports exceeded", async () => {

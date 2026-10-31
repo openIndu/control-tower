@@ -21,6 +21,10 @@ import {
 // to decide whether to redo tier/step2/step3 at all: redoing them on resume
 // would re-invoke agents pointlessly (wasting budget) and would try to
 // `git worktree add` a path that already exists from the earlier run.
+//
+// stopAfterStep2 (spec/005 section 2.1's --dry-run) returns right after step
+// 2 produces its solution document, before step 3/4 ever run -- see the
+// return site below for why that result has no `state` field.
 
 export async function runIssuePipeline(
   issue,
@@ -33,6 +37,7 @@ export async function runIssuePipeline(
     resumeIssueState = {},
     pauseFilePath,
     stopAfterCiGreen = false,
+    stopAfterStep2 = false,
   },
   {
     createWorktree = createIssueWorktree,
@@ -82,6 +87,29 @@ export async function runIssuePipeline(
       { issue, tier },
       { generateProposal, reviewProposal },
     );
+
+    // spec/005 section 2.1: "--dry-run（做到步骤 2 为止，对 GitHub 零写入）" --
+    // the worktree above is still created (step 2's carrier calls run with
+    // it as their cwd, so they can read real repo content; see
+    // carrier-callbacks.mjs's buildRealGenerateProposal), but nothing past
+    // this point ever touches git add/commit/push or the GitHub API, so
+    // stopping here is a real zero-GitHub-writes guarantee, not just a
+    // convention. No `state` field on this result on purpose -- it is not
+    // one of states.mjs's TERMINAL_STATES (that enum is dev.schema.json's
+    // documented, closed contract for the real pipeline's outcomes; a dry
+    // run stopping by design is a different kind of result, not a new
+    // member of that set), so a caller that forgets this branch and feeds
+    // it to exitCodeForStates fails loudly instead of being silently
+    // miscounted as some unrelated terminal state.
+    if (stopAfterStep2) {
+      return {
+        dryRun: true,
+        worktreePath,
+        branchName,
+        tier,
+        solutionDocument: step2Result.document,
+      };
+    }
 
     step3Result = await runStep3(
       {
