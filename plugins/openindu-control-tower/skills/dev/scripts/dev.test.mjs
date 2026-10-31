@@ -295,6 +295,7 @@ function baseRunRepoOverrides(overrides = {}) {
     },
     saveState: () => {},
     appendTrace: () => {},
+    fetchCommitMessages: () => [],
     ...overrides,
   };
 }
@@ -547,6 +548,63 @@ test("runRepo's exit code reflects the batch of issue outcomes via exitCodeForSt
   );
   assert.equal(result.exitCode, EXIT_CODES.PARTIAL);
   assert.equal(result.results.length, 2);
+});
+
+test("runRepo's RUN_COMPLETE result includes a rendered report covering every issue", async () => {
+  const result = await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      runIntakeFn: async () => fakeIntakeComplete({ issueCount: 2 }),
+      runPipeline: async (issue) => ({
+        state: issue.number === 1 ? "MERGED" : "NO_ACTION",
+        prNumber: issue.number === 1 ? 10 : undefined,
+        mergeCommit: issue.number === 1 ? "sha1" : undefined,
+      }),
+    }),
+  );
+
+  assert.equal(typeof result.report, "string");
+  assert.match(result.report, /\| #1 \|.*\| MERGED \|/);
+  assert.match(result.report, /\| #2 \|.*\| NO_ACTION \|/);
+  assert.match(result.report, /## Rates/);
+});
+
+test("runRepo only fetches the default branch's commit log (for the rollback check) when at least one issue actually merged", async () => {
+  const fetchCalls = [];
+  const resultWithNoMerge = await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      runIntakeFn: async () => fakeIntakeComplete({ issueCount: 1 }),
+      runPipeline: async () => ({ state: "NO_ACTION" }),
+      fetchCommitMessages: (...args) => {
+        fetchCalls.push(args);
+        return [];
+      },
+    }),
+  );
+  assert.equal(fetchCalls.length, 0);
+  assert.equal(resultWithNoMerge.report.includes("Rollback rate: 0.0%"), true);
+
+  await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      runIntakeFn: async () => fakeIntakeComplete({ issueCount: 1 }),
+      runPipeline: async () => ({
+        state: "MERGED",
+        prNumber: 10,
+        mergeCommit: "sha1",
+      }),
+      fetchCommitMessages: (...args) => {
+        fetchCalls.push(args);
+        return [];
+      },
+    }),
+  );
+  assert.equal(fetchCalls.length, 1);
+  assert.deepEqual(fetchCalls[0], [
+    join("/base", "clones", "openIndu", "openIndu-backend"),
+    "main",
+  ]);
 });
 
 test("runRepo's buildStep4Deps closure forwards the per-issue issueArgs to the injected buildStep4DepsFn, along with the resolved runContext (carrier + authorizedApprovers)", async () => {

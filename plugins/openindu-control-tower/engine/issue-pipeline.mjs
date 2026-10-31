@@ -125,7 +125,13 @@ export async function runIssuePipeline(
       return {
         state: "BLOCKED",
         reason: "implementation review exhausted its rounds",
-        document: step3Result.document,
+        // Named to match the normal-completion return below (not the bare
+        // `document` this used to carry) -- run-report.mjs's per-issue
+        // matrix (spec/005 section 6 criterion #15) reads both fields by
+        // these names across every outcome, BLOCKED included: step 2 did
+        // produce a solution before step 3 blocked, so it belongs here too.
+        solutionDocument: step2Result.document,
+        implementationReviewDocument: step3Result.document,
         worktreePath,
         branchName,
         tier,

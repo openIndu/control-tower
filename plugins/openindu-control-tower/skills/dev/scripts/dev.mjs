@@ -36,6 +36,11 @@ import {
 } from "../../../engine/route-reader.mjs";
 import { buildRepoRunContext } from "../../../engine/run-context.mjs";
 import {
+  computeOutcomeRates,
+  computeRollbackRate,
+  renderRunReport,
+} from "../../../engine/run-report.mjs";
+import {
   acquireRunLock,
   createRunState,
   getIssueState,
@@ -46,6 +51,7 @@ import {
   RunLockHeldError,
   saveRunState,
 } from "../../../engine/run-state.mjs";
+import { defaultFetchDefaultBranchCommitMessages } from "../../../engine/step4-callbacks.mjs";
 import { appendTraceEntry, traceFileName } from "../../../engine/trace-log.mjs";
 import {
   defaultRepoClonePath,
@@ -288,6 +294,7 @@ export async function runRepo(options, overrides = {}) {
     saveState = saveRunState,
     createBudget = createBudgetTracker,
     appendTrace = appendTraceEntry,
+    fetchCommitMessages = defaultFetchDefaultBranchCommitMessages,
   } = overrides;
 
   const intakeResult = await runIntakeFn(options, overrides);
@@ -482,6 +489,34 @@ export async function runRepo(options, overrides = {}) {
       };
     }
 
+    // spec/005 section 6 criteria #15/#16: the per-issue matrix and the
+    // degradation/human-correction/rollback rates, computed from this run's
+    // own results -- recordedMerges/commitMessages are only fetched when
+    // something in this run actually merged, since computeRollbackRate is
+    // trivially 0 otherwise and a fetch+log round trip would be wasted work.
+    const outcomeRates = computeOutcomeRates(
+      results.map((result) => ({
+        issueNumber: result.issueNumber,
+        state: result.state,
+      })),
+    );
+    const recordedMerges = results
+      .filter((result) => result.state === "MERGED")
+      .map((result) => ({
+        issueNumber: result.issueNumber,
+        mergeSha: result.mergeCommit,
+      }));
+    const commitMessages =
+      recordedMerges.length > 0
+        ? fetchCommitMessages(repoClonePath, defaultBranch)
+        : [];
+    const rollbackRate = computeRollbackRate(recordedMerges, commitMessages);
+    const report = renderRunReport({
+      issueResults: results,
+      outcomeRates,
+      rollbackRate,
+    });
+
     return {
       outcome: "RUN_COMPLETE",
       exitCode: exitCodeForStates(results.map((result) => result.state)),
@@ -489,6 +524,7 @@ export async function runRepo(options, overrides = {}) {
       results,
       budgetExceeded: budgetTracker.exceeded,
       spentUsd: budgetTracker.spentUsd,
+      report,
     };
   } finally {
     releaseLock(lockFilePath, runId);
