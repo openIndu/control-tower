@@ -9,6 +9,7 @@ import {
   buildCommitMessage,
   commitChanges,
   currentCommitSha,
+  hasStagedChanges,
   pushBranch,
   stageAllChanges,
 } from "./git-ops.mjs";
@@ -109,6 +110,31 @@ test("stageAllChanges stages every untracked and modified file, not a subset", (
       .split("\n")
       .sort();
     assert.deepEqual(staged, ["a.txt", "b.txt"]);
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
+test("hasStagedChanges is false on a clean tree and true once something is staged", () => {
+  const scratch = mkdtempSync(join(tmpdir(), "git-ops-test-"));
+  try {
+    git(["init", "-q", "-b", "main", scratch]);
+    const execGit = (args, cwd) =>
+      execFileSync(
+        "git",
+        ["-c", "user.email=t@example.com", "-c", "user.name=t", ...args],
+        { cwd, encoding: "utf8" },
+      );
+    writeFileSync(join(scratch, "a.txt"), "a\n");
+    execGit(["add", "."], scratch);
+    execGit(["commit", "-q", "-m", "init"], scratch);
+
+    assert.equal(hasStagedChanges(scratch, execGit), false);
+
+    writeFileSync(join(scratch, "a.txt"), "a changed\n");
+    execGit(["add", "."], scratch);
+
+    assert.equal(hasStagedChanges(scratch, execGit), true);
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
