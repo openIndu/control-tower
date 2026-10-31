@@ -1,9 +1,13 @@
 // Constructs a headless `claude` invocation inside the carrier (spec/005
-// section 2.6). This module only builds argv arrays and env objects --
-// the actual `docker compose run` call is made by the caller via an
-// injected exec function, same dependency-injection pattern used
-// throughout engine/. Nothing here reads process.env or shells out
-// itself, so it stays testable without Docker.
+// section 2.6). This module only builds argv arrays -- the actual
+// `docker compose run` call is made by the caller via an injected exec
+// function, same dependency-injection pattern used throughout engine/.
+// Nothing here reads process.env or shells out itself, so it stays
+// testable without Docker. The 5 non-secret env vars the agent needs
+// (HTTPS_PROXY etc.) are declared statically in docker-compose.yml's own
+// "agent" service, not built here -- only ANTHROPIC_API_KEY, which cannot
+// be a literal in that checked-in file, is handled by this module (see
+// buildDockerComposeRunArgs's bare "-e ANTHROPIC_API_KEY").
 
 // Roles that only plan or review never get Bash at all. Roles that
 // implement or fix get Bash, scoped to exactly the commands dev.checks
@@ -22,33 +26,16 @@ export function roleNeedsBash(role) {
 // Rule #1, the current principle text, or the target repo's own
 // CLAUDE.md/AGENTS.md -- it does not depend on the target repo having a
 // .claude/ directory at all (studio does not).
-export function buildAppendSystemPrompt({ rule1AnchorText, principleText, repoClaudeMd, repoAgentsMd }) {
+export function buildAppendSystemPrompt({
+  rule1AnchorText,
+  principleText,
+  repoClaudeMd,
+  repoAgentsMd,
+}) {
   const sections = [rule1AnchorText, principleText];
   if (repoClaudeMd) sections.push(repoClaudeMd);
   if (repoAgentsMd) sections.push(repoAgentsMd);
   return sections.filter(Boolean).join("\n\n---\n\n");
-}
-
-// The complete env to pass to `docker compose run -e ...`. This is
-// constructed explicitly, never inherited from the host process -- Docker
-// already gives a clean env by default, but being explicit here means a
-// reviewer can see the whole allowlist in one place instead of trusting
-// "Docker doesn't leak the host env" as an implicit property.
-export function buildAgentEnv({ anthropicApiKey }) {
-  return {
-    ANTHROPIC_API_KEY: anthropicApiKey,
-    OPENINDU_DEV_ACTIVE: "1",
-    HTTPS_PROXY: "http://egress-proxy:8080",
-    HTTP_PROXY: "http://egress-proxy:8080",
-    NO_PROXY: "",
-    GIT_TERMINAL_PROMPT: "0",
-    // Documented at https://code.claude.com/docs/en/network-config: the CLI
-    // otherwise also calls optional Datadog telemetry hosts, which the
-    // egress proxy would just block anyway (only api.anthropic.com is
-    // allowlisted) -- this avoids paying for that blocked round trip on
-    // every single run.
-    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
-  };
 }
 
 // Builds the docker compose run argv (everything after `docker compose
@@ -71,6 +58,16 @@ export function buildDockerComposeRunArgs({
     "--rm",
     "-v",
     `${worktreePath}:/workspace`,
+    // Bare "-e ANTHROPIC_API_KEY" (no "=value") tells docker compose to
+    // forward the value from ITS OWN process environment -- never typing
+    // the secret itself into composeArgs, a log line, or a test fixture
+    // (AGENTS.md: never put credentials in command text or tool output).
+    // The 5 non-secret env vars docker-compose.yml's "agent" service
+    // already declares statically (HTTPS_PROXY etc.) do not need this
+    // treatment; ANTHROPIC_API_KEY is the one value that cannot be a
+    // literal in a checked-in compose file.
+    "-e",
+    "ANTHROPIC_API_KEY",
     "agent",
   ];
 
