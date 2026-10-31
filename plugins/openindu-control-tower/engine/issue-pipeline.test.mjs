@@ -227,6 +227,10 @@ test("runIssuePipeline reports BLOCKED when step 3 exhausts its review/fix round
   );
   assert.equal(result.state, "BLOCKED");
   assert.equal(step4DepsBuilt, false);
+  assert.equal(typeof result.solutionDocument, "string");
+  assert.ok(result.solutionDocument.length > 0);
+  assert.equal(typeof result.implementationReviewDocument, "string");
+  assert.ok(result.implementationReviewDocument.length > 0);
 });
 
 test("runIssuePipeline on resume with openedPr:true skips the worktree, tier resolution, and steps 2/3 entirely, going straight to step 4", async () => {

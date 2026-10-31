@@ -43,3 +43,94 @@ export function computeRollbackRate(recordedMerges, commitMessages) {
     reverted,
   };
 }
+
+// spec/005 section 6 criterion #15's matrix needs a CI column distinct from
+// PR/合并读回, but pr-and-merge.mjs's runStep4 does not carry an explicit
+// ciGreen flag on its return value -- this derives it from fields that ARE
+// always present, verified against all of runStep4's actual return shapes
+// (read directly, not guessed): MERGED/PR_GREEN/FAILED can only be reached
+// after CI went green (FAILED is the post-merge readback mismatch, which
+// requires having already called merge()); a HUMAN_MERGE_REQUIRED carrying
+// `failures` only happens after a promotion guard ran, itself gated on CI
+// already being green; a HUMAN_MERGE_REQUIRED carrying `reason` and no
+// `failures` is the one shape that means CI itself never went green.
+export function classifyCiForReport(result) {
+  if (!result.prNumber) return "N/A";
+  if (result.state === "HUMAN_MERGE_REQUIRED" && !result.failures) {
+    return "not green";
+  }
+  return "green";
+}
+
+function renderDocColumn(value) {
+  return value ? "✓" : "—";
+}
+
+function renderStateColumn(result) {
+  if (result.state) return result.state;
+  return result.dryRun ? "DRY_RUN" : "UNKNOWN";
+}
+
+// issueResults: runIssuePipeline's return shape, one per issue a run
+// attempted (dry-run or real) -- NOT issues skipped entirely (excluded by
+// --max-issues, or never reached because the budget tripped first). Renders
+// spec/005 section 6 criterion #15's matrix (方案/评审/PR/CI/合并读回/状态)
+// plus criterion #16's three rates, as markdown. rule11Checklist is
+// renderRule11StatusChecklist's (build-step.mjs) already-rendered text, or
+// null when step 6 readiness was not computed for this run (e.g. the repo
+// has no dev.build at all) -- omitted from the report rather than printed
+// as a misleading empty section.
+//
+// "已合并" (per issue, the 状态 column reading MERGED) is deliberately a
+// different claim from the top-level Complete/Partially complete verdict
+// below -- AGENTS.md's own completion-report rule (never report a whole-
+// task "done" unless every row passed read-back) applies to this runner's
+// own report exactly as it applies to this assistant's chat replies, so
+// Complete requires every attempted issue to be clean, not just merged.
+export function renderRunReport({
+  issueResults,
+  outcomeRates,
+  rollbackRate,
+  rule11Checklist = null,
+}) {
+  const lines = [
+    "# /dev run report",
+    "",
+    "| Issue | 方案 | 评审 | PR | CI | 合并读回 | 状态 |",
+    "| --- | --- | --- | --- | --- | --- | --- |",
+  ];
+  for (const result of issueResults) {
+    lines.push(
+      `| #${result.issueNumber} | ${renderDocColumn(result.solutionDocument)} | ${renderDocColumn(
+        result.implementationReviewDocument,
+      )} | ${result.prNumber ?? "—"} | ${classifyCiForReport(result)} | ${
+        result.state === "MERGED" ? result.mergeCommit : "N/A"
+      } | ${renderStateColumn(result)} |`,
+    );
+  }
+
+  lines.push(
+    "",
+    "## Rates",
+    "",
+    `- Degradation rate: ${(outcomeRates.degradationRate * 100).toFixed(1)}% (${outcomeRates.total} issue(s))`,
+    `- Human-correction rate: ${(outcomeRates.humanCorrectionRate * 100).toFixed(1)}%`,
+    `- Rollback rate: ${(rollbackRate.rollbackRate * 100).toFixed(1)}%`,
+  );
+
+  if (rule11Checklist) {
+    lines.push("", "## RULE 11 delivery status", "", rule11Checklist);
+  }
+
+  const isComplete =
+    outcomeRates.degradationRate === 0 &&
+    outcomeRates.humanCorrectionRate === 0;
+  lines.push(
+    "",
+    isComplete
+      ? "Complete: every attempted issue reached a clean terminal state."
+      : `Partially complete: ${Math.round(outcomeRates.degradationRate * outcomeRates.total)} issue(s) did not reach a clean terminal state -- see the 状态 column above.`,
+  );
+
+  return lines.join("\n");
+}
