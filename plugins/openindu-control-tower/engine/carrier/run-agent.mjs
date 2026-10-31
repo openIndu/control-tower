@@ -27,11 +27,32 @@ export function runPositiveControlsOrThrow(
   return { allControlsFailed: true, output };
 }
 
+// Must run INSIDE the same carrier the agent itself uses (spec/005 section
+// 2.6: "在 agent 实际使用的同一个载体里执行") -- a plain host-side `bash
+// run-positive-controls.sh` (the original version of this function) tests
+// the trusted runner's own host, not the sandboxed container, which proves
+// nothing about the carrier's isolation. The Dockerfile COPYs the script to
+// /usr/local/bin and declares ENTRYPOINT ["claude"] for a real agent
+// invocation; overriding --entrypoint runs the script instead, in the same
+// "agent" compose service, with the same bare ANTHROPIC_API_KEY forwarding
+// invoker.mjs's buildDockerComposeRunArgs uses for a real call -- so control
+// #6 (no credential-shaped env var besides it) is exercised against the
+// actual env shape a real call has, not an artificially empty one.
 function defaultExecShell(carrierDir) {
-  const result = spawnSync("bash", ["run-positive-controls.sh"], {
-    cwd: carrierDir,
-    encoding: "utf8",
-  });
+  const result = spawnSync(
+    "docker",
+    [
+      "compose",
+      "run",
+      "--rm",
+      "-e",
+      "ANTHROPIC_API_KEY",
+      "--entrypoint",
+      "run-positive-controls.sh",
+      "agent",
+    ],
+    { cwd: carrierDir, encoding: "utf8" },
+  );
   return { status: result.status, output: result.stdout + result.stderr };
 }
 
