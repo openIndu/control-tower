@@ -34,6 +34,12 @@ test("parseArgs parses --resume with its run-id value", () => {
   assert.equal(options.resume, "run-abc-123");
 });
 
+test("parseArgs defaults maxTotalBudgetUsd to null and parses --max-total-budget-usd as a number", () => {
+  assert.equal(parseArgs(["--repo", "x"]).maxTotalBudgetUsd, null);
+  const options = parseArgs(["--repo", "x", "--max-total-budget-usd", "12.5"]);
+  assert.equal(options.maxTotalBudgetUsd, 12.5);
+});
+
 test("parseArgs rejects an unknown flag", () => {
   assert.throws(
     () => parseArgs(["--repo", "x", "--bogus"]),
@@ -288,6 +294,7 @@ function baseRunRepoOverrides(overrides = {}) {
       throw new Error("loadState should not be called for a fresh run");
     },
     saveState: () => {},
+    appendTrace: () => {},
     ...overrides,
   };
 }
@@ -319,6 +326,53 @@ test("runRepo refuses --dry-run explicitly rather than silently running the real
   );
   assert.equal(result.outcome, "NOT_YET_IMPLEMENTED");
   assert.equal(pipelineCalled, false);
+});
+
+test("runRepo creates one budget tracker for the whole run from options.maxTotalBudgetUsd, and stops starting new issues once it reports exceeded", async () => {
+  const createBudgetCalls = [];
+  let completedIssues = 0;
+  const pipelineCalls = [];
+  const result = await runRepo(
+    { org: "openIndu", repo: "openIndu-backend", maxTotalBudgetUsd: 10 },
+    baseRunRepoOverrides({
+      runIntakeFn: async () => fakeIntakeComplete({ issueCount: 3 }),
+      createBudget: (maxTotalUsd) => {
+        createBudgetCalls.push(maxTotalUsd);
+        return {
+          addCost: () => {},
+          get spentUsd() {
+            return completedIssues * 7;
+          },
+          get exceeded() {
+            return completedIssues >= 1;
+          },
+        };
+      },
+      runPipeline: async (issue) => {
+        pipelineCalls.push(issue.number);
+        completedIssues += 1;
+        return { state: "NO_ACTION" };
+      },
+    }),
+  );
+
+  assert.deepEqual(createBudgetCalls, [10]);
+  assert.deepEqual(pipelineCalls, [1]);
+  assert.equal(result.budgetExceeded, true);
+  assert.equal(result.spentUsd, 7);
+});
+
+test("runRepo reports budgetExceeded: false and the tracker's spentUsd when the budget never trips", async () => {
+  const result = await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      runIntakeFn: async () => fakeIntakeComplete({ issueCount: 2 }),
+      runPipeline: async () => ({ state: "NO_ACTION" }),
+    }),
+  );
+
+  assert.equal(result.budgetExceeded, false);
+  assert.equal(result.spentUsd, 0);
 });
 
 test("runRepo clones once, sets up the system prompt once, and calls the real pipeline once per issue up to --max-issues", async () => {

@@ -9,9 +9,11 @@ import {
   ADMISSION_RESULTS,
   evaluateAdmission,
 } from "../../../engine/admission.mjs";
+import { createBudgetTracker } from "../../../engine/budget-tracking.mjs";
 import {
   buildCarrierCallbacks,
   setupSystemPrompt,
+  withTrackingWrappers,
 } from "../../../engine/carrier-setup.mjs";
 import { DEFAULT_PAUSE_FILE_NAME } from "../../../engine/dev-pause.mjs";
 import {
@@ -44,6 +46,7 @@ import {
   RunLockHeldError,
   saveRunState,
 } from "../../../engine/run-state.mjs";
+import { appendTraceEntry, traceFileName } from "../../../engine/trace-log.mjs";
 import {
   defaultRepoClonePath,
   defaultWorktreeBaseDir,
@@ -82,6 +85,10 @@ export function parseArgs(argv) {
     // spec/005 section 2.1: "--max-issues（默认 10）" -- a safety bound on
     // how many issues a single invocation will act on, not an opt-in.
     maxIssues: 10,
+    // spec/005 section 2.1/2.6: "--max-total-budget-usd（单次运行总预算）" --
+    // null means no cap (budget-tracking.mjs's createBudgetTracker treats a
+    // null maxTotalUsd as "never exceeded"), not zero.
+    maxTotalBudgetUsd: null,
   };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
@@ -92,6 +99,8 @@ export function parseArgs(argv) {
     else if (argument === "--no-merge") options.noMerge = true;
     else if (argument === "--max-issues")
       options.maxIssues = Number(argv[++index]);
+    else if (argument === "--max-total-budget-usd")
+      options.maxTotalBudgetUsd = Number(argv[++index]);
     else if (argument === "--help") options.help = true;
     else throw new Error(`Unknown argument: ${argument}`);
   }
@@ -243,11 +252,8 @@ export async function runIntake(
 //
 // Deliberately NOT yet wired here, each a stated gap rather than a silent
 // one: --dry-run (refused explicitly below, rather than silently running
-// the full pipeline under a flag that promises zero GitHub writes);
-// --max-total-budget-usd and trace-log persistence (budget-tracking.mjs's
-// withCostTracking / trace-log.mjs's withTraceLogging exist but are not
-// yet wrapped around these callbacks); and step 5/6 sequencing + the final
-// report.
+// the full pipeline under a flag that promises zero GitHub writes); and
+// step 5/6 sequencing + the final report.
 //
 // promotedToReady is deliberately NOT tracked here, unlike openedPr/merged:
 // pr-lifecycle.mjs's promoteToReady is `gh pr ready <N>`, which is a safe
@@ -273,6 +279,8 @@ export async function runRepo(options, overrides = {}) {
     releaseLock = releaseRunLock,
     loadState = loadRunState,
     saveState = saveRunState,
+    createBudget = createBudgetTracker,
+    appendTrace = appendTraceEntry,
   } = overrides;
 
   const intakeResult = await runIntakeFn(options, overrides);
@@ -359,8 +367,18 @@ export async function runRepo(options, overrides = {}) {
       ? loadState(stateFilePath)
       : createRunState({ runId, repoName: repo });
 
+    // One tracker for the WHOLE run (spec/005: "--max-total-budget-usd
+    // 单次运行总预算"), shared across every issue -- an earlier issue's
+    // spend counts against a later one's budget, not reset per issue.
+    const budgetTracker = createBudget(options.maxTotalBudgetUsd);
+
     const results = [];
     for (const issue of snapshot.issues.slice(0, options.maxIssues ?? 10)) {
+      // Checked before STARTING a new issue, not before every call within
+      // one -- an issue already in progress runs to its natural
+      // completion; the cap only stops the loop from picking up a new one.
+      if (budgetTracker.exceeded) break;
+
       const worktreePath = issueWorktreePath({
         baseDir: worktreeBaseDir,
         runId,
@@ -383,7 +401,14 @@ export async function runRepo(options, overrides = {}) {
         ),
         allowedToolCommands: devChecks,
       };
-      const callbacks = buildCarrierCallbacks(carrierContext);
+      const callbacks = withTrackingWrappers(
+        buildCarrierCallbacks(carrierContext),
+        {
+          addCost: budgetTracker.addCost,
+          appendTrace: (entry) =>
+            appendTrace(docsDir, traceFileName(issue.number), entry),
+        },
+      );
       const resumeIssueState = getIssueState(runState, issue.number);
       const issueRunContext = {
         ...baseRunContext,
@@ -428,6 +453,8 @@ export async function runRepo(options, overrides = {}) {
       exitCode: exitCodeForStates(results.map((result) => result.state)),
       runId,
       results,
+      budgetExceeded: budgetTracker.exceeded,
+      spentUsd: budgetTracker.spentUsd,
     };
   } finally {
     releaseLock(lockFilePath, runId);
@@ -435,7 +462,7 @@ export async function runRepo(options, overrides = {}) {
 }
 
 function usage() {
-  return "Usage: dev.mjs --repo NAME [--org openIndu] [--dry-run] [--resume RUN_ID] [--no-merge] [--max-issues N]";
+  return "Usage: dev.mjs --repo NAME [--org openIndu] [--dry-run] [--resume RUN_ID] [--no-merge] [--max-issues N] [--max-total-budget-usd N]";
 }
 
 async function main() {

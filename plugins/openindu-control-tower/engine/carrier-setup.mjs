@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { withCostTracking } from "./budget-tracking.mjs";
 import {
   buildRealFix,
   buildRealGenerateProposal,
@@ -10,6 +11,7 @@ import {
   buildRealReviewProposal,
   buildSystemPromptText,
 } from "./carrier-callbacks.mjs";
+import { withTraceLogging } from "./trace-log.mjs";
 
 const PRINCIPLE_SKILL_MD_RELATIVE_PATH =
   "plugins/openindu-control-tower/skills/principle/SKILL.md";
@@ -63,4 +65,26 @@ export function buildCarrierCallbacks(context, overrides = {}) {
     reviewImplementation: buildRealReviewImplementation(context, overrides),
     fix: buildRealFix(context, overrides),
   };
+}
+
+// Wraps every callback in a buildCarrierCallbacks() result with
+// budget-tracking.mjs's withCostTracking and trace-log.mjs's
+// withTraceLogging -- both modules' own comments describe wrapping a
+// callback "from the outside" at exactly this dependency-injection
+// boundary, so this composes the two rather than making main()'s loop
+// re-apply both wrappers to each of the 6 keys by hand. The callback's own
+// key (generateProposal, implement, etc.) is used as the trace label --
+// the trace file itself is already scoped per issue (trace-log.mjs's
+// traceFileName), so the label only needs to distinguish which callback
+// within that one file, not which issue.
+export function withTrackingWrappers(callbacks, { addCost, appendTrace }) {
+  const wrapped = {};
+  for (const [name, fn] of Object.entries(callbacks)) {
+    wrapped[name] = withTraceLogging(
+      withCostTracking(fn, addCost),
+      appendTrace,
+      name,
+    );
+  }
+  return wrapped;
 }
