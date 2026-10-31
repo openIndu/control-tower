@@ -1,6 +1,6 @@
 import { execFileSync, spawn } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 // spec/005 section 2.1 step 5: "先检查「不指向生产」". Motivated by a real prior
 // incident in this exact workspace (a local stack that was actually talking to a
@@ -147,4 +147,16 @@ export async function generateVerifyChecklist(
 export function writeVerifyChecklist(path, markdownText) {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, markdownText);
+}
+
+// A missing .env is a normal case for many repos (e.g. one that only reads
+// real process env vars), not an error -- checkNotPointingAtProduction still
+// runs on whatever text comes back, including "".
+export function defaultReadLocalServiceEnvText(worktreePath) {
+  try {
+    return readFileSync(join(worktreePath, ".env"), "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return "";
+    throw error;
+  }
 }

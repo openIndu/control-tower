@@ -71,6 +71,34 @@ function renderStateColumn(result) {
   return result.dryRun ? "DRY_RUN" : "UNKNOWN";
 }
 
+// localServiceResult: local-service.mjs's step-5 outcome for this run (see
+// dev.mjs's wiring) -- shapes are {attempted: false, reason} when
+// dev.local_service is not configured, {attempted: true, healthy,
+// blockedByProductionCheck, error} when startLocalService/probeHealth threw
+// (checkNotPointingAtProduction's refusal gets its own line, since that is a
+// safety refusal rather than an ordinary failure), or {attempted: true,
+// healthy, pid, checklistPath} on a normal attempt.
+function renderLocalVerificationSection(localServiceResult) {
+  const lines = ["## Local verification", ""];
+  if (!localServiceResult.attempted) {
+    lines.push(`- Not attempted: ${localServiceResult.reason}`);
+    return lines.join("\n");
+  }
+  if (localServiceResult.blockedByProductionCheck) {
+    lines.push(`- Refused to start: ${localServiceResult.error}`);
+    return lines.join("\n");
+  }
+  if (localServiceResult.error) {
+    lines.push(`- Failed: ${localServiceResult.error}`);
+    return lines.join("\n");
+  }
+  lines.push(
+    `- Healthy: ${localServiceResult.healthy ? "yes" : "no"}`,
+    `- Verify checklist: ${localServiceResult.checklistPath ?? "none (no issue in this run reached MERGED)"}`,
+  );
+  return lines.join("\n");
+}
+
 // issueResults: runIssuePipeline's return shape, one per issue a run
 // attempted (dry-run or real) -- NOT issues skipped entirely (excluded by
 // --max-issues, or never reached because the budget tripped first). Renders
@@ -79,7 +107,10 @@ function renderStateColumn(result) {
 // renderRule11StatusChecklist's (build-step.mjs) already-rendered text, or
 // null when step 6 readiness was not computed for this run (e.g. the repo
 // has no dev.build at all) -- omitted from the report rather than printed
-// as a misleading empty section.
+// as a misleading empty section. localServiceResult is step 5's outcome
+// (see renderLocalVerificationSection above), or null when it was not
+// computed for this run (e.g. a dry run, which never reaches step 5) --
+// also omitted rather than printed empty.
 //
 // "已合并" (per issue, the 状态 column reading MERGED) is deliberately a
 // different claim from the top-level Complete/Partially complete verdict
@@ -92,6 +123,7 @@ export function renderRunReport({
   outcomeRates,
   rollbackRate,
   rule11Checklist = null,
+  localServiceResult = null,
 }) {
   const lines = [
     "# /dev run report",
@@ -117,6 +149,10 @@ export function renderRunReport({
     `- Human-correction rate: ${(outcomeRates.humanCorrectionRate * 100).toFixed(1)}%`,
     `- Rollback rate: ${(rollbackRate.rollbackRate * 100).toFixed(1)}%`,
   );
+
+  if (localServiceResult) {
+    lines.push("", renderLocalVerificationSection(localServiceResult));
+  }
 
   if (rule11Checklist) {
     lines.push("", "## RULE 11 delivery status", "", rule11Checklist);

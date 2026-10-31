@@ -176,6 +176,68 @@ test("renderRunReport omits the RULE 11 section entirely when rule11Checklist is
   assert.doesNotMatch(report, /RULE 11/);
 });
 
+test("renderRunReport omits the Local verification section entirely when localServiceResult is null", () => {
+  const report = renderRunReport({
+    issueResults: [],
+    outcomeRates: { degradationRate: 0, humanCorrectionRate: 0, total: 0 },
+    rollbackRate: { rollbackRate: 0, reverted: [] },
+  });
+
+  assert.doesNotMatch(report, /Local verification/);
+});
+
+test("renderRunReport's Local verification section reports why step 5 was not attempted when dev.local_service is not configured", () => {
+  const report = renderRunReport({
+    issueResults: [],
+    outcomeRates: { degradationRate: 0, humanCorrectionRate: 0, total: 0 },
+    rollbackRate: { rollbackRate: 0, reverted: [] },
+    localServiceResult: {
+      attempted: false,
+      reason: "dev.local_service is not configured for this repo",
+    },
+  });
+
+  assert.match(report, /## Local verification/);
+  assert.match(
+    report,
+    /Not attempted: dev\.local_service is not configured for this repo/,
+  );
+});
+
+test("renderRunReport's Local verification section reports a production-check refusal distinctly from an ordinary failure", () => {
+  const report = renderRunReport({
+    issueResults: [],
+    outcomeRates: { degradationRate: 0, humanCorrectionRate: 0, total: 0 },
+    rollbackRate: { rollbackRate: 0, reverted: [] },
+    localServiceResult: {
+      attempted: true,
+      healthy: false,
+      blockedByProductionCheck: true,
+      error:
+        "refusing to start the local service -- env matches forbidden pattern(s): prod-db.internal",
+    },
+  });
+
+  assert.match(report, /- Refused to start: refusing to start/);
+});
+
+test("renderRunReport's Local verification section reports health and checklist path on a normal attempt", () => {
+  const report = renderRunReport({
+    issueResults: [],
+    outcomeRates: { degradationRate: 0, humanCorrectionRate: 0, total: 0 },
+    rollbackRate: { rollbackRate: 0, reverted: [] },
+    localServiceResult: {
+      attempted: true,
+      healthy: true,
+      pid: 1234,
+      checklistPath: "/docs/verify-checklist.md",
+    },
+  });
+
+  assert.match(report, /- Healthy: yes/);
+  assert.match(report, /- Verify checklist: \/docs\/verify-checklist\.md/);
+});
+
 test("renderRunReport reports a dry-run result (no state field) as DRY_RUN rather than UNKNOWN", () => {
   const report = renderRunReport({
     issueResults: [

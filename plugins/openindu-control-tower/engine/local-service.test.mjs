@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -7,6 +7,7 @@ import test from "node:test";
 import {
   checkNotPointingAtProduction,
   createVerificationWorktree,
+  defaultReadLocalServiceEnvText,
   generateVerifyChecklist,
   PointsAtProductionError,
   probeHealth,
@@ -199,6 +200,28 @@ test("writeVerifyChecklist writes the markdown text to the given path, creating 
     const path = join(dir, "nested", "verify-checklist.md");
     writeVerifyChecklist(path, "# Checklist\n\n- [ ] thing\n");
     assert.equal(readFileSync(path, "utf8"), "# Checklist\n\n- [ ] thing\n");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("defaultReadLocalServiceEnvText reads .env from the worktree root when present", () => {
+  const dir = mkdtempSync(join(tmpdir(), "local-service-test-"));
+  try {
+    writeFileSync(join(dir, ".env"), "DATABASE_URL=localhost\n");
+    assert.equal(
+      defaultReadLocalServiceEnvText(dir),
+      "DATABASE_URL=localhost\n",
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("defaultReadLocalServiceEnvText returns an empty string (not an error) when no .env exists", () => {
+  const dir = mkdtempSync(join(tmpdir(), "local-service-test-"));
+  try {
+    assert.equal(defaultReadLocalServiceEnvText(dir), "");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
