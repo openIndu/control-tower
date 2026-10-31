@@ -150,6 +150,67 @@ test("buildRealReviewProposal writes a real prompt file naming the perspective a
   });
 });
 
+test("buildRealGenerateProposal propagates the invocation's actual costUsd alongside the parsed summary, for the runner's total-budget tracking", async () => {
+  await withTempDir(async (dir) => {
+    const generateProposal = buildRealGenerateProposal(
+      {
+        worktreePath: "/wt",
+        systemPromptFilePath: "/wt/sp.txt",
+        promptDir: dir,
+      },
+      {
+        invoke: async () => ({
+          success: true,
+          text: JSON.stringify({ summary: "x" }),
+          costUsd: 0.1234,
+        }),
+      },
+    );
+    const result = await generateProposal("x", {
+      number: 1,
+      title: "t",
+      body: "b",
+    });
+    assert.deepEqual(result, { summary: "x", costUsd: 0.1234 });
+  });
+});
+
+test("buildRealGenerateScopingProposal propagates costUsd:null unchanged (invokeAgent's own fallback when the carrier reports no cost)", async () => {
+  await withTempDir(async (dir) => {
+    const generateScopingProposal = buildRealGenerateScopingProposal(
+      {
+        worktreePath: "/wt",
+        systemPromptFilePath: "/wt/sp.txt",
+        promptDir: dir,
+      },
+      {
+        invoke: async () => ({
+          success: true,
+          text: JSON.stringify({
+            summary: "s",
+            estimatedLines: 1,
+            moduleCount: 1,
+            isDocsOrConfigOnly: true,
+            touchesSensitiveArea: false,
+            riskTier: "L0",
+            declaredActionTypes: [],
+            suggestedTier: null,
+            confidence: 0.9,
+            reviewerStatedUncertain: false,
+          }),
+          costUsd: null,
+        }),
+      },
+    );
+    const result = await generateScopingProposal({
+      number: 1,
+      title: "t",
+      body: "b",
+    });
+    assert.equal(result.costUsd, null);
+  });
+});
+
 test("buildRealGenerateProposal throws when the carrier invocation did not succeed", async () => {
   await withTempDir(async (dir) => {
     const generateProposal = buildRealGenerateProposal(

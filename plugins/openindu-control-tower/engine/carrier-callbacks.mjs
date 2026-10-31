@@ -134,7 +134,17 @@ function parseStructuredResponse(invokeResult) {
       "carrier invocation succeeded but returned no text to parse",
     );
   }
-  return JSON.parse(invokeResult.text);
+  const parsed = JSON.parse(invokeResult.text);
+  // spec/005 section 2.6: "--max-budget-usd 约束单次调用，runner 另管单次运行总预算"
+  // -- the runner needs each call's actual cost to track that total. Additive
+  // and conditional on the key being present at all (invokeAgent/
+  // parseStreamJsonResult always sets it, a number or null, on the success
+  // path already confirmed above) so a bare {success, text} fake that models
+  // no cost at all -- every pre-existing test in this file -- sees no change
+  // to its result shape.
+  return invokeResult.costUsd !== undefined
+    ? { ...parsed, costUsd: invokeResult.costUsd }
+    : parsed;
 }
 
 // implement/fix have no structured output to parse (they write files and run
