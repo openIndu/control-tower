@@ -259,3 +259,53 @@ test("runIssuePipeline on resume with openedPr:true skips the worktree, tier res
   assert.equal(proposalCalled, false);
   assert.equal(result.tier, null);
 });
+
+test("runIssuePipeline with stopAfterStep2 creates the worktree and runs step 2, but returns before step 3/4 -- no implement/fix/commit/PR call happens", async () => {
+  let implementCalled = false;
+  let commitAndPushCalled = false;
+  let openPrCalled = false;
+  const result = await runIssuePipeline(
+    ISSUE,
+    baseContext({ stopAfterStep2: true }),
+    happyDeps({
+      implement: async () => {
+        implementCalled = true;
+      },
+      buildStep4Deps: () => ({
+        ...happyPathStep4Deps(),
+        commitAndPush: async () => {
+          commitAndPushCalled = true;
+        },
+        openPr: async () => {
+          openPrCalled = true;
+          return { prNumber: 7 };
+        },
+      }),
+    }),
+  );
+
+  assert.equal(implementCalled, false);
+  assert.equal(commitAndPushCalled, false);
+  assert.equal(openPrCalled, false);
+  assert.equal(result.dryRun, true);
+  assert.equal(result.state, undefined);
+  assert.equal(result.tier, "lite");
+  assert.equal(typeof result.solutionDocument, "string");
+  assert.ok(result.solutionDocument.length > 0);
+  assert.notEqual(result.worktreePath, undefined);
+  assert.notEqual(result.branchName, undefined);
+});
+
+test("runIssuePipeline with stopAfterStep2 still returns HUMAN_REQUIRED (with its usual state) when tier resolution needs a human, since that happens before step 2", async () => {
+  const result = await runIssuePipeline(
+    ISSUE,
+    baseContext({ stopAfterStep2: true }),
+    happyDeps({
+      generateScopingProposal: async () =>
+        liteScoping({ reviewerStatedUncertain: true, confidence: 0.4 }),
+    }),
+  );
+
+  assert.equal(result.state, "HUMAN_REQUIRED");
+  assert.equal(result.dryRun, undefined);
+});

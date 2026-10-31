@@ -250,10 +250,17 @@ export async function runIntake(
 // (#60). Everything side-effecting is injected, same convention as
 // runIntake; main()'s own call below supplies the real defaults.
 //
+// --dry-run (spec/005 section 2.1: "做到步骤 2 为止，对 GitHub 零写入") shares
+// this same loop -- the clone, the one shared system prompt, the per-issue
+// carrier context/promptDir, and the budget tracker are identical either
+// way -- but never touches run-state.mjs at all: nothing a dry run does is
+// resumable (step 3/4 never run, so there is no PR/merge progress to save),
+// so isDryRun skips loadState/createRunState/getIssueState/markPrOpened/
+// markMerged/saveState entirely, and --dry-run with --resume together is
+// refused explicitly below rather than silently ignoring --resume.
+//
 // Deliberately NOT yet wired here, each a stated gap rather than a silent
-// one: --dry-run (refused explicitly below, rather than silently running
-// the full pipeline under a flag that promises zero GitHub writes); and
-// step 5/6 sequencing + the final report.
+// one: step 5/6 sequencing + the final report.
 //
 // promotedToReady is deliberately NOT tracked here, unlike openedPr/merged:
 // pr-lifecycle.mjs's promoteToReady is `gh pr ready <N>`, which is a safe
@@ -288,14 +295,15 @@ export async function runRepo(options, overrides = {}) {
     return intakeResult;
   }
 
-  if (options.dryRun) {
+  if (options.dryRun && options.resume) {
     return {
-      outcome: "NOT_YET_IMPLEMENTED",
+      outcome: "ARGUMENT_ERROR",
       exitCode: EXIT_CODES.ARGUMENT_OR_INTERNAL_ERROR,
       reason:
-        "--dry-run is not wired yet -- refusing to silently run the full pipeline under a flag that promises zero GitHub writes",
+        "--dry-run and --resume cannot be combined -- a dry run never writes state.json, so there is nothing for --resume to load",
     };
   }
+  const isDryRun = Boolean(options.dryRun);
 
   const { org, repo } = options;
   const { route, repoEntry, defaultBranch, snapshot } = intakeResult;
@@ -363,9 +371,12 @@ export async function runRepo(options, overrides = {}) {
 
     // --resume loads the SAME runId's state back from the SAME docsDir a
     // prior invocation wrote it to; a fresh run starts from an empty one.
-    let runState = options.resume
-      ? loadState(stateFilePath)
-      : createRunState({ runId, repoName: repo });
+    // A dry run never reads or writes this at all (see the header comment).
+    let runState = isDryRun
+      ? null
+      : options.resume
+        ? loadState(stateFilePath)
+        : createRunState({ runId, repoName: repo });
 
     // One tracker for the WHOLE run (spec/005: "--max-total-budget-usd
     // 单次运行总预算"), shared across every issue -- an earlier issue's
@@ -409,7 +420,9 @@ export async function runRepo(options, overrides = {}) {
             appendTrace(docsDir, traceFileName(issue.number), entry),
         },
       );
-      const resumeIssueState = getIssueState(runState, issue.number);
+      const resumeIssueState = isDryRun
+        ? {}
+        : getIssueState(runState, issue.number);
       const issueRunContext = {
         ...baseRunContext,
         carrier: carrierContext,
@@ -427,6 +440,7 @@ export async function runRepo(options, overrides = {}) {
           resumeIssueState,
           pauseFilePath,
           stopAfterCiGreen,
+          stopAfterStep2: isDryRun,
         },
         {
           ...callbacks,
@@ -435,17 +449,37 @@ export async function runRepo(options, overrides = {}) {
         },
       );
 
-      if (result.prNumber) {
-        runState = markPrOpened(runState, issue.number, result.prNumber);
+      if (!isDryRun) {
+        if (result.prNumber) {
+          runState = markPrOpened(runState, issue.number, result.prNumber);
+        }
+        if (result.state === "MERGED") {
+          runState = markMerged(runState, issue.number, {
+            mergeSha: result.mergeCommit,
+          });
+        }
+        saveState(stateFilePath, runState);
       }
-      if (result.state === "MERGED") {
-        runState = markMerged(runState, issue.number, {
-          mergeSha: result.mergeCommit,
-        });
-      }
-      saveState(stateFilePath, runState);
 
       results.push({ issueNumber: issue.number, ...result });
+    }
+
+    if (isDryRun) {
+      // Dry-run results have no `state` at all unless tier resolution sent
+      // them to HUMAN_REQUIRED before step 2 ever ran (see
+      // issue-pipeline.mjs) -- exitCodeForStates would throw on the
+      // undefined ones, so this checks directly rather than reusing it.
+      const anyHumanRequired = results.some(
+        (result) => result.state === "HUMAN_REQUIRED",
+      );
+      return {
+        outcome: "DRY_RUN_COMPLETE",
+        exitCode: anyHumanRequired ? EXIT_CODES.PARTIAL : EXIT_CODES.OK,
+        runId,
+        results,
+        budgetExceeded: budgetTracker.exceeded,
+        spentUsd: budgetTracker.spentUsd,
+      };
     }
 
     return {
