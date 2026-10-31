@@ -24,10 +24,22 @@ export const DEFAULT_PLAN_REVIEW_BUDGET_USD = 1.0;
 // higher default for the same reason DEFAULT_PLAN_REVIEW_BUDGET_USD is low.
 export const DEFAULT_IMPLEMENT_FIX_BUDGET_USD = 5.0;
 
+// guards-core.mjs's guardG4 compares the PR's actual changed paths against
+// declaredPlanPaths -- a pre-declared scope boundary, not something derived
+// from the diff it is checked against (that would make the guard vacuous).
+// Before this field existed, nothing supplied guardG4 a real value at all.
+// A winning proposal's declaredPaths is this run's only source for it: the
+// proposal is "the plan" step 2 solidifies into, and plan-solidification.mjs/
+// implement-review.mjs already pass the winner through by reference with no
+// exact-shape check on it (confirmed), so this field reaches step 4's real
+// buildStep4Deps with no other module needing to change.
 const PROPOSAL_SCHEMA = {
   type: "object",
-  properties: { summary: { type: "string" } },
-  required: ["summary"],
+  properties: {
+    summary: { type: "string" },
+    declaredPaths: { type: "array", items: { type: "string" } },
+  },
+  required: ["summary", "declaredPaths"],
 };
 
 const REVIEW_SCHEMA = {
@@ -201,7 +213,7 @@ export function buildRealGenerateProposal(
         "",
         issue.body ?? "",
         "",
-        'Respond with exactly one JSON object matching this shape: {"summary": "<your proposed solution, 2-4 paragraphs>"}. No other text.',
+        'Respond with exactly one JSON object matching this shape: {"summary": "<your proposed solution, 2-4 paragraphs>", "declaredPaths": [<every file or directory path, relative to the repo root, that you expect this solution to touch>]}. No other text.',
       ].join("\n"),
     );
     const { composeArgs, claudeArgs } = buildDockerComposeRunArgs({

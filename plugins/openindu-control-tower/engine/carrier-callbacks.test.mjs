@@ -175,6 +175,38 @@ test("buildRealGenerateProposal propagates the invocation's actual costUsd along
   });
 });
 
+test("buildRealGenerateProposal's prompt asks for declaredPaths, and propagates whatever the carrier returns for it (guardG4's scope-boundary input)", async () => {
+  await withTempDir(async (dir) => {
+    const generateProposal = buildRealGenerateProposal(
+      {
+        worktreePath: "/wt",
+        systemPromptFilePath: "/wt/system-prompt.txt",
+        promptDir: dir,
+      },
+      {
+        invoke: async () => ({
+          success: true,
+          text: JSON.stringify({
+            summary: "x",
+            declaredPaths: ["src/foo.ts", "src/foo.test.ts"],
+          }),
+        }),
+      },
+    );
+    const result = await generateProposal("x", {
+      number: 1,
+      title: "t",
+      body: "b",
+    });
+    assert.deepEqual(result, {
+      summary: "x",
+      declaredPaths: ["src/foo.ts", "src/foo.test.ts"],
+    });
+    const promptText = readFileSync(join(dir, "proposal-x.txt"), "utf8");
+    assert.match(promptText, /declaredPaths/);
+  });
+});
+
 test("buildRealGenerateProposal propagates rawStdout alongside costUsd and the parsed summary, for trace-log.mjs", async () => {
   await withTempDir(async (dir) => {
     const generateProposal = buildRealGenerateProposal(
