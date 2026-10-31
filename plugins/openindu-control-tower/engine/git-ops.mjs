@@ -52,3 +52,14 @@ export function pushBranch(
 export function currentCommitSha(worktreePath, execGit = defaultExecGit) {
   return execGit(["rev-parse", "HEAD"], worktreePath).trim();
 }
+
+// `git status --porcelain` always exits 0 whether or not there is anything
+// staged, unlike `git diff --cached --quiet` (exit 1 when there IS a staged
+// diff) -- deliberately avoiding throw-based control flow for a perfectly
+// normal outcome (a fix role genuinely making no file change is not an
+// error). Used before a CI-fix commit round: committing with nothing staged
+// would throw and crash the run, when the correct behavior is to let CI
+// re-poll the unchanged head and eventually exhaust its retry budget.
+export function hasStagedChanges(worktreePath, execGit = defaultExecGit) {
+  return execGit(["status", "--porcelain"], worktreePath).trim().length > 0;
+}

@@ -4,6 +4,7 @@ import { buildRealFix } from "./carrier-callbacks.mjs";
 import {
   buildCommitMessage,
   commitChanges,
+  hasStagedChanges,
   pushBranch,
   stageAllChanges,
 } from "./git-ops.mjs";
@@ -97,6 +98,7 @@ export function buildStep4Callbacks(
     stageFn = stageAllChanges,
     commitFn = commitChanges,
     pushFn = pushBranch,
+    hasStagedChangesFn = hasStagedChanges,
     fetchPrSnapshot = defaultFetchPrSnapshot,
     fetchDefaultBranchHeadConclusion = defaultFetchDefaultBranchHeadConclusion,
     fetchPrMergedBy = defaultFetchPrMergedBy,
@@ -166,6 +168,26 @@ export function buildStep4Callbacks(
       (c) => c.conclusion !== "SUCCESS",
     );
     await fix({ reason: "ci-failure", attempt, failingChecks }, issue);
+    // fix()'s own prompt explicitly tells the carrier not to commit or push
+    // (same "implement only writes files" rule as the main implement role) --
+    // so this is the one place that actually happens for a CI-fix round.
+    // Without it, runCiRetryLoop would just re-poll the same unchanged head
+    // forever (up to maxAttempts), making every fix attempt a no-op. Guarded
+    // on hasStagedChangesFn: a fix role that judges there is nothing to
+    // change should let CI re-poll the unchanged head and exhaust its retry
+    // budget, not crash on "nothing to commit".
+    stageFn(worktreePath);
+    if (hasStagedChangesFn(worktreePath)) {
+      commitFn({
+        worktreePath,
+        message: buildCommitMessage({
+          subject: `fix: address CI failure (attempt ${attempt})`,
+          coAuthoredBy: commit.coAuthoredBy,
+        }),
+        signoff: commit.signoff,
+      });
+      pushFn({ worktreePath, branchName });
+    }
   }
 
   function gatherFactsFor(prNumber) {

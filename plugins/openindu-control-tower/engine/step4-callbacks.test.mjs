@@ -38,6 +38,7 @@ function fakeDeps(overrides = {}) {
     stageFn: () => {},
     commitFn: () => {},
     pushFn: () => {},
+    hasStagedChangesFn: () => true,
     fetchPrSnapshot: () => ({
       prHeadSha: "head-sha",
       actualChecks: [
@@ -130,6 +131,53 @@ test("attemptCiFix passes only the non-SUCCESS checks to fix, alongside the atte
     { name: "unit-tests", conclusion: "FAILURE" },
   ]);
   assert.equal(seenFixArgs.issue.number, 9);
+});
+
+test("attemptCiFix stages, commits with an attempt-numbered subject, and pushes, when fix left staged changes", async () => {
+  let seen = {};
+  const callbacks = buildStep4Callbacks(
+    baseContext(),
+    {},
+    fakeDeps({
+      hasStagedChangesFn: () => true,
+      stageFn: (worktreePath) => {
+        seen.staged = worktreePath;
+      },
+      commitFn: (args) => {
+        seen.commit = args;
+      },
+      pushFn: (args) => {
+        seen.push = args;
+      },
+    }),
+  );
+  await callbacks.openPr();
+  await callbacks.attemptCiFix(1);
+  assert.equal(seen.staged, "/wt");
+  assert.match(seen.commit.message, /attempt 1/);
+  assert.equal(seen.push.branchName, "dev/issue-9");
+});
+
+test("attemptCiFix stages but does not commit or push when fix left nothing staged, so CI re-polls the unchanged head instead of crashing", async () => {
+  let committed = false;
+  let pushed = false;
+  const callbacks = buildStep4Callbacks(
+    baseContext(),
+    {},
+    fakeDeps({
+      hasStagedChangesFn: () => false,
+      commitFn: () => {
+        committed = true;
+      },
+      pushFn: () => {
+        pushed = true;
+      },
+    }),
+  );
+  await callbacks.openPr();
+  await callbacks.attemptCiFix(1);
+  assert.equal(committed, false);
+  assert.equal(pushed, false);
 });
 
 test("promote adapts to promoteToReady's {repoPath, prNumber} shape", async () => {
