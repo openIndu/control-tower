@@ -7,10 +7,26 @@ import test from "node:test";
 import {
   DocumentAlreadyExistsError,
   resolveDocsDir,
+  resolveRepoDocsDir,
   reviewDocFileName,
   solutionDocFileName,
   writeIssueDocument,
 } from "./docs-dir.mjs";
+
+test("resolveRepoDocsDir is the repo-level parent of resolveDocsDir's run-scoped path, for both the default and a custom OPENINDU_DOCS_DIR", () => {
+  assert.equal(
+    resolveRepoDocsDir("backend", {}),
+    join(process.cwd(), "mem_docs", "backend"),
+  );
+  assert.equal(
+    join(resolveRepoDocsDir("backend", {}), "dev-runs", "run-1"),
+    resolveDocsDir("backend", "run-1", {}),
+  );
+  assert.equal(
+    resolveRepoDocsDir("backend", { OPENINDU_DOCS_DIR: "/custom/docs" }),
+    join("/custom/docs", "backend"),
+  );
+});
 
 test("resolveDocsDir defaults to <cwd>/mem_docs/<repo>/dev-runs/<run-id> when OPENINDU_DOCS_DIR is unset", () => {
   const dir = resolveDocsDir("backend", "run-1", {});

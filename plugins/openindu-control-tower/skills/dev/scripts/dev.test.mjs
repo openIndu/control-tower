@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { join } from "node:path";
 import test from "node:test";
 
-import { gatherAdmissionFacts, parseArgs, runIntake } from "./dev.mjs";
+import { EXIT_CODES } from "../../../engine/exit-codes.mjs";
+import { gatherAdmissionFacts, parseArgs, runIntake, runRepo } from "./dev.mjs";
 
 test("parseArgs requires --repo", () => {
   assert.throws(() => parseArgs([]), /--repo requires a value/);
@@ -239,4 +241,227 @@ test("runIntake builds a snapshot entry per issue using the author login for the
   assert.deepEqual(seenAuthors, ["alice", "bob"]);
   assert.equal(result.snapshot.issues[0].source.issueAuthorHasWrite, true);
   assert.equal(result.snapshot.issues[1].source.issueAuthorHasWrite, false);
+});
+
+function fakeIntakeComplete({ issueCount = 1, dev = {}, devGrants = [] } = {}) {
+  const issues = Array.from({ length: issueCount }, (_, index) => ({
+    number: index + 1,
+    title: `issue ${index + 1}`,
+    body: "body",
+    author: "alice",
+    bodyHashAtSnapshot: "hash",
+    source: { issueAuthorHasWrite: false, commenterPermissions: [] },
+  }));
+  return {
+    outcome: "INTAKE_COMPLETE",
+    admissionResult: "auto_merge_eligible",
+    route: {
+      repos: { "openIndu-backend": { type: "backend", dev } },
+      dev_grants: devGrants,
+    },
+    repoEntry: { type: "backend", dev },
+    defaultBranch: "main",
+    snapshot: { issueCount, issues, takenAt: "2026-10-31T00:00:00.000Z" },
+    issues,
+  };
+}
+
+function baseRunRepoOverrides(overrides = {}) {
+  return {
+    ensureClone: () => ({ cloned: false }),
+    worktreeBaseDir: "/base",
+    setupPrompt: () => "/base/run-1/system-prompt.txt",
+    generateRunId: () => "run-1",
+    resolveDocsDirFn: (repo, runId) => `/docs/${repo}/${runId}`,
+    resolveRepoDocsDirFn: (repo) => `/docs/${repo}`,
+    resolveApprovers: () => ["@alice"],
+    buildStep4DepsFn: () => ({ stepFourDepsBuilt: true }),
+    ...overrides,
+  };
+}
+
+test("runRepo passes through runIntake's non-INTAKE_COMPLETE result unchanged, without touching the filesystem or GitHub", async () => {
+  const rejected = {
+    outcome: "REJECTED",
+    exitCode: EXIT_CODES.REJECTED,
+    reason: "dev.enabled is not true for this repo",
+  };
+  const result = await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({ runIntakeFn: async () => rejected }),
+  );
+  assert.deepEqual(result, rejected);
+});
+
+test("runRepo refuses --dry-run explicitly rather than silently running the real pipeline", async () => {
+  let pipelineCalled = false;
+  const result = await runRepo(
+    { org: "openIndu", repo: "openIndu-backend", dryRun: true },
+    baseRunRepoOverrides({
+      runIntakeFn: async () => fakeIntakeComplete(),
+      runPipeline: async () => {
+        pipelineCalled = true;
+        return { state: "NO_ACTION" };
+      },
+    }),
+  );
+  assert.equal(result.outcome, "NOT_YET_IMPLEMENTED");
+  assert.equal(pipelineCalled, false);
+});
+
+test("runRepo clones once, sets up the system prompt once, and calls the real pipeline once per issue up to --max-issues", async () => {
+  const pipelineCalls = [];
+  const result = await runRepo(
+    { org: "openIndu", repo: "openIndu-backend", maxIssues: 2 },
+    baseRunRepoOverrides({
+      runIntakeFn: async () =>
+        fakeIntakeComplete({ issueCount: 3, dev: { checks: ["npm test"] } }),
+      runPipeline: async (issue, pipelineOptions, deps) => {
+        pipelineCalls.push({ issue, pipelineOptions, deps });
+        return { state: "NO_ACTION" };
+      },
+    }),
+  );
+
+  assert.equal(pipelineCalls.length, 2);
+  assert.equal(pipelineCalls[0].issue.number, 1);
+  assert.equal(pipelineCalls[1].issue.number, 2);
+  assert.deepEqual(pipelineCalls[0].pipelineOptions.devChecks, ["npm test"]);
+  assert.equal(
+    pipelineCalls[0].pipelineOptions.pauseFilePath,
+    join("/docs/openIndu-backend", ".dev-pause"),
+  );
+  assert.equal(typeof pipelineCalls[0].deps.buildStep4Deps, "function");
+  assert.equal(typeof pipelineCalls[0].deps.generateProposal, "function");
+  assert.notEqual(pipelineCalls[0].pipelineOptions.worktreeBaseDir, undefined);
+  assert.equal(result.outcome, "RUN_COMPLETE");
+  assert.equal(result.exitCode, EXIT_CODES.OK);
+});
+
+test("runRepo gives each issue its own promptDir (sibling of its worktree, not shared across issues)", async () => {
+  const promptDirs = [];
+  await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      runIntakeFn: async () => fakeIntakeComplete({ issueCount: 2 }),
+      buildStep4DepsFn: (runContext) => {
+        promptDirs.push(runContext.carrier.promptDir);
+        return { stepFourDepsBuilt: true };
+      },
+      runPipeline: async (issue, pipelineOptions, deps) => {
+        deps.buildStep4Deps({ issue });
+        return { state: "NO_ACTION" };
+      },
+    }),
+  );
+  assert.equal(promptDirs.length, 2);
+  assert.notEqual(promptDirs[0], promptDirs[1]);
+  assert.match(promptDirs[0], /issue-1-prompts$/);
+  assert.match(promptDirs[1], /issue-2-prompts$/);
+});
+
+test("runRepo sets stopAfterCiGreen=true when --no-merge is passed, even with a valid grant", async () => {
+  let seenStop;
+  await runRepo(
+    { org: "openIndu", repo: "openIndu-backend", noMerge: true },
+    baseRunRepoOverrides({
+      runIntakeFn: async () =>
+        fakeIntakeComplete({
+          devGrants: [
+            { repos: ["openIndu-backend"], expires_on: "2999-01-01" },
+          ],
+        }),
+      runPipeline: async (issue, pipelineOptions) => {
+        seenStop = pipelineOptions.stopAfterCiGreen;
+        return { state: "NO_ACTION" };
+      },
+    }),
+  );
+  assert.equal(seenStop, true);
+});
+
+test("runRepo sets stopAfterCiGreen=true when the repo has no live grant, even without --no-merge", async () => {
+  let seenStop;
+  await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      runIntakeFn: async () => fakeIntakeComplete({ devGrants: [] }),
+      runPipeline: async (issue, pipelineOptions) => {
+        seenStop = pipelineOptions.stopAfterCiGreen;
+        return { state: "NO_ACTION" };
+      },
+    }),
+  );
+  assert.equal(seenStop, true);
+});
+
+test("runRepo sets stopAfterCiGreen=false when the repo has a live grant and --no-merge is not passed", async () => {
+  let seenStop;
+  await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      runIntakeFn: async () =>
+        fakeIntakeComplete({
+          devGrants: [
+            { repos: ["openIndu-backend"], expires_on: "2999-01-01" },
+          ],
+        }),
+      runPipeline: async (issue, pipelineOptions) => {
+        seenStop = pipelineOptions.stopAfterCiGreen;
+        return { state: "NO_ACTION" };
+      },
+    }),
+  );
+  assert.equal(seenStop, false);
+});
+
+test("runRepo's exit code reflects the batch of issue outcomes via exitCodeForStates (PARTIAL when any issue is BLOCKED)", async () => {
+  const result = await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      runIntakeFn: async () => fakeIntakeComplete({ issueCount: 2 }),
+      runPipeline: async (issue) => ({
+        state: issue.number === 1 ? "MERGED" : "BLOCKED",
+      }),
+    }),
+  );
+  assert.equal(result.exitCode, EXIT_CODES.PARTIAL);
+  assert.equal(result.results.length, 2);
+});
+
+test("runRepo's buildStep4Deps closure forwards the per-issue issueArgs to the injected buildStep4DepsFn, along with the resolved runContext (carrier + authorizedApprovers)", async () => {
+  let capturedRunContext;
+  let capturedIssueArgs;
+  await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      runIntakeFn: async () => fakeIntakeComplete({ issueCount: 1 }),
+      resolveApprovers: () => ["@alice", "@bob"],
+      buildStep4DepsFn: (runContext, issueArgs) => {
+        capturedRunContext = runContext;
+        capturedIssueArgs = issueArgs;
+        return { stepFourDepsBuilt: true };
+      },
+      runPipeline: async (issue, pipelineOptions, deps) => {
+        const step4Deps = deps.buildStep4Deps({
+          worktreePath: "/wt/issue-1",
+          branchName: "dev/issue-1",
+          issue,
+          tier: "T1",
+          scoping: {},
+          declaredPaths: [],
+          solutionDocument: null,
+          implementationReviewDocument: null,
+        });
+        assert.deepEqual(step4Deps, { stepFourDepsBuilt: true });
+        return { state: "NO_ACTION" };
+      },
+    }),
+  );
+
+  assert.deepEqual(capturedRunContext.authorizedApprovers, ["@alice", "@bob"]);
+  assert.equal(capturedRunContext.resumePrNumber, null);
+  assert.equal(typeof capturedRunContext.carrier.promptDir, "string");
+  assert.equal(capturedIssueArgs.issue.number, 1);
+  assert.equal(capturedIssueArgs.tier, "T1");
 });
