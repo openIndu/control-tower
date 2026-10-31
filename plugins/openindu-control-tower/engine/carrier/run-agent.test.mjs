@@ -151,3 +151,24 @@ test("invokeAgent reads the prompt file, passes its content as spawnCompose's st
   assert.equal(result.success, true);
   assert.equal(result.exitCode, 0);
 });
+
+test("invokeAgent passes the raw stdout through as rawStdout, for trace-log.mjs to redact and persist", () => {
+  const rawStdout = JSON.stringify({
+    type: "result",
+    subtype: "success",
+    is_error: false,
+  });
+  const result = invokeAgent(
+    {
+      composeArgs: ["run", "--rm", "agent"],
+      claudeArgs: ["--bare", "--print"],
+      promptFilePath: "/fake/prompt.txt",
+      cwd: "/fake/carrier",
+    },
+    {
+      readPrompt: () => "the issue body",
+      spawnCompose: () => ({ status: 0, stderr: "", stdout: rawStdout }),
+    },
+  );
+  assert.equal(result.rawStdout, rawStdout);
+});

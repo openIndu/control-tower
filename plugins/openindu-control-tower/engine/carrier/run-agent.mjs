@@ -107,5 +107,9 @@ export function invokeAgent(
     cwd,
   );
   const parsed = parseStreamJsonResult(stdout ?? "");
-  return { ...parsed, exitCode: status, stderr };
+  // trace-log.mjs's withTraceLogging needs the raw trace to redact and
+  // persist (spec/005 section 6 criterion #16) -- additive, no existing
+  // caller reads result shape via deepEqual (confirmed: run-agent.test.mjs
+  // asserts individual fields only), so nothing downstream needs updating.
+  return { ...parsed, exitCode: status, stderr, rawStdout: stdout ?? "" };
 }

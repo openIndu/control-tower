@@ -175,6 +175,36 @@ test("buildRealGenerateProposal propagates the invocation's actual costUsd along
   });
 });
 
+test("buildRealGenerateProposal propagates rawStdout alongside costUsd and the parsed summary, for trace-log.mjs", async () => {
+  await withTempDir(async (dir) => {
+    const generateProposal = buildRealGenerateProposal(
+      {
+        worktreePath: "/wt",
+        systemPromptFilePath: "/wt/sp.txt",
+        promptDir: dir,
+      },
+      {
+        invoke: async () => ({
+          success: true,
+          text: JSON.stringify({ summary: "x" }),
+          costUsd: 0.1234,
+          rawStdout: "raw trace text",
+        }),
+      },
+    );
+    const result = await generateProposal("x", {
+      number: 1,
+      title: "t",
+      body: "b",
+    });
+    assert.deepEqual(result, {
+      summary: "x",
+      costUsd: 0.1234,
+      rawStdout: "raw trace text",
+    });
+  });
+});
+
 test("buildRealGenerateScopingProposal propagates costUsd:null unchanged (invokeAgent's own fallback when the carrier reports no cost)", async () => {
   await withTempDir(async (dir) => {
     const generateScopingProposal = buildRealGenerateScopingProposal(
