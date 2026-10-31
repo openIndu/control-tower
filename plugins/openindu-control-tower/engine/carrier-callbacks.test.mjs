@@ -76,6 +76,8 @@ test("buildRealGenerateProposal writes a real prompt file naming the strategy an
       "--rm",
       "-v",
       "/wt:/workspace",
+      "-e",
+      "ANTHROPIC_API_KEY",
       "agent",
     ]);
     assert.ok(seenArgs.claudeArgs.includes("--json-schema"));

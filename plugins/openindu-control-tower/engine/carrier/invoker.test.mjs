@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  buildAgentEnv,
   buildAppendSystemPrompt,
   buildDockerComposeRunArgs,
   roleNeedsBash,
@@ -49,21 +48,6 @@ test("buildAppendSystemPrompt works with neither CLAUDE.md nor AGENTS.md present
   assert.equal(prompt, "RULE1\n\n---\n\nPRINCIPLE");
 });
 
-test("buildAgentEnv never includes anything beyond the fixed allowlist", () => {
-  const env = buildAgentEnv({ anthropicApiKey: "sk-ant-test" });
-  assert.deepEqual(Object.keys(env).sort(), [
-    "ANTHROPIC_API_KEY",
-    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
-    "GIT_TERMINAL_PROMPT",
-    "HTTPS_PROXY",
-    "HTTP_PROXY",
-    "NO_PROXY",
-    "OPENINDU_DEV_ACTIVE",
-  ]);
-  assert.equal(env.ANTHROPIC_API_KEY, "sk-ant-test");
-  assert.equal(env.OPENINDU_DEV_ACTIVE, "1");
-});
-
 test("buildDockerComposeRunArgs mounts only the worktree, nothing else", () => {
   const { composeArgs } = buildDockerComposeRunArgs({
     worktreePath: "/tmp/worktree",
@@ -72,7 +56,33 @@ test("buildDockerComposeRunArgs mounts only the worktree, nothing else", () => {
     maxBudgetUsd: 1,
     promptFilePath: "/tmp/issue.txt",
   });
-  assert.deepEqual(composeArgs, ["run", "--rm", "-v", "/tmp/worktree:/workspace", "agent"]);
+  assert.deepEqual(composeArgs, [
+    "run",
+    "--rm",
+    "-v",
+    "/tmp/worktree:/workspace",
+    "-e",
+    "ANTHROPIC_API_KEY",
+    "agent",
+  ]);
+});
+
+test("buildDockerComposeRunArgs always forwards ANTHROPIC_API_KEY by bare name, never embedding its actual value", () => {
+  const { composeArgs } = buildDockerComposeRunArgs({
+    worktreePath: "/tmp/worktree",
+    role: "implement",
+    systemPromptFilePath: "/tmp/prompt.txt",
+    allowedToolCommands: ["Bash(npm test)"],
+    maxBudgetUsd: 2,
+    promptFilePath: "/tmp/issue.txt",
+  });
+  const flagIndex = composeArgs.indexOf("-e");
+  assert.ok(flagIndex >= 0, "expected a bare -e flag in composeArgs");
+  assert.equal(composeArgs[flagIndex + 1], "ANTHROPIC_API_KEY");
+  assert.ok(
+    composeArgs.indexOf("agent") > flagIndex,
+    "-e ANTHROPIC_API_KEY must come before the service name per docker compose's own argv order",
+  );
 });
 test("buildDockerComposeRunArgs always includes --restricted and --strict-mcp-config", () => {
   const { claudeArgs } = buildDockerComposeRunArgs({
