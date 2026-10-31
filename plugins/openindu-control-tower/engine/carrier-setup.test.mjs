@@ -11,7 +11,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { buildCarrierCallbacks, setupSystemPrompt } from "./carrier-setup.mjs";
+import {
+  buildCarrierCallbacks,
+  setupSystemPrompt,
+  withTrackingWrappers,
+} from "./carrier-setup.mjs";
 
 function withTempDir(fn) {
   const dir = mkdtempSync(join(tmpdir(), "carrier-setup-test-"));
@@ -137,4 +141,69 @@ test("buildCarrierCallbacks returns all 6 real callbacks, each wired to the same
     });
     assert.ok(seenPromptFiles[0].startsWith(promptDir));
   });
+});
+
+test("withTrackingWrappers wraps every callback, passing cost to addCost, a trace entry labeled by the callback's own key to appendTrace, and the result through unchanged", async () => {
+  let totalCost = 0;
+  const traceEntries = [];
+  const callbacks = {
+    generateProposal: async () => ({
+      summary: "s",
+      costUsd: 0.5,
+      rawStdout: "proposal stdout",
+    }),
+    implement: async () => ({
+      filesChanged: ["a.js"],
+      costUsd: 1.5,
+      rawStdout: "implement stdout",
+    }),
+  };
+
+  const wrapped = withTrackingWrappers(callbacks, {
+    addCost: (cost) => {
+      totalCost += cost;
+    },
+    appendTrace: (entry) => traceEntries.push(entry),
+  });
+
+  const proposalResult = await wrapped.generateProposal();
+  const implementResult = await wrapped.implement();
+
+  assert.equal(totalCost, 2);
+  assert.deepEqual(proposalResult, {
+    summary: "s",
+    costUsd: 0.5,
+    rawStdout: "proposal stdout",
+  });
+  assert.deepEqual(implementResult, {
+    filesChanged: ["a.js"],
+    costUsd: 1.5,
+    rawStdout: "implement stdout",
+  });
+  assert.deepEqual(traceEntries, [
+    { label: "generateProposal", rawStdout: "proposal stdout" },
+    { label: "implement", rawStdout: "implement stdout" },
+  ]);
+});
+
+test("withTrackingWrappers tolerates a bare fake callback with no costUsd/rawStdout -- neither wrapper throws, and nothing gets tracked", async () => {
+  let addCostCalled = false;
+  let appendTraceCalled = false;
+  const wrapped = withTrackingWrappers(
+    { reviewProposal: async () => ({ score: 7, mustFix: [] }) },
+    {
+      addCost: () => {
+        addCostCalled = true;
+      },
+      appendTrace: () => {
+        appendTraceCalled = true;
+      },
+    },
+  );
+
+  const result = await wrapped.reviewProposal();
+
+  assert.deepEqual(result, { score: 7, mustFix: [] });
+  assert.equal(addCostCalled, false);
+  assert.equal(appendTraceCalled, false);
 });
