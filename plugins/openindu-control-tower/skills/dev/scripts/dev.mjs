@@ -127,6 +127,18 @@ export async function runIntake(
       reason: `structurally excluded type: ${repoEntry.type}`,
     };
   }
+  // spec/005 section 2.4: dev.enabled defaults to false ("是否允许 /dev 操作该
+  // 仓（PR-only 也算操作）"); section 2.3-2's exit-3 list names it alongside
+  // structural exclusion and A1 ("排除类型、未启用、A1 不满足"), so this is a
+  // REJECTED short-circuit, not a PR_ONLY admission result -- a repo that has
+  // never opted in gets no action at all, not even an opened PR.
+  if (repoEntry.dev?.enabled !== true) {
+    return {
+      outcome: "REJECTED",
+      exitCode: EXIT_CODES.REJECTED,
+      reason: "dev.enabled is not true for this repo",
+    };
+  }
 
   const admissionFacts = gatherAdmission({ org, repo });
   const admission = evaluateAdmission({

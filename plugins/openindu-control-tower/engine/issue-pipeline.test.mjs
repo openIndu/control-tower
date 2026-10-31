@@ -133,6 +133,7 @@ function baseContext(overrides = {}) {
 
 test("runIssuePipeline happy path: creates the worktree, resolves tier, runs step 2/3/4, returns MERGED with both documents", async () => {
   let worktreeArgs = null;
+  let step4DepsArgs = null;
   const gateCwds = [];
   const result = await runIssuePipeline(
     ISSUE,
@@ -144,6 +145,14 @@ test("runIssuePipeline happy path: creates the worktree, resolves tier, runs ste
       execShell: (command, cwd) => {
         gateCwds.push(cwd);
         return { status: 0, output: "ok" };
+      },
+      buildStep4Deps: (args) => {
+        step4DepsArgs = args;
+        return {
+          ...happyPathStep4Deps(),
+          gatherPromotionFacts: async () => ALL_PASS_FACTS,
+          gatherPostPromotionFacts: async () => ALL_PASS_FACTS,
+        };
       },
     }),
   );
@@ -160,6 +169,16 @@ test("runIssuePipeline happy path: creates the worktree, resolves tier, runs ste
   // gap found via this test before execShell/cwd threading was added.
   assert.equal(gateCwds.length, 1);
   assert.equal(gateCwds[0], worktreeArgs.worktreePath);
+
+  // pr-content.mjs's renderPrBody needs these to write a real PR body --
+  // confirms buildStep4Deps actually receives what runStep2/runStep3 just
+  // produced, not null placeholders.
+  assert.equal(step4DepsArgs.solutionDocument, result.solutionDocument);
+  assert.equal(
+    step4DepsArgs.implementationReviewDocument,
+    result.implementationReviewDocument,
+  );
+  assert.match(step4DepsArgs.solutionDocument, /Issue #42/);
 });
 
 test("runIssuePipeline reports HUMAN_REQUIRED from tier resolution and never runs step 2/3/4", async () => {
