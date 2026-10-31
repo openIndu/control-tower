@@ -3,6 +3,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { EXIT_CODES } from "../../../engine/exit-codes.mjs";
+import { PointsAtProductionError } from "../../../engine/local-service.mjs";
 import {
   createRunState,
   markMerged,
@@ -605,6 +606,168 @@ test("runRepo only fetches the default branch's commit log (for the rollback che
     join("/base", "clones", "openIndu", "openIndu-backend"),
     "main",
   ]);
+});
+
+test("runRepo runs step 5 (local verification) when dev.local_service is configured and an issue merged, writing a checklist and reporting health", async () => {
+  const calls = [];
+  const result = await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      runIntakeFn: async () =>
+        fakeIntakeComplete({
+          issueCount: 1,
+          dev: {
+            local_service: {
+              build_command: "npm run build",
+              start_command: "npm start",
+              health_check_url: "http://localhost:8080/health",
+            },
+          },
+        }),
+      runPipeline: async () => ({
+        state: "MERGED",
+        prNumber: 10,
+        mergeCommit: "sha1",
+      }),
+      createVerifyWorktree: (args) =>
+        calls.push(["createVerifyWorktree", args]),
+      startService: (args) => {
+        calls.push(["startService", args]);
+        return { pid: 4321 };
+      },
+      probeServiceHealth: async (args) => {
+        calls.push(["probeServiceHealth", args]);
+        return { healthy: true };
+      },
+      buildSummarizeAcceptanceCriteria: () => async () => ["check the thing"],
+      generateChecklist: async (issues) => {
+        calls.push(["generateChecklist", issues]);
+        return "# Checklist";
+      },
+      writeChecklist: (path, markdown) => {
+        calls.push(["writeChecklist", path, markdown]);
+      },
+    }),
+  );
+
+  assert.deepEqual(result.localServiceResult, {
+    attempted: true,
+    healthy: true,
+    pid: 4321,
+    checklistPath: result.localServiceResult.checklistPath,
+  });
+  assert.equal(typeof result.localServiceResult.checklistPath, "string");
+  assert.match(result.report, /## Local verification/);
+  assert.match(result.report, /- Healthy: yes/);
+
+  const kinds = calls.map((c) => c[0]);
+  assert.deepEqual(kinds, [
+    "createVerifyWorktree",
+    "startService",
+    "probeServiceHealth",
+    "generateChecklist",
+    "writeChecklist",
+  ]);
+  assert.deepEqual(
+    calls.find((c) => c[0] === "generateChecklist")[1].map((i) => i.number),
+    [1],
+  );
+});
+
+test("runRepo's step 5 starts and health-checks the service even when nothing merged, but skips the checklist (no merged issues to summarize)", async () => {
+  let generateChecklistCalled = false;
+  const result = await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      runIntakeFn: async () =>
+        fakeIntakeComplete({
+          issueCount: 1,
+          dev: { local_service: { start_command: "npm start" } },
+        }),
+      runPipeline: async () => ({ state: "NO_ACTION" }),
+      createVerifyWorktree: () => {},
+      startService: () => ({ pid: 1 }),
+      probeServiceHealth: async () => ({ healthy: true }),
+      generateChecklist: async () => {
+        generateChecklistCalled = true;
+        return "# Checklist";
+      },
+    }),
+  );
+
+  assert.equal(generateChecklistCalled, false);
+  assert.equal(result.localServiceResult.checklistPath, null);
+  assert.match(
+    result.report,
+    /- Verify checklist: none \(no issue in this run reached MERGED\)/,
+  );
+});
+
+test("runRepo's step 5 catches a production-check refusal and reports it instead of crashing the run", async () => {
+  const result = await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      runIntakeFn: async () =>
+        fakeIntakeComplete({
+          issueCount: 1,
+          dev: {
+            local_service: {
+              start_command: "npm start",
+              forbidden_env_patterns: ["prod-db.internal"],
+            },
+          },
+        }),
+      runPipeline: async () => ({
+        state: "MERGED",
+        prNumber: 10,
+        mergeCommit: "sha1",
+      }),
+      createVerifyWorktree: () => {},
+      readLocalServiceEnvText: () => "DATABASE_URL=prod-db.internal",
+      startService: () => {
+        throw new PointsAtProductionError(["prod-db.internal"]);
+      },
+    }),
+  );
+
+  assert.equal(result.outcome, "RUN_COMPLETE");
+  assert.equal(result.results[0].state, "MERGED");
+  assert.equal(result.localServiceResult.blockedByProductionCheck, true);
+  assert.match(result.report, /- Refused to start: refusing to start/);
+});
+
+test("runRepo reports step 5 as not attempted, and step 6 as N/A, when neither dev.local_service nor dev.build is configured", async () => {
+  const result = await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      runIntakeFn: async () => fakeIntakeComplete({ issueCount: 1 }),
+      runPipeline: async () => ({ state: "NO_ACTION" }),
+    }),
+  );
+
+  assert.deepEqual(result.localServiceResult, {
+    attempted: false,
+    reason: "dev.local_service is not configured for this repo",
+  });
+  assert.equal(result.buildReadiness.status, "N/A");
+  assert.match(result.report, /dev\.build readiness: N\/A/);
+});
+
+test("runRepo's step 6 reports PENDING for an aggregate-routed dev.build, since RULE 11 step ③ is a cross-repo fact this runner cannot check", async () => {
+  const result = await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      runIntakeFn: async () =>
+        fakeIntakeComplete({
+          issueCount: 1,
+          dev: { build: { aggregate: true } },
+        }),
+      runPipeline: async () => ({ state: "NO_ACTION" }),
+    }),
+  );
+
+  assert.equal(result.buildReadiness.status, "PENDING");
+  assert.match(result.report, /dev\.build readiness: PENDING/);
 });
 
 test("runRepo's buildStep4Deps closure forwards the per-issue issueArgs to the injected buildStep4DepsFn, along with the resolved runContext (carrier + authorizedApprovers)", async () => {

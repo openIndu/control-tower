@@ -10,6 +10,7 @@ import {
   evaluateAdmission,
 } from "../../../engine/admission.mjs";
 import { createBudgetTracker } from "../../../engine/budget-tracking.mjs";
+import { buildRealSummarizeAcceptanceCriteria } from "../../../engine/carrier-callbacks.mjs";
 import {
   buildCarrierCallbacks,
   setupSystemPrompt,
@@ -34,6 +35,19 @@ import {
   parseRoute,
   resolveRepoAuthorization,
 } from "../../../engine/route-reader.mjs";
+import {
+  evaluateBuildReadiness,
+  renderRule11StatusChecklist,
+} from "../../../engine/build-step.mjs";
+import {
+  createVerificationWorktree,
+  defaultReadLocalServiceEnvText,
+  generateVerifyChecklist,
+  PointsAtProductionError,
+  probeHealth,
+  startLocalService,
+  writeVerifyChecklist,
+} from "../../../engine/local-service.mjs";
 import { buildRepoRunContext } from "../../../engine/run-context.mjs";
 import {
   computeOutcomeRates,
@@ -266,7 +280,8 @@ export async function runIntake(
 // refused explicitly below rather than silently ignoring --resume.
 //
 // Deliberately NOT yet wired here, each a stated gap rather than a silent
-// one: step 5/6 sequencing + the final report.
+// one: ./dev ack and ./dev build's own subcommand dispatch (main()'s
+// argument parsing only supports the default repo-run mode today).
 //
 // promotedToReady is deliberately NOT tracked here, unlike openedPr/merged:
 // pr-lifecycle.mjs's promoteToReady is `gh pr ready <N>`, which is a safe
@@ -295,6 +310,13 @@ export async function runRepo(options, overrides = {}) {
     createBudget = createBudgetTracker,
     appendTrace = appendTraceEntry,
     fetchCommitMessages = defaultFetchDefaultBranchCommitMessages,
+    createVerifyWorktree = createVerificationWorktree,
+    readLocalServiceEnvText = defaultReadLocalServiceEnvText,
+    startService = startLocalService,
+    probeServiceHealth = probeHealth,
+    generateChecklist = generateVerifyChecklist,
+    writeChecklist = writeVerifyChecklist,
+    buildSummarizeAcceptanceCriteria = buildRealSummarizeAcceptanceCriteria,
   } = overrides;
 
   const intakeResult = await runIntakeFn(options, overrides);
@@ -489,6 +511,104 @@ export async function runRepo(options, overrides = {}) {
       };
     }
 
+    // spec/005 section 2.1 step 5: runs once per repo after the per-issue
+    // loop (never per issue), against a single verification worktree on the
+    // current default branch -- not the dry-run path above, since nothing
+    // merged for there to be anything new to verify. Informational: a
+    // startLocalService/probeHealth failure is caught and reported rather
+    // than thrown, so it never erases the per-issue results already in
+    // `results` (AGENTS.md rule 4 -- surface the error, don't silently treat
+    // it as success -- is satisfied by reporting it, not by crashing the
+    // whole run and losing everything that already succeeded).
+    const localServiceConfig = repoEntry.dev?.local_service ?? null;
+    let localServiceResult;
+    if (!localServiceConfig) {
+      localServiceResult = {
+        attempted: false,
+        reason: "dev.local_service is not configured for this repo",
+      };
+    } else {
+      const verifyWorktreePath = join(worktreeBaseDir, runId, "verify");
+      try {
+        createVerifyWorktree({
+          repoPath: repoClonePath,
+          worktreePath: verifyWorktreePath,
+          defaultBranch,
+        });
+        const started = startService({
+          worktreePath: verifyWorktreePath,
+          buildCommand: localServiceConfig.build_command,
+          startCommand: localServiceConfig.start_command,
+          resolvedEnvText: readLocalServiceEnvText(verifyWorktreePath),
+          forbiddenEnvPatterns: localServiceConfig.forbidden_env_patterns ?? [],
+        });
+        const health = await probeServiceHealth({
+          healthCheckUrl: localServiceConfig.health_check_url,
+        });
+        const mergedIssueNumbers = new Set(
+          results
+            .filter((result) => result.state === "MERGED")
+            .map((result) => result.issueNumber),
+        );
+        const mergedIssues = snapshot.issues.filter((issue) =>
+          mergedIssueNumbers.has(issue.number),
+        );
+        let checklistPath = null;
+        if (mergedIssues.length > 0) {
+          const summarizeAcceptanceCriteria = buildSummarizeAcceptanceCriteria({
+            worktreePath: verifyWorktreePath,
+            systemPromptFilePath,
+            promptDir: join(worktreeBaseDir, runId, "verify-prompts"),
+          });
+          const checklistMarkdown = await generateChecklist(
+            mergedIssues,
+            summarizeAcceptanceCriteria,
+          );
+          checklistPath = join(docsDir, "verify-checklist.md");
+          writeChecklist(checklistPath, checklistMarkdown);
+        }
+        localServiceResult = {
+          attempted: true,
+          healthy: health.healthy,
+          pid: started.pid,
+          checklistPath,
+        };
+      } catch (error) {
+        localServiceResult = {
+          attempted: true,
+          healthy: false,
+          blockedByProductionCheck: error instanceof PointsAtProductionError,
+          error: error.message,
+        };
+      }
+    }
+
+    // spec/005 section 2.1 step 6: readiness info only, feeding the report's
+    // RULE 11 section -- never auto-runs runBuildStep (build-step.mjs's own
+    // header: step 6 "only runs after explicit user confirmation", which
+    // only ./dev build's own subcommand can supply). rule11Status is
+    // deliberately undefined -- whether RULE 11 step ③ (the aggregate
+    // repo's submodule-pointer PR) has merged is a cross-repo fact this
+    // runner has no mechanism to check from here, and
+    // evaluateBuildReadiness's own `rule11Status?.submodulePointerMerged`
+    // optional-chains that into a conservative PENDING rather than a wrong
+    // READY_TO_BUILD. This is one axis of RULE 11 (⑥'s own readiness), not
+    // the full ③-⑥ breakdown -- the other steps are cross-repo facts this
+    // runner cannot observe, so they are left out rather than fabricated.
+    const buildReadiness = evaluateBuildReadiness(
+      repoEntry.dev?.build ?? null,
+      undefined,
+    );
+    const rule11Checklist = renderRule11StatusChecklist([
+      {
+        step: "⑥",
+        label: `dev.build readiness: ${buildReadiness.status}${
+          buildReadiness.reason ? ` (${buildReadiness.reason})` : ""
+        }`,
+        status: buildReadiness.status === "BUILT" ? "done" : "pending",
+      },
+    ]);
+
     // spec/005 section 6 criteria #15/#16: the per-issue matrix and the
     // degradation/human-correction/rollback rates, computed from this run's
     // own results -- recordedMerges/commitMessages are only fetched when
@@ -515,6 +635,8 @@ export async function runRepo(options, overrides = {}) {
       issueResults: results,
       outcomeRates,
       rollbackRate,
+      rule11Checklist,
+      localServiceResult,
     });
 
     return {
@@ -524,6 +646,8 @@ export async function runRepo(options, overrides = {}) {
       results,
       budgetExceeded: budgetTracker.exceeded,
       spentUsd: budgetTracker.spentUsd,
+      localServiceResult,
+      buildReadiness,
       report,
     };
   } finally {
