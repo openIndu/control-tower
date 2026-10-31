@@ -7,7 +7,9 @@ import test from "node:test";
 
 import {
   createIssueWorktree,
+  defaultRepoClonePath,
   defaultWorktreeBaseDir,
+  ensureRepoClone,
   issueBranchName,
   issueWorktreePath,
   listWorktrees,
@@ -107,6 +109,54 @@ test("removeIssueWorktree removes a clean worktree and listWorktrees no longer r
     assert.equal(existsSync(worktreePath), false);
     const entries = listWorktrees(repoPath, (args, cwd) => git(args, cwd));
     assert.ok(!entries.some((e) => e.path.endsWith("wt-issue-11")));
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
+test("defaultRepoClonePath nests clones under baseDir/clones/org/repo, a sibling of the per-run worktrees", () => {
+  assert.equal(
+    defaultRepoClonePath("/tmp/base", "openIndu", "backend"),
+    join("/tmp/base", "clones", "openIndu", "backend"),
+  );
+});
+
+test("ensureRepoClone clones when clonePath does not exist yet, reporting cloned:true", () => {
+  const scratch = mkdtempSync(join(tmpdir(), "worktree-test-"));
+  try {
+    const clonePath = join(scratch, "clones", "openIndu", "backend");
+    const calls = [];
+    const result = ensureRepoClone(
+      { org: "openIndu", repo: "backend", clonePath },
+      (args) => {
+        calls.push(args);
+        return "";
+      },
+    );
+    assert.equal(result.cloned, true);
+    assert.deepEqual(calls, [
+      ["clone", "https://github.com/openIndu/backend.git", clonePath],
+    ]);
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
+test("ensureRepoClone only fetches (never re-clones) when clonePath already exists, reporting cloned:false", () => {
+  const scratch = mkdtempSync(join(tmpdir(), "worktree-test-"));
+  try {
+    const clonePath = join(scratch, "repo");
+    makeLocalRepoWithOneCommit(clonePath);
+    const calls = [];
+    const result = ensureRepoClone(
+      { org: "openIndu", repo: "backend", clonePath },
+      (args, cwd) => {
+        calls.push({ args, cwd });
+        return "";
+      },
+    );
+    assert.equal(result.cloned, false);
+    assert.deepEqual(calls, [{ args: ["fetch", "origin"], cwd: clonePath }]);
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }

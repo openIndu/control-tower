@@ -103,7 +103,24 @@ export async function runIssuePipeline(
     }
   }
 
-  const step4Deps = buildStep4Deps({ worktreePath, branchName, issue, tier });
+  // pr-content.mjs's renderPrBody needs the documents to write a real PR
+  // body -- on resume (step2Result/step3Result still null here) there is
+  // nothing to pass, but buildStep4Deps's own openPr() is never called in
+  // that case either (resumeIssueState.openedPr is already true), so a null
+  // document never actually reaches a real PR body.
+  // pr-content.mjs's renderPrBody needs the documents to write a real PR
+  // body -- on resume (step2Result/step3Result still null here) there is
+  // nothing to pass, but buildStep4Deps's own openPr() is never called in
+  // that case either (resumeIssueState.openedPr is already true), so a null
+  // document never actually reaches a real PR body.
+  const step4Deps = buildStep4Deps({
+    worktreePath,
+    branchName,
+    issue,
+    tier,
+    solutionDocument: step2Result?.document ?? null,
+    implementationReviewDocument: step3Result?.document ?? null,
+  });
   const step4Result = await runStep4(
     { resumeState: resumeIssueState, pauseFilePath, stopAfterCiGreen },
     step4Deps,

@@ -64,6 +64,13 @@ const ROUTE_JSON = JSON.stringify({
   repos: {
     "openIndu-backend": {
       type: "backend",
+      dev: {
+        enabled: true,
+        required_checks: [{ kind: "test" }, { kind: "secret-scan" }],
+      },
+    },
+    "openIndu-not-enabled": {
+      type: "backend",
       dev: { required_checks: [{ kind: "test" }, { kind: "secret-scan" }] },
     },
     "control-tower": { type: "control-tower" },
@@ -110,6 +117,32 @@ test("runIntake reports REJECTED (exit 3) for a structurally-excluded repo, neve
   assert.equal(result.outcome, "REJECTED");
   assert.equal(result.exitCode, 3);
   assert.equal(called, false);
+});
+
+test("runIntake reports REJECTED (exit 3) when dev.enabled is not true, never gathering admission facts or calling collectIssues", async () => {
+  let admissionCalled = false;
+  let collectCalled = false;
+  const result = await runIntake(
+    { org: "openIndu", repo: "openIndu-not-enabled" },
+    baseDeps({
+      gatherAdmission: () => {
+        admissionCalled = true;
+        return {
+          hasDefaultBranchCiWorkflow: true,
+          defaultBranchHeadCiState: "SUCCESS",
+        };
+      },
+      collectIssues: () => {
+        collectCalled = true;
+        return { issueCount: 0, issues: [] };
+      },
+    }),
+  );
+  assert.equal(result.outcome, "REJECTED");
+  assert.equal(result.exitCode, 3);
+  assert.match(result.reason, /dev\.enabled/);
+  assert.equal(admissionCalled, false);
+  assert.equal(collectCalled, false);
 });
 
 test("runIntake reports REJECTED (exit 3) when admission A1 fails (no CI workflow at all), never calling collectIssues", async () => {
