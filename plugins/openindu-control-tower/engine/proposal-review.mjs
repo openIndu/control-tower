@@ -24,8 +24,17 @@ export async function runProposalStage({ issue, tier }, generateProposal) {
   const proposals = [];
   for (let i = 0; i < proposalStrategies.length; i++) {
     const strategy = proposalStrategies[i];
-    const { summary } = await generateProposal(strategy, issue);
-    proposals.push({ id: `p${i + 1}`, strategy, summary });
+    const generated = await generateProposal(strategy, issue);
+    const proposal = { id: `p${i + 1}`, strategy, summary: generated.summary };
+    // guardG4 needs the winner's declaredPaths (carrier-callbacks.mjs's
+    // PROPOSAL_SCHEMA). Conditional on presence, same shape as
+    // carrier-callbacks.mjs's own costUsd/rawStdout merges, so every
+    // pre-existing test here (fakes that return a bare {summary}) keeps its
+    // exact-shape assertion unchanged.
+    if (generated.declaredPaths !== undefined) {
+      proposal.declaredPaths = generated.declaredPaths;
+    }
+    proposals.push(proposal);
   }
   return proposals;
 }

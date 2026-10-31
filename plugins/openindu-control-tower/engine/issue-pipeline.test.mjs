@@ -103,7 +103,10 @@ function happyDeps(overrides = {}) {
   return {
     createWorktree: () => {},
     generateScopingProposal: async () => liteScoping(),
-    generateProposal: async () => ({ summary: "do the fix" }),
+    generateProposal: async () => ({
+      summary: "do the fix",
+      declaredPaths: ["src/fix.ts"],
+    }),
     reviewProposal: async () => ({ score: 9 }),
     implement: async () => {},
     reviewImplementation: async () => ({ mustFixItems: [] }),
@@ -179,6 +182,14 @@ test("runIssuePipeline happy path: creates the worktree, resolves tier, runs ste
     result.implementationReviewDocument,
   );
   assert.match(step4DepsArgs.solutionDocument, /Issue #42/);
+
+  // guardG4/guardG6 (via the real buildStep4Deps's gatherPromotionFacts)
+  // need these -- confirms the winning proposal's declaredPaths and the
+  // scoping self-assessment both reach buildStep4Deps, not just the
+  // rendered documents.
+  assert.deepEqual(step4DepsArgs.declaredPaths, ["src/fix.ts"]);
+  assert.equal(step4DepsArgs.scoping.riskTier, "L0");
+  assert.equal(step4DepsArgs.scoping.confidence, 0.95);
 });
 
 test("runIssuePipeline reports HUMAN_REQUIRED from tier resolution and never runs step 2/3/4", async () => {

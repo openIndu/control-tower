@@ -26,6 +26,22 @@ test("runProposalStage generates exactly 1 proposal for lite, calling generatePr
   });
 });
 
+test("runProposalStage propagates declaredPaths when generateProposal supplies it, for guardG4's scope-boundary check", async () => {
+  const proposals = await runProposalStage(
+    { issue: { number: 1 }, tier: "lite" },
+    async (strategy) => ({
+      summary: `summary for ${strategy}`,
+      declaredPaths: ["src/a.ts", "src/b.ts"],
+    }),
+  );
+  assert.deepEqual(proposals[0], {
+    id: "p1",
+    strategy: "direct",
+    summary: "summary for direct",
+    declaredPaths: ["src/a.ts", "src/b.ts"],
+  });
+});
+
 test("runProposalStage generates exactly 3 proposals for standard, with the 3 named strategies in order", async () => {
   const proposals = await runProposalStage(
     { issue: { number: 1 }, tier: "standard" },
