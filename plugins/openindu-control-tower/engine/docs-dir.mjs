@@ -7,9 +7,17 @@ import { join } from "node:path";
 // -- the workspace launcher (dev/dev.cmd, section 2.1 line 232) is expected to
 // invoke this runner from the workspace root; OPENINDU_DOCS_DIR exists
 // precisely so a caller never has to rely on that cwd assumption holding.
-export function resolveDocsDir(repo, runId, env = process.env) {
+// The repo-level docs dir, one level above any single run-id -- shared by
+// resolveDocsDir below and by anything that needs a path scoped to the
+// repo across runs (e.g. dev.mjs's .dev-pause, which must be seen by every
+// future invocation, not just the run that wrote it).
+export function resolveRepoDocsDir(repo, env = process.env) {
   const base = env.OPENINDU_DOCS_DIR ?? join(process.cwd(), "mem_docs");
-  return join(base, repo, "dev-runs", runId);
+  return join(base, repo);
+}
+
+export function resolveDocsDir(repo, runId, env = process.env) {
+  return join(resolveRepoDocsDir(repo, env), "dev-runs", runId);
 }
 
 export function solutionDocFileName(issueNumber) {
