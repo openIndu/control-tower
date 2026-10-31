@@ -142,9 +142,17 @@ function parseStructuredResponse(invokeResult) {
   // path already confirmed above) so a bare {success, text} fake that models
   // no cost at all -- every pre-existing test in this file -- sees no change
   // to its result shape.
-  return invokeResult.costUsd !== undefined
-    ? { ...parsed, costUsd: invokeResult.costUsd }
-    : parsed;
+  let result =
+    invokeResult.costUsd !== undefined
+      ? { ...parsed, costUsd: invokeResult.costUsd }
+      : parsed;
+  // spec/005 section 6 criterion #16: trace-log.mjs's withTraceLogging reads
+  // rawStdout to redact and persist. Same conditional-on-presence shape as
+  // costUsd above, for the same reason: a bare test fake carries neither key.
+  if (invokeResult.rawStdout !== undefined) {
+    result = { ...result, rawStdout: invokeResult.rawStdout };
+  }
+  return result;
 }
 
 // implement/fix have no structured output to parse (they write files and run
