@@ -54,6 +54,7 @@ export async function runIssuePipeline(
   const branchName = issueBranchName(issue.number);
 
   let tier = null;
+  let scoping = null;
   let step2Result = null;
   let step3Result = null;
 
@@ -66,6 +67,7 @@ export async function runIssuePipeline(
     });
 
     const tierResult = await resolveTier(issue, generateScopingProposal);
+    scoping = tierResult.scoping;
     if (tierResult.outcome === "HUMAN_REQUIRED") {
       return {
         state: "HUMAN_REQUIRED",
@@ -104,20 +106,22 @@ export async function runIssuePipeline(
   }
 
   // pr-content.mjs's renderPrBody needs the documents to write a real PR
-  // body -- on resume (step2Result/step3Result still null here) there is
-  // nothing to pass, but buildStep4Deps's own openPr() is never called in
-  // that case either (resumeIssueState.openedPr is already true), so a null
-  // document never actually reaches a real PR body.
-  // pr-content.mjs's renderPrBody needs the documents to write a real PR
-  // body -- on resume (step2Result/step3Result still null here) there is
-  // nothing to pass, but buildStep4Deps's own openPr() is never called in
-  // that case either (resumeIssueState.openedPr is already true), so a null
-  // document never actually reaches a real PR body.
+  // body; guardG4/guardG6 need declaredPaths/scoping -- on resume
+  // (step2Result/step3Result/scoping still null here) there is nothing to
+  // pass. openPr()/gatherPromotionFacts() (which is where G4/G6 actually
+  // run, via PRE_PROMOTION_GUARDS) are skipped when resumeIssueState already
+  // has openedPr/promotedToReady true. gatherPostPromotionFacts DOES still
+  // run unconditionally, but pr-lifecycle.mjs's POST_PROMOTION_GUARDS
+  // deliberately excludes G4/G6 ("转 ready 后...不能倒退改声明范围或风险档
+  // 位" -- confirmed by reading that guard list directly), so a null value
+  // here never actually reaches a guard that reads it, on any resume path.
   const step4Deps = buildStep4Deps({
     worktreePath,
     branchName,
     issue,
     tier,
+    scoping,
+    declaredPaths: step2Result?.winner?.declaredPaths ?? null,
     solutionDocument: step2Result?.document ?? null,
     implementationReviewDocument: step3Result?.document ?? null,
   });
