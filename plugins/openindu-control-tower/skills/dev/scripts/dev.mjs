@@ -2,11 +2,11 @@
 
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { evaluateAck } from "../../../engine/ack.mjs";
+import { evaluateAck, needsAckDowngrade } from "../../../engine/ack.mjs";
 import {
   ADMISSION_RESULTS,
   evaluateAdmission,
@@ -315,6 +315,7 @@ export async function runRepo(options, overrides = {}) {
     setupPrompt = setupSystemPrompt,
     runPositiveControls = runPositiveControlsOrThrow,
     carrierDir = CARRIER_DIR,
+    hasOverdueUnackedMerge = defaultHasOverdueUnackedMerge,
     controlTowerRepoPath = CONTROL_TOWER_REPO_ROOT,
     controlTowerRef = "main",
     grantPrincipleRef = "main",
@@ -430,9 +431,16 @@ export async function runRepo(options, overrides = {}) {
     // G11 / spec/005 section 2.3-2: a repo with no live dev_grant, or one
     // whose grant has expired, still gets real PRs opened and reviewed --
     // it just never auto-merges. --no-merge forces the same stop
-    // regardless of grant state.
+    // regardless of grant state. Section 6 criterion #19 adds a third,
+    // independent reason: a merge from any PRIOR run against this repo
+    // that has sat unacked past the 72-hour deadline also forces PR-only,
+    // until the maintainer runs ./dev ack and catches it up.
     const authorization = resolveRepoAuthorization(route, repo);
-    const stopAfterCiGreen = options.noMerge || !authorization.authorized;
+    const overdueUnackedMerge = hasOverdueUnackedMerge(
+      resolveRepoDocsDirFn(repo),
+    );
+    const stopAfterCiGreen =
+      options.noMerge || !authorization.authorized || overdueUnackedMerge;
     const pauseFilePath = join(
       resolveRepoDocsDirFn(repo),
       DEFAULT_PAUSE_FILE_NAME,
@@ -694,6 +702,36 @@ export async function runRepo(options, overrides = {}) {
   } finally {
     releaseLock(lockFilePath, runId);
   }
+}
+
+// spec/005 section 6 criterion #19: "合并后 72 小时内没有 ack_at -> 下一次运行
+// PR-only". Scans every PRIOR run's state.json under this one repo's
+// dev-runs directory (not just the run currently starting -- a merge from
+// a run that already finished is exactly the case this exists to catch),
+// and asks ack.mjs's needsAckDowngrade about every issue that ever merged.
+// A run with no dev-runs directory yet (first run against this repo) or no
+// state.json yet (a dry run never writes one) has nothing to find --
+// returns false, not an error.
+export function defaultHasOverdueUnackedMerge(repoDocsDir, now = new Date()) {
+  const runsDir = join(repoDocsDir, "dev-runs");
+  if (!existsSync(runsDir)) return false;
+  for (const runId of readdirSync(runsDir)) {
+    const stateFilePath = join(runsDir, runId, "state.json");
+    if (!existsSync(stateFilePath)) continue;
+    const state = JSON.parse(readFileSync(stateFilePath, "utf8"));
+    for (const issueState of Object.values(state.issues ?? {})) {
+      if (
+        needsAckDowngrade({
+          mergedAt: issueState.mergedAt,
+          ackAt: issueState.ackAt,
+          now,
+        })
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 // Scans every repo's dev-runs directory for runId, since ./dev ack <run-id>
