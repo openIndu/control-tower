@@ -47,7 +47,7 @@ graph TD
     brain --> settings
     settings --> aggregate
     settings --> backend
-    settings --> adminportal["admin/portal"]
+    settings --> adminportal["openindu-admin / openindu-portal"]
     settings --> studio
     settings --> platform
     settings --> infra["infra-deploy"]
