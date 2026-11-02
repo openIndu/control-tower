@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
@@ -12,6 +14,7 @@ import {
   RunLockHeldError,
 } from "../../../engine/run-state.mjs";
 import {
+  defaultHasOverdueUnackedMerge,
   gatherAdmissionFacts,
   parseArgs,
   runAckCommand,
@@ -297,6 +300,9 @@ function baseRunRepoOverrides(overrides = {}) {
     // accidentally shell out to real `docker compose run`.
     runPositiveControls: () => ({ allControlsFailed: true, output: "" }),
     carrierDir: "/fake/carrier",
+    // Stubbed to "nothing overdue" -- every test except the ones that
+    // specifically exercise spec/005 section 6 criterion #19 overrides it.
+    hasOverdueUnackedMerge: () => false,
     setupPrompt: () => "/base/run-1/system-prompt.txt",
     generateRunId: () => "run-1",
     resolveDocsDirFn: (repo, runId) => `/docs/${repo}/${runId}`,
@@ -549,6 +555,92 @@ test("runRepo sets stopAfterCiGreen=false when the repo has a live grant and --n
     }),
   );
   assert.equal(seenStop, false);
+});
+
+test("runRepo sets stopAfterCiGreen=true when a prior run's merge has sat unacked past 72 hours, even with a valid grant and no --no-merge", async () => {
+  let seenStop;
+  await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      hasOverdueUnackedMerge: () => true,
+      runIntakeFn: async () =>
+        fakeIntakeComplete({
+          devGrants: [
+            { repos: ["openIndu-backend"], expires_on: "2999-01-01" },
+          ],
+        }),
+      runPipeline: async (issue, pipelineOptions) => {
+        seenStop = pipelineOptions.stopAfterCiGreen;
+        return { state: "NO_ACTION" };
+      },
+    }),
+  );
+  assert.equal(seenStop, true);
+});
+
+test("runRepo passes this repo's own docs dir to hasOverdueUnackedMerge, not a different repo's", async () => {
+  let seenDocsDir;
+  await runRepo(
+    { org: "openIndu", repo: "openIndu-backend" },
+    baseRunRepoOverrides({
+      resolveRepoDocsDirFn: (repo) => `/docs/${repo}`,
+      hasOverdueUnackedMerge: (repoDocsDir) => {
+        seenDocsDir = repoDocsDir;
+        return false;
+      },
+      runIntakeFn: async () => fakeIntakeComplete(),
+      runPipeline: async () => ({ state: "NO_ACTION" }),
+    }),
+  );
+  assert.equal(seenDocsDir, "/docs/openIndu-backend");
+});
+
+test("defaultHasOverdueUnackedMerge reports true for a merge that sat unacked past 72 hours in a real state.json on disk, and false once acked", () => {
+  const scratch = mkdtempSync(join(tmpdir(), "ack-downgrade-test-"));
+  try {
+    const runDir = join(scratch, "dev-runs", "run-old");
+    mkdirSync(runDir, { recursive: true });
+    const longAgo = new Date(Date.now() - 100 * 60 * 60 * 1000).toISOString();
+    writeFileSync(
+      join(runDir, "state.json"),
+      JSON.stringify({
+        runId: "run-old",
+        repoName: "openIndu-backend",
+        issues: {
+          42: {
+            merged: true,
+            mergeSha: "abc123",
+            mergedAt: longAgo,
+            ackAt: null,
+          },
+        },
+      }),
+    );
+    assert.equal(defaultHasOverdueUnackedMerge(scratch), true);
+
+    writeFileSync(
+      join(runDir, "state.json"),
+      JSON.stringify({
+        runId: "run-old",
+        repoName: "openIndu-backend",
+        issues: {
+          42: {
+            merged: true,
+            mergeSha: "abc123",
+            mergedAt: longAgo,
+            ackAt: new Date().toISOString(),
+          },
+        },
+      }),
+    );
+    assert.equal(defaultHasOverdueUnackedMerge(scratch), false);
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+});
+
+test("defaultHasOverdueUnackedMerge returns false when the repo has no dev-runs directory yet", () => {
+  assert.equal(defaultHasOverdueUnackedMerge("/does/not/exist"), false);
 });
 
 test("runRepo calls runPositiveControls with carrierDir once per run, before the per-issue loop ever starts", async () => {
