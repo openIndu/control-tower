@@ -40,16 +40,18 @@ The control layer **does not enumerate concrete repos**. This repo only defines 
 
 ## Distribution: the public plugin
 
-```
-control-tower (brain)
-        │  .claude-plugin/marketplace.json
-        │  plugins/openindu-control-tower/  (principles + 20 agents + 16 skills + hook)
-        ▼
-each repo's .claude/settings.json references 6 lines → clone即生效 → /plugin update pulls updates
-        │
-   ┌────┴────┬──────────┬──────────┬──────────┬──────────┐
-   ▼         ▼          ▼          ▼          ▼          ▼
-aggregate  backend  admin/portal  studio  platform  infra-deploy …
+```mermaid
+graph TD
+    brain["control-tower (brain)<br/>marketplace.json + plugins/openindu-control-tower<br/>11 principles + 20 agents + 16 skills + hook"]
+    settings["each repo's .claude/settings.json<br/>6-line reference → effective on clone → /plugin update pulls updates"]
+    brain --> settings
+    settings --> aggregate
+    settings --> backend
+    settings --> adminportal["admin/portal"]
+    settings --> studio
+    settings --> platform
+    settings --> infra["infra-deploy"]
+    settings --> more["…"]
 ```
 
 A sub-repo onboards by writing in `.claude/settings.json`:
@@ -105,10 +107,24 @@ A sub-repo onboards by writing in `.claude/settings.json`:
 
 `openindu-maintainers` has **20 agents**, all via the public plugin. The SDLC pipeline:
 
-```
-business-analyst → product-manager → architect → ui-ux-designer → [frontend/backend/edge/station-control] → ops → bi-analyst
-                                          ↑ codebase-analyst (read-only, any stage)
-governance (manager/arbiter/inspector/control-tower) + quality (test/reviewer/security) cross-cut
+```mermaid
+graph LR
+    subgraph PIPELINE["SDLC pipeline"]
+        BA[business-analyst] --> PM[product-manager] --> ARCH[architect] --> UX[ui-ux-designer]
+        UX --> FE[frontend]
+        UX --> BE[backend]
+        UX --> EDGE[edge]
+        UX --> SC[station-control]
+        FE --> OPS[ops]
+        BE --> OPS
+        EDGE --> OPS
+        SC --> OPS
+        OPS --> BI[bi-analyst]
+    end
+
+    CA["codebase-analyst<br/>read-only, any stage"] -.-> PIPELINE
+    GOV["governance<br/>manager / arbiter / inspector / control-tower"] -. cross-cuts .-> PIPELINE
+    QUAL["quality<br/>test / reviewer / security"] -. cross-cuts .-> PIPELINE
 ```
 
 | Domain     | Agents                                     |
