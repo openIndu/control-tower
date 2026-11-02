@@ -43,7 +43,7 @@ The control layer **does not enumerate concrete repos**. This repo only defines 
 ```
 control-tower (brain)
         │  .claude-plugin/marketplace.json
-        │  plugins/openindu-control-tower/  (principles + 20 agents + 12 skills + hook)
+        │  plugins/openindu-control-tower/  (principles + 20 agents + 16 skills + hook)
         ▼
 each repo's .claude/settings.json references 6 lines → clone即生效 → /plugin update pulls updates
         │
@@ -146,12 +146,14 @@ control-tower/
 ├── .claude-plugin/marketplace.json  # marketplace catalog
 ├── plugins/openindu-control-tower/       # ★ public Claude Code plugin (org-wide)
 │   ├── .claude-plugin/plugin.json
-│   ├── skills/                      # principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis
+│   ├── skills/                      # 16: principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / dev / issue-pipeline
 │   ├── agents/                      # 20 agents (SDLC roles, zero business binding)
+│   ├── engine/                      # deterministic /dev engine (spec/005): states / guards / admission / carrier / pr-lifecycle etc., one .mjs + one .test.mjs each
+│   ├── evals/                       # eval suites: dev-reasoning-layer (spec/005) + standing-authorization (spec/006)
 │   ├── hooks/                       # trunk protection (RULE 7)
-│   ├── reference/                   # route.json (sole source) + manifest.yaml
+│   ├── reference/                   # route.json (sole source) + dev.schema.json + manifest.yaml + coding-standards/
 │   └── README.md
-├── scripts/sync-route.mjs            # route.json single-source sync / check
+├── scripts/                          # sync-route / check-roster / check-version-bump / detect-modules
 ├── .github/workflows/ci.yml         # prettier + plugin validate + route + roster consistency
 ├── spec/                            # feature designs (control-tower design → arbiter review)
 ├── revision/                        # change records (changelog)
