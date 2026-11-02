@@ -300,6 +300,11 @@ function baseRunRepoOverrides(overrides = {}) {
     // accidentally shell out to real `docker compose run`.
     runPositiveControls: () => ({ allControlsFailed: true, output: "" }),
     carrierDir: "/fake/carrier",
+    // Stubbed to "a credential is available" -- every test except the
+    // ones that specifically exercise spec/005 section 2.6's credential
+    // check overrides it, so none of them depend on this machine's real
+    // ANTHROPIC_API_KEY/CLAUDE_CODE_OAUTH_TOKEN env state.
+    detectCredential: () => "ANTHROPIC_API_KEY",
     // Stubbed to "nothing overdue" -- every test except the ones that
     // specifically exercise spec/005 section 6 criterion #19 overrides it.
     hasOverdueUnackedMerge: () => false,

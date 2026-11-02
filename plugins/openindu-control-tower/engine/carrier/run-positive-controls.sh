@@ -69,20 +69,23 @@ echo "=== 5. reading outside the worktree must fail ==="
 ls /root >/dev/null 2>&1
 check "read /root" "$?" nonzero
 
-echo "=== 6. no credential-shaped env var besides the dedicated API key ==="
+echo "=== 6. no credential-shaped env var besides the dedicated model credential ==="
 # GH_CONFIG_DIR is a sanctioned exception: spec/005 section 2.6 itself
 # requires it, to redirect gh's own config lookup to an empty directory --
 # it is a path, not a credential, and its target is checked separately
-# below for actually being empty.
-leaked=$(env | grep -E '(TOKEN|SECRET|PASSWORD)' | grep -v '^ANTHROPIC_API_KEY=' || true)
+# below for actually being empty. ANTHROPIC_API_KEY and
+# CLAUDE_CODE_OAUTH_TOKEN are the two sanctioned model-credential names
+# (section 2.6 "唯二例外") -- only one is ever actually present, but both
+# names are excluded here regardless, same treatment either way.
+leaked=$(env | grep -E '(TOKEN|SECRET|PASSWORD)' | grep -v -E '^(ANTHROPIC_API_KEY|CLAUDE_CODE_OAUTH_TOKEN)=' || true)
 leaked="${leaked}$(env | grep -E '^(GH_|GITHUB_)' | grep -v '^GH_CONFIG_DIR=' || true)"
-leaked="${leaked}$(env | grep -E 'KEY' | grep -v '^ANTHROPIC_API_KEY=' || true)"
+leaked="${leaked}$(env | grep -E 'KEY' | grep -v -E '^(ANTHROPIC_API_KEY|CLAUDE_CODE_OAUTH_TOKEN)=' || true)"
 if [ -n "$leaked" ]; then
   echo "FAIL: credential-shaped env var(s) present:"
   echo "$leaked"
   fail=1
 else
-  echo "PASS: no credential-shaped env var besides ANTHROPIC_API_KEY"
+  echo "PASS: no credential-shaped env var besides ANTHROPIC_API_KEY/CLAUDE_CODE_OAUTH_TOKEN"
 fi
 if [ -n "${GH_CONFIG_DIR:-}" ] && [ -d "$GH_CONFIG_DIR" ]; then
   gh_contents=$(ls -A "$GH_CONFIG_DIR" 2>/dev/null || true)

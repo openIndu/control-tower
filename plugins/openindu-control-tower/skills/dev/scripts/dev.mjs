@@ -22,6 +22,7 @@ import {
   PositiveControlFailedError,
   runPositiveControlsOrThrow,
 } from "../../../engine/carrier/run-agent.mjs";
+import { detectCredentialEnvVar } from "../../../engine/carrier/invoker.mjs";
 import { DEFAULT_PAUSE_FILE_NAME } from "../../../engine/dev-pause.mjs";
 import {
   resolveDocsBaseDir,
@@ -315,6 +316,7 @@ export async function runRepo(options, overrides = {}) {
     setupPrompt = setupSystemPrompt,
     runPositiveControls = runPositiveControlsOrThrow,
     carrierDir = CARRIER_DIR,
+    detectCredential = detectCredentialEnvVar,
     hasOverdueUnackedMerge = defaultHasOverdueUnackedMerge,
     controlTowerRepoPath = CONTROL_TOWER_REPO_ROOT,
     controlTowerRef = "main",
@@ -407,6 +409,20 @@ export async function runRepo(options, overrides = {}) {
       throw error;
     }
 
+    // spec/005 section 2.6: ANTHROPIC_API_KEY (preferred) or
+    // CLAUDE_CODE_OAUTH_TOKEN (fallback, via `claude setup-token`) --
+    // checked once per run, before any carrier call, rather than letting
+    // a missing credential surface later as an opaque per-issue failure.
+    const credentialEnvVar = detectCredential(process.env);
+    if (!credentialEnvVar) {
+      return {
+        outcome: "ENVIRONMENT_CHECK_FAILED",
+        exitCode: EXIT_CODES.ENVIRONMENT_CHECK_FAILED,
+        reason:
+          "neither ANTHROPIC_API_KEY nor CLAUDE_CODE_OAUTH_TOKEN is set in the runner's environment -- see spec/005 section 2.6",
+      };
+    }
+
     const systemPromptFilePath = setupPrompt({
       controlTowerRepoPath,
       repoClonePath,
@@ -489,6 +505,7 @@ export async function runRepo(options, overrides = {}) {
           `issue-${issue.number}-prompts`,
         ),
         allowedToolCommands: devChecks,
+        credentialEnvVar,
       };
       const callbacks = withTrackingWrappers(
         buildCarrierCallbacks(carrierContext),
@@ -608,6 +625,7 @@ export async function runRepo(options, overrides = {}) {
             worktreePath: verifyWorktreePath,
             systemPromptFilePath,
             promptDir: join(worktreeBaseDir, runId, "verify-prompts"),
+            credentialEnvVar,
           });
           const checklistMarkdown = await generateChecklist(
             mergedIssues,

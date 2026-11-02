@@ -204,6 +204,7 @@ export function buildRealGenerateProposal(
     systemPromptFilePath,
     promptDir,
     maxBudgetUsd = DEFAULT_PLAN_REVIEW_BUDGET_USD,
+    credentialEnvVar = "ANTHROPIC_API_KEY",
   } = context;
   return async function generateProposal(strategy, issue) {
     const promptFilePath = writeTextFile(
@@ -225,6 +226,7 @@ export function buildRealGenerateProposal(
       maxBudgetUsd,
       promptFilePath,
       jsonSchema: PROPOSAL_SCHEMA,
+      credentialEnvVar,
     });
     const result = await invoke({
       composeArgs,
@@ -249,6 +251,7 @@ export function buildRealGenerateScopingProposal(
     systemPromptFilePath,
     promptDir,
     maxBudgetUsd = DEFAULT_PLAN_REVIEW_BUDGET_USD,
+    credentialEnvVar = "ANTHROPIC_API_KEY",
   } = context;
   return async function generateScopingProposal(issue) {
     const promptFilePath = writeTextFile(
@@ -283,6 +286,7 @@ export function buildRealGenerateScopingProposal(
       maxBudgetUsd,
       promptFilePath,
       jsonSchema: SCOPING_SCHEMA,
+      credentialEnvVar,
     });
     const result = await invoke({
       composeArgs,
@@ -308,6 +312,7 @@ export function buildRealImplement(context, { invoke = invokeAgent } = {}) {
     promptDir,
     allowedToolCommands,
     maxBudgetUsd = DEFAULT_IMPLEMENT_FIX_BUDGET_USD,
+    credentialEnvVar = "ANTHROPIC_API_KEY",
   } = context;
   return async function implement(winningProposal, issue) {
     const promptFilePath = writeTextFile(
@@ -330,6 +335,7 @@ export function buildRealImplement(context, { invoke = invokeAgent } = {}) {
       allowedToolCommands,
       maxBudgetUsd,
       promptFilePath,
+      credentialEnvVar,
     });
     const result = await invoke({
       composeArgs,
@@ -384,6 +390,7 @@ export function buildRealFix(context, { invoke = invokeAgent } = {}) {
     promptDir,
     allowedToolCommands,
     maxBudgetUsd = DEFAULT_IMPLEMENT_FIX_BUDGET_USD,
+    credentialEnvVar = "ANTHROPIC_API_KEY",
   } = context;
   return async function fix(failureDescription, issue) {
     const promptFilePath = writeTextFile(
@@ -403,6 +410,7 @@ export function buildRealFix(context, { invoke = invokeAgent } = {}) {
       allowedToolCommands,
       maxBudgetUsd,
       promptFilePath,
+      credentialEnvVar,
     });
     const result = await invoke({
       composeArgs,
@@ -433,6 +441,7 @@ export function buildRealReviewImplementation(
     systemPromptFilePath,
     promptDir,
     maxBudgetUsd = DEFAULT_PLAN_REVIEW_BUDGET_USD,
+    credentialEnvVar = "ANTHROPIC_API_KEY",
   } = context;
   return async function review(perspective, issue) {
     const diff = computeWorkingTreeDiff(worktreePath);
@@ -458,6 +467,7 @@ export function buildRealReviewImplementation(
       maxBudgetUsd,
       promptFilePath,
       jsonSchema: IMPLEMENT_REVIEW_SCHEMA,
+      credentialEnvVar,
     });
     const result = await invoke({
       composeArgs,
@@ -478,6 +488,7 @@ export function buildRealReviewProposal(
     systemPromptFilePath,
     promptDir,
     maxBudgetUsd = DEFAULT_PLAN_REVIEW_BUDGET_USD,
+    credentialEnvVar = "ANTHROPIC_API_KEY",
   } = context;
   return async function reviewProposal(perspective, proposal) {
     const promptFilePath = writeTextFile(
@@ -499,6 +510,7 @@ export function buildRealReviewProposal(
       maxBudgetUsd,
       promptFilePath,
       jsonSchema: REVIEW_SCHEMA,
+      credentialEnvVar,
     });
     const result = await invoke({
       composeArgs,
@@ -524,6 +536,7 @@ export function buildRealSummarizeAcceptanceCriteria(
     systemPromptFilePath,
     promptDir,
     maxBudgetUsd = DEFAULT_PLAN_REVIEW_BUDGET_USD,
+    credentialEnvVar = "ANTHROPIC_API_KEY",
   } = context;
   return async function summarizeAcceptanceCriteria(issue) {
     const promptFilePath = writeTextFile(
@@ -545,6 +558,7 @@ export function buildRealSummarizeAcceptanceCriteria(
       maxBudgetUsd,
       promptFilePath,
       jsonSchema: ACCEPTANCE_CRITERIA_SCHEMA,
+      credentialEnvVar,
     });
     const result = await invoke({
       composeArgs,

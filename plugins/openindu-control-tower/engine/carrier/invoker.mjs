@@ -2,12 +2,28 @@
 // section 2.6). This module only builds argv arrays -- the actual
 // `docker compose run` call is made by the caller via an injected exec
 // function, same dependency-injection pattern used throughout engine/.
-// Nothing here reads process.env or shells out itself, so it stays
-// testable without Docker. The 5 non-secret env vars the agent needs
-// (HTTPS_PROXY etc.) are declared statically in docker-compose.yml's own
-// "agent" service, not built here -- only ANTHROPIC_API_KEY, which cannot
-// be a literal in that checked-in file, is handled by this module (see
-// buildDockerComposeRunArgs's bare "-e ANTHROPIC_API_KEY").
+// The non-secret env vars the agent needs (HTTPS_PROXY etc.) are declared
+// statically in docker-compose.yml's own "agent" service, not built here
+// -- only the one model credential, which cannot be a literal in that
+// checked-in file, is handled by this module (see
+// buildDockerComposeRunArgs's bare "-e <credential var name>").
+//
+// detectCredentialEnvVar is this module's one deliberate exception to
+// "nothing here reads process.env" -- it takes an explicit env object
+// (a real caller passes process.env; a test passes a fake), so it stays
+// just as testable as everything else here while still being the single
+// place spec/005 section 2.6's "ANTHROPIC_API_KEY（首选）或
+// CLAUDE_CODE_OAUTH_TOKEN（备选）...同一次调用只传其一" decision is made.
+export const CREDENTIAL_ENV_VAR_NAMES = Object.freeze([
+  "ANTHROPIC_API_KEY",
+  "CLAUDE_CODE_OAUTH_TOKEN",
+]);
+
+export function detectCredentialEnvVar(env) {
+  if (env.ANTHROPIC_API_KEY) return "ANTHROPIC_API_KEY";
+  if (env.CLAUDE_CODE_OAUTH_TOKEN) return "CLAUDE_CODE_OAUTH_TOKEN";
+  return null;
+}
 
 // Roles that only plan or review never get Bash at all. Roles that
 // implement or fix get Bash, scoped to exactly the commands dev.checks
@@ -52,27 +68,41 @@ export function buildDockerComposeRunArgs({
   promptFilePath,
   outputFormat = "stream-json",
   jsonSchema,
+  credentialEnvVar = "ANTHROPIC_API_KEY",
 }) {
+  if (!CREDENTIAL_ENV_VAR_NAMES.includes(credentialEnvVar)) {
+    throw new Error(
+      `Unknown credential env var: ${JSON.stringify(credentialEnvVar)}`,
+    );
+  }
+
   const composeArgs = [
     "run",
     "--rm",
     "-v",
     `${worktreePath}:/workspace`,
-    // Bare "-e ANTHROPIC_API_KEY" (no "=value") tells docker compose to
-    // forward the value from ITS OWN process environment -- never typing
-    // the secret itself into composeArgs, a log line, or a test fixture
-    // (AGENTS.md: never put credentials in command text or tool output).
-    // The 5 non-secret env vars docker-compose.yml's "agent" service
-    // already declares statically (HTTPS_PROXY etc.) do not need this
-    // treatment; ANTHROPIC_API_KEY is the one value that cannot be a
-    // literal in a checked-in compose file.
+    // Bare "-e <name>" (no "=value") tells docker compose to forward the
+    // value from ITS OWN process environment -- never typing the secret
+    // itself into composeArgs, a log line, or a test fixture (AGENTS.md:
+    // never put credentials in command text or tool output). The
+    // non-secret env vars docker-compose.yml's "agent" service already
+    // declares statically (HTTPS_PROXY etc.) do not need this treatment;
+    // this is the one value that cannot be a literal in a checked-in
+    // compose file.
     "-e",
-    "ANTHROPIC_API_KEY",
+    credentialEnvVar,
     "agent",
   ];
 
+  // spec/005 section 2.6 "模型调用": ANTHROPIC_API_KEY uses --bare (it
+  // never reads OAuth/keychain, by design). CLAUDE_CODE_OAUTH_TOKEN
+  // can't use --bare at all -- Anthropic's own docs say bare mode does
+  // not read that variable -- so that branch uses --safe-mode instead,
+  // which disables the same CLAUDE.md/skills/plugins/hooks/MCP/custom
+  // commands and agents/auto-memory auto-discovery (and more) without
+  // touching authentication. The two flags are never both present.
   const claudeArgs = [
-    "--bare",
+    credentialEnvVar === "ANTHROPIC_API_KEY" ? "--bare" : "--safe-mode",
     "--restricted",
     "--strict-mcp-config",
     "--append-system-prompt-file",
