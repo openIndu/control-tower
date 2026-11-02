@@ -29,22 +29,24 @@ Or run `/adopt` in a repo — it writes the block below into `.claude/settings.j
 
 ### Skills
 
-| Command              | Purpose                                                             |
-| -------------------- | ------------------------------------------------------------------- |
-| `/principle`         | **Sole source of the 11 Agent behavior RULEs** (Rule #1 entry)      |
-| `/adopt`             | Onboard a repo to the plugin + converge duplicate governance assets |
-| `/launch`            | Bring up the `openindu-maintainers` team                            |
-| `/design`            | Orchestrate the 0-to-1 SDLC pipeline across roles                   |
-| `/autopilot`         | Run the pipeline at a chosen autonomy tier (L0-L3)                  |
-| `/issue-pipeline`    | Triage organization Issues, adversarially review, then dispatch     |
-| `/design-md`         | Adopt a DESIGN.md design system for UI work                         |
-| `/memory`            | Read/write the team's reusable lessons ledger                       |
-| `/delivery-check`    | RULE 11 delivery-pipeline completeness self-check                   |
-| `/route`             | Query repo location, type, image, domain, PR flow                   |
-| `/spec-new`          | Draft a spec design (control-tower)                                 |
-| `/revision-new`      | Draft a revision record (control-tower)                             |
-| `/codebase-analysis` | 7-step codebase analysis methodology (used by codebase-analyst)     |
-| `/company-analysis`  | Evidence-led company research using Five Forces, SWOT, and DuPont   |
+| Command              | Purpose                                                                         |
+| -------------------- | ------------------------------------------------------------------------------- |
+| `/principle`         | **Sole source of the 11 Agent behavior RULEs** (Rule #1 entry)                  |
+| `/adopt`             | Onboard a repo to the plugin + converge duplicate governance assets             |
+| `/launch`            | Bring up the `openindu-maintainers` team                                        |
+| `/design`            | Orchestrate the 0-to-1 SDLC pipeline across roles                               |
+| `/autopilot`         | Run the pipeline at a chosen autonomy tier (L0-L3)                              |
+| `/issue-pipeline`    | Triage organization Issues, adversarially review, then dispatch                 |
+| `/dev`               | Deterministic org-wide issue pipeline — scope, PR, grant-gated merge (spec/005) |
+| `/design-md`         | Adopt a DESIGN.md design system for UI work                                     |
+| `/memory`            | Read/write the team's reusable lessons ledger                                   |
+| `/build`             | Build + push a Docker image to the registry (RULE 11 step ④)                    |
+| `/delivery-check`    | RULE 11 delivery-pipeline completeness self-check                               |
+| `/route`             | Query repo location, type, image, domain, PR flow                               |
+| `/spec-new`          | Draft a spec design (control-tower)                                             |
+| `/revision-new`      | Draft a revision record (control-tower)                                         |
+| `/codebase-analysis` | 7-step codebase analysis methodology (used by codebase-analyst)                 |
+| `/company-analysis`  | Evidence-led company research using Five Forces, SWOT, and DuPont               |
 
 ### Agents (20)
 
