@@ -76,10 +76,13 @@ environment the moment the new fail-fast check landed -- fixed by adding
 matching the same pattern already used there for `runPositiveControls` and
 `hasOverdueUnackedMerge`.
 
-Also passing: `prettier --check`, `claude plugin validate --strict`, `sync-route.mjs --check`,
-`check-version-bump.mjs` (no bump needed -- `engine/` isn't in `DISTRIBUTED_PREFIXES`, but
-`skills/dev/scripts/dev.mjs` is; the script itself reports no bump required against the current
-diff).
+Also passing: `prettier --check`, `claude plugin validate --strict`, `sync-route.mjs --check`.
+`check-version-bump.mjs` initially (and wrongly) reported no bump needed -- run before this
+branch had any commits, so `git diff origin/main...HEAD` was comparing two identical commits and
+came back empty regardless of the uncommitted working-tree changes. CI caught the real answer
+once the diff was real: `skills/dev/scripts/dev.mjs` and `dev.test.mjs` are under
+`plugins/openindu-control-tower/skills/`, which is a `DISTRIBUTED_PREFIXES` entry, so a bump was
+in fact required. Fixed: `5.31.0` -> `5.32.0` in both `plugin.json` and `marketplace.json`.
 
 ## Impact
 
@@ -88,7 +91,7 @@ diff).
 | Behavior change | A run can now authenticate with either a Console API key or a subscription OAuth token                                                                                                                                |
 | Blast radius    | `openIndu/control-tower` only; the `/dev` pipeline is still unreachable org-wide -- no repo has `dev.enabled: true`, and this machine's own stage-8 dry-run against studio#76 still hasn't actually been run for real |
 | Spec            | spec/005 section 2.6 amended, arbiter-approved, `status: finalized`                                                                                                                                                   |
-| Plugin version  | unchanged (no distributed-content path touched; see `check-version-bump.mjs` note above)                                                                                                                              |
+| Plugin version  | `5.31.0` -> `5.32.0` (see `check-version-bump.mjs` note above)                                                                                                                                                        |
 | Rollback        | Revert the PR                                                                                                                                                                                                         |
 
 ## Next
