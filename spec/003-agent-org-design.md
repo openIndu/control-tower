@@ -1,10 +1,10 @@
 ---
 spec_id: 003-agent-org-design
 title: Agent 组织架构重构——按能力编制，与仓库数量解耦
-status: finalized # draft | under_review | revision_required | finalized | superseded
+status: superseded # draft | under_review | revision_required | finalized | superseded
 author: control-tower
 created: 2026-08-03
-updated: 2026-08-03
+updated: 2026-11-02
 supersedes:
 related_repos:
   - workflow-control-tower
@@ -18,6 +18,8 @@ related_rules:
 ---
 
 # Agent 组织架构重构——按能力编制，与仓库数量解耦
+
+> **Superseded by [`007-roster-and-backlog-reconciliation.md`](./007-roster-and-backlog-reconciliation.md) on 2026-11-02.** §2.2-§2.3 的编制表（14/16 席）已过时，当前权威编制是 007 §2 的 20 席快照。本文件其余论证（按语言/能力而非仓库编制的理由、fork 不占编制的结论等）仍然成立，未被取代。
 
 ## 1. 背景（WHY）
 
