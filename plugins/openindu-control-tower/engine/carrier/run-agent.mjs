@@ -1,6 +1,8 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
+import { detectCredentialEnvVar } from "./invoker.mjs";
+
 // Runs the existing D1 positive-control script (run-positive-controls.sh) and
 // requires every one of the 7 controls to fail or be empty (spec/005 section 4
 // criterion #3: "任一没过 -> exit 5，不无人值守、不自动合并"). This function IS that
@@ -39,6 +41,12 @@ export function runPositiveControlsOrThrow(
 // #6 (no credential-shaped env var besides it) is exercised against the
 // actual env shape a real call has, not an artificially empty one.
 function defaultExecShell(carrierDir) {
+  // Same detection a real invokeAgent call makes (invoker.mjs's
+  // detectCredentialEnvVar against this same process's real env) --
+  // required by spec/005 section 2.6: the positive controls must be
+  // exercised against the actual env shape a real call has, including
+  // which of the two sanctioned credential vars is the one present.
+  const credentialEnvVar = detectCredentialEnvVar(process.env) ?? "ANTHROPIC_API_KEY";
   const result = spawnSync(
     "docker",
     [
@@ -46,7 +54,7 @@ function defaultExecShell(carrierDir) {
       "run",
       "--rm",
       "-e",
-      "ANTHROPIC_API_KEY",
+      credentialEnvVar,
       "--entrypoint",
       "run-positive-controls.sh",
       "agent",

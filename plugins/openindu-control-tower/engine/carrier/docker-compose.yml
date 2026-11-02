@@ -32,6 +32,12 @@ services:
       # skips optional Datadog telemetry calls the egress proxy would
       # just block anyway (only api.anthropic.com is allowlisted).
       CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
+      # spec/005 section 2.6: --bare (the ANTHROPIC_API_KEY branch) turns
+      # this off on its own, but --safe-mode (the CLAUDE_CODE_OAUTH_TOKEN
+      # branch, see invoker.mjs) does not -- set unconditionally here so
+      # both branches get it rather than making it depend on which
+      # credential a given run happens to have.
+      CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: "1"
     working_dir: /workspace
     depends_on:
       - egress-proxy

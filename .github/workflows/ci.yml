@@ -55,10 +55,18 @@ jobs:
       # 阶段 7（PR-F8-1）：skills/dev/scripts/dev.mjs 是真正的 runner 入口，
       # 不在 engine/ 目录下，上面的 glob 覆盖不到——单独补一条，否则这份
       # PR 会悄悄产出一个本地测过但 CI 永远不跑的文件。
+      #
+      # spec/005 §2.6 修订（2026-11-02）排查时发现：engine/*.test.mjs 这条
+      # glob 只匹配 engine/ 顶层，engine/carrier/ 与
+      # engine/carrier/egress-proxy/ 两层子目录下的测试（invoker.test.mjs、
+      # run-agent.test.mjs、proxy.test.mjs）一直在本地跑绿、从未接入
+      # CI——跟上面这条注释警告的正是同一类空洞，补上。
       - name: /dev engine unit tests
         run: |
           fail=0
           for f in plugins/openindu-control-tower/engine/*.test.mjs \
+                   plugins/openindu-control-tower/engine/carrier/*.test.mjs \
+                   plugins/openindu-control-tower/engine/carrier/egress-proxy/*.test.mjs \
                    plugins/openindu-control-tower/skills/issue-pipeline/scripts/collect-org-issues.test.mjs \
                    plugins/openindu-control-tower/skills/dev/scripts/*.test.mjs \
                    scripts/check-pr-scope.test.mjs; do

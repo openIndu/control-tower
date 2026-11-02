@@ -4,6 +4,8 @@ import test from "node:test";
 import {
   buildAppendSystemPrompt,
   buildDockerComposeRunArgs,
+  CREDENTIAL_ENV_VAR_NAMES,
+  detectCredentialEnvVar,
   roleNeedsBash,
 } from "./invoker.mjs";
 
@@ -123,4 +125,110 @@ test("buildDockerComposeRunArgs never puts the prompt text itself into claudeArg
   });
   assert.equal(promptFilePath, "/tmp/issue-body-with-$(rm -rf).txt");
   assert.ok(!claudeArgs.some((a) => a.includes("rm -rf")));
+});
+
+// spec/005 section 2.6 revision 2026-11-02: ANTHROPIC_API_KEY (preferred,
+// uses --bare) or CLAUDE_CODE_OAUTH_TOKEN (fallback, uses --safe-mode
+// instead -- Anthropic's docs confirm --bare never reads that variable).
+test("detectCredentialEnvVar prefers ANTHROPIC_API_KEY when both are set", () => {
+  assert.equal(
+    detectCredentialEnvVar({
+      ANTHROPIC_API_KEY: "sk-ant-api03-fake",
+      CLAUDE_CODE_OAUTH_TOKEN: "sk-ant-oat01-fake",
+    }),
+    "ANTHROPIC_API_KEY",
+  );
+});
+test("detectCredentialEnvVar falls back to CLAUDE_CODE_OAUTH_TOKEN when that's the only one set", () => {
+  assert.equal(
+    detectCredentialEnvVar({ CLAUDE_CODE_OAUTH_TOKEN: "sk-ant-oat01-fake" }),
+    "CLAUDE_CODE_OAUTH_TOKEN",
+  );
+});
+test("detectCredentialEnvVar returns null when neither is set, including when set to an empty string", () => {
+  assert.equal(detectCredentialEnvVar({}), null);
+  assert.equal(
+    detectCredentialEnvVar({
+      ANTHROPIC_API_KEY: "",
+      CLAUDE_CODE_OAUTH_TOKEN: "",
+    }),
+    null,
+  );
+});
+
+test("buildDockerComposeRunArgs defaults to the ANTHROPIC_API_KEY/--bare branch when credentialEnvVar is omitted", () => {
+  const { composeArgs, claudeArgs } = buildDockerComposeRunArgs({
+    worktreePath: "/tmp/worktree",
+    role: "plan",
+    systemPromptFilePath: "/tmp/prompt.txt",
+    maxBudgetUsd: 1,
+    promptFilePath: "/tmp/issue.txt",
+  });
+  assert.ok(claudeArgs.includes("--bare"));
+  assert.ok(!claudeArgs.includes("--safe-mode"));
+  assert.ok(composeArgs.includes("ANTHROPIC_API_KEY"));
+  assert.ok(!composeArgs.includes("CLAUDE_CODE_OAUTH_TOKEN"));
+});
+
+test("buildDockerComposeRunArgs with credentialEnvVar=CLAUDE_CODE_OAUTH_TOKEN uses --safe-mode instead of --bare, and forwards that var name", () => {
+  const { composeArgs, claudeArgs } = buildDockerComposeRunArgs({
+    worktreePath: "/tmp/worktree",
+    role: "plan",
+    systemPromptFilePath: "/tmp/prompt.txt",
+    maxBudgetUsd: 1,
+    promptFilePath: "/tmp/issue.txt",
+    credentialEnvVar: "CLAUDE_CODE_OAUTH_TOKEN",
+  });
+  assert.ok(claudeArgs.includes("--safe-mode"));
+  assert.ok(!claudeArgs.includes("--bare"));
+  assert.ok(composeArgs.includes("CLAUDE_CODE_OAUTH_TOKEN"));
+  assert.ok(!composeArgs.includes("ANTHROPIC_API_KEY"));
+});
+
+// Arbiter review (spec/005 §2.6 amendment, 2026-11-02): pin mutual
+// exclusion explicitly for both branches, not just presence of the right
+// flag/var -- --bare and --safe-mode must never both appear, and exactly
+// one of the two credential var names must appear, never both or neither.
+test("buildDockerComposeRunArgs never mixes --bare/--safe-mode or both credential var names, for either branch", () => {
+  for (const credentialEnvVar of CREDENTIAL_ENV_VAR_NAMES) {
+    const { composeArgs, claudeArgs } = buildDockerComposeRunArgs({
+      worktreePath: "/tmp/worktree",
+      role: "plan",
+      systemPromptFilePath: "/tmp/prompt.txt",
+      maxBudgetUsd: 1,
+      promptFilePath: "/tmp/issue.txt",
+      credentialEnvVar,
+    });
+    const modeFlags = claudeArgs.filter(
+      (a) => a === "--bare" || a === "--safe-mode",
+    );
+    assert.equal(
+      modeFlags.length,
+      1,
+      `expected exactly one of --bare/--safe-mode for ${credentialEnvVar}, got ${JSON.stringify(modeFlags)}`,
+    );
+    const credentialNamesPresent = CREDENTIAL_ENV_VAR_NAMES.filter((name) =>
+      composeArgs.includes(name),
+    );
+    assert.deepEqual(
+      credentialNamesPresent,
+      [credentialEnvVar],
+      `expected exactly ${credentialEnvVar} in composeArgs, got ${JSON.stringify(credentialNamesPresent)}`,
+    );
+  }
+});
+
+test("buildDockerComposeRunArgs rejects an unknown credentialEnvVar rather than silently defaulting", () => {
+  assert.throws(
+    () =>
+      buildDockerComposeRunArgs({
+        worktreePath: "/tmp/worktree",
+        role: "plan",
+        systemPromptFilePath: "/tmp/prompt.txt",
+        maxBudgetUsd: 1,
+        promptFilePath: "/tmp/issue.txt",
+        credentialEnvVar: "SOME_OTHER_VAR",
+      }),
+    /Unknown credential env var/,
+  );
 });
