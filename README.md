@@ -19,17 +19,23 @@ Or more thoroughly — run `/adopt` once in the target repo. It writes the plugi
 
 Available immediately after onboarding:
 
-| Command           | Purpose                                                    |
-| ----------------- | ---------------------------------------------------------- |
-| `/principle`      | Load the 11 Agent behavior principles (Rule #1)            |
-| `/route`          | Look up repo location, image, domain, which PR flow to use |
-| `/launch`         | Bring up the `openindu-maintainers` team                   |
-| `/design`         | Orchestrate the 0-to-1 SDLC pipeline across roles          |
-| `/autopilot`      | Run the pipeline at a chosen autonomy tier (L0-L3)         |
-| `/design-md`      | Adopt a DESIGN.md design system for UI work                |
-| `/memory`         | Read/write the team's reusable lessons ledger              |
-| `/delivery-check` | Self-check the RULE 11 delivery pipeline completeness      |
-| `/adopt`          | Onboard a repo and converge duplicate governance assets    |
+| Command              | Purpose                                                                 |
+| -------------------- | ----------------------------------------------------------------------- |
+| `/principle`         | Load the 11 Agent behavior principles (Rule #1)                         |
+| `/route`             | Look up repo location, image, domain, which PR flow to use              |
+| `/launch`            | Bring up the `openindu-maintainers` team                                |
+| `/design`            | Orchestrate the 0-to-1 SDLC pipeline across roles                       |
+| `/autopilot`         | Run the pipeline at a chosen autonomy tier (L0-L3)                      |
+| `/design-md`         | Adopt a DESIGN.md design system for UI work                             |
+| `/memory`            | Read/write the team's reusable lessons ledger                           |
+| `/delivery-check`    | Self-check the RULE 11 delivery pipeline completeness                   |
+| `/adopt`             | Onboard a repo and converge duplicate governance assets                 |
+| `/issue-pipeline`    | Collect and triage open issues across the whole org                     |
+| `/dev`               | Run the deterministic org-wide issue→PR→merge pipeline against one repo |
+| `/spec-new`          | Draft a new spec (feature / process / principle change)                 |
+| `/revision-new`      | Create a revision record (changelog) for a change                       |
+| `/build`             | Build and push a Docker image for an openIndu service (RULE 11 step 4)  |
+| `/codebase-analysis` | Reverse-engineer and document an unfamiliar codebase                    |
 
 Plus **20 agents** (governance / ideation / design / build / quality / data / operations / insight, zero business binding) and a hook that blocks `git push origin main`.
 
@@ -45,7 +51,7 @@ Plus **20 agents** (governance / ideation / design / build / quality / data / op
         │  · plugins/openindu-control-tower/    │
         │      ├─ 11 principles (sole src)│
         │      ├─ 20 SDLC role agents     │
-        │      ├─ 13 workflow skills      │
+        │      ├─ 15 workflow skills      │
         │      └─ trunk-protection hook   │
         │  · route.json (repo routing, data)│
         │  · spec/ revision/ design & change│
@@ -167,12 +173,14 @@ control-tower/
 ├── .claude-plugin/marketplace.json  # Marketplace catalog
 ├── plugins/openindu-control-tower/       # ★ Public Claude Code plugin
 │   ├── .claude-plugin/plugin.json
-│   ├── skills/                      # 14 skills (principle + 13 workflow)
+│   ├── skills/                      # 16: principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / dev / issue-pipeline
 │   ├── agents/                      # 20 agents (SDLC roles, zero business binding)
+│   ├── engine/                      # deterministic /dev engine (spec/005): states / guards / admission / carrier / pr-lifecycle etc.
+│   ├── evals/                       # eval suites: dev-reasoning-layer (spec/005) + standing-authorization (spec/006)
 │   ├── hooks/                       # Trunk protection
-│   ├── reference/                   # route.json + manifest.yaml
+│   ├── reference/                   # route.json + dev.schema.json + manifest.yaml + coding-standards/
 │   └── README.md
-├── scripts/sync-route.mjs
+├── scripts/                          # sync-route / check-roster / check-version-bump / detect-modules
 ├── .github/workflows/ci.yml
 ├── spec/                            # Feature designs
 ├── revision/                        # Change records

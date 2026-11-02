@@ -19,17 +19,23 @@
 
 接入后立刻可用：
 
-| 命令              | 作用                                 |
-| ----------------- | ------------------------------------ |
-| `/principle`      | 加载 11 条 Agent 行为守则（Rule #1） |
-| `/route`          | 查仓库位置、镜像、域名、走哪种 PR    |
-| `/launch`         | 拉起 `openindu-maintainers` 团队     |
-| `/design`         | 编排 0→1 SDLC 角色流水线             |
-| `/autopilot`      | 分层自主跑流水线（L0-L3）            |
-| `/design-md`      | 采用 DESIGN.md 设计系统做 UI         |
-| `/memory`         | 读写团队可复用踩坑记忆               |
-| `/delivery-check` | RULE 11 交付链路完成度自检           |
-| `/adopt`          | 让某个仓接入并收敛重复治理资产       |
+| 命令                 | 作用                                            |
+| -------------------- | ----------------------------------------------- |
+| `/principle`         | 加载 11 条 Agent 行为守则（Rule #1）            |
+| `/route`             | 查仓库位置、镜像、域名、走哪种 PR               |
+| `/launch`            | 拉起 `openindu-maintainers` 团队                |
+| `/design`            | 编排 0→1 SDLC 角色流水线                        |
+| `/autopilot`         | 分层自主跑流水线（L0-L3）                       |
+| `/design-md`         | 采用 DESIGN.md 设计系统做 UI                    |
+| `/memory`            | 读写团队可复用踩坑记忆                          |
+| `/delivery-check`    | RULE 11 交付链路完成度自检                      |
+| `/adopt`             | 让某个仓接入并收敛重复治理资产                  |
+| `/issue-pipeline`    | 扫描并分类全组织的 open issue                   |
+| `/dev`               | 对单个仓库跑确定性的 issue→PR→合并流水线        |
+| `/spec-new`          | 起草新 spec（特性/流程/守则变更）               |
+| `/revision-new`      | 为一次改动创建变更记录（changelog）             |
+| `/build`             | 为 openIndu 服务构建并推送镜像（RULE 11 第④步） |
+| `/codebase-analysis` | 逆向分析并整理一个陌生代码库                    |
 
 外加 **20 个 agent**（治理/需求/设计/构建/质量/数据/运维/洞察，零业务绑定）和一个阻断 `git push origin main` 的 hook。
 
@@ -146,12 +152,14 @@ control-tower/
 ├── .claude-plugin/marketplace.json  # 市场目录
 ├── plugins/openindu-control-tower/       # ★ Claude Code 公共插件
 │   ├── .claude-plugin/plugin.json
-│   ├── skills/                      # 14 个 skill
+│   ├── skills/                      # 16 个：principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / dev / issue-pipeline
 │   ├── agents/                      # 20 个 agent（SDLC 角色，零业务绑定）
+│   ├── engine/                      # 确定性 /dev 引擎（spec/005）：states / guards / admission / carrier / pr-lifecycle 等
+│   ├── evals/                       # eval 套件：dev-reasoning-layer（spec/005）+ standing-authorization（spec/006）
 │   ├── hooks/                       # 主干保护
-│   ├── reference/                   # route.json + manifest.yaml
+│   ├── reference/                   # route.json + dev.schema.json + manifest.yaml + coding-standards/
 │   └── README.md
-├── scripts/sync-route.mjs
+├── scripts/                          # sync-route / check-roster / check-version-bump / detect-modules
 ├── .github/workflows/ci.yml
 ├── spec/                            # 特性设计
 ├── revision/                        # 修订记录
