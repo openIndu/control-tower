@@ -134,6 +134,62 @@ Auto-detects team state: creates + spawns manager if absent; messages if manager
 
 ---
 
+## Commands & workflows (16 skills)
+
+Each is `plugins/openindu-control-tower/skills/<name>/SKILL.md`. 11 of the 16 carry
+`disable-model-invocation: true` — the model never triggers them from conversation context, only
+an explicit `/<name>` call does. The 5 marked **\*** below have no such flag and may be
+auto-invoked. Every skill's first line of work is `/principle` (RULE 1); omitted from the
+"Input" column below since it's constant across all 16.
+
+### Reference (read-only, no writes)
+
+| Command             | Input                          | Output                                                                                                                                                                                            |
+| ------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/principle` **\*** | none                           | the 11 RULEs loaded into context — no file write, no side effect                                                                                                                                  |
+| `/route` **\***     | optional `<repo name or type>` | a routing answer read from `route.json` (URL / type / host / image / domain / aggregate ownership / K8s namespace) + 3 derived judgments (which PR flow, does it need `/build`, can it touch K8s) |
+
+### SDLC pipeline orchestration
+
+| Command      | Input                                            | Output                                                                                                                                                                                                                                                                                                      |
+| ------------ | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/launch`    | optional `[initial task description]`            | the `openindu-maintainers` team brought up — manager spawned (or messaged if already up) with a role roster activated by the current repo's language; no file artifact, state lives in `~/.claude/teams/openindu-maintainers/`                                                                              |
+| `/design`    | `<feature description>`                          | the `design/<domain>/` artifact tree, written phase by phase (business-analyst → product-manager → architect → ui-ux-designer → build role → ops → bi-analyst), each phase gated by a human STOP; ends with working code + a passing `/delivery-check`                                                      |
+| `/autopilot` | `<idea> [--tier L0\|L1\|L2\|L3]`                 | the same artifact tree as `/design` (it wraps `/design`), but the STOP policy is tier-controlled — L0 gates every phase, L1 gates only the ends, L2 auto-syncs to staging behind one STOP, L3 runs end to end to a sandbox deploy with one final notification. RULE 4/7/8/10 are never relaxed by the tier. |
+| `/design-md` | `[--pick <brand> \| --generate "<description>"]` | `design/uiux/DESIGN.md` — a 9-section design-system document (palette / type / components / layout / depth / do's-and-don'ts / responsive / agent-prompt guide) that becomes ui-ux-designer's and frontend's source of truth                                                                                |
+
+### Org-wide batch pipelines (deterministic engine, spec/005)
+
+| Command           | Input                                                                                                                                                                        | Output                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/issue-pipeline` | `[--org openIndu] [--tier L1] [--dry-run]`                                                                                                                                   | an adjudicated, prioritized queue over every open issue in the org (`ACTION` / `NEEDS_TRIAGE` / `NO_ACTION`, each with an independent adversarial review); accepted items are dispatched through `/autopilot`; ends with a per-issue status table (`NO_ACTION` / `NEEDS_TRIAGE` / `PR_GREEN` / `BLOCKED` / `FAILED` / `PENDING_APPROVAL`) — never merges anything itself                                                                    |
+| `/dev`            | `--repo <repo> [--dry-run \| --resume <run-id> \| --no-merge \| --max-issues N \| --max-total-budget-usd N]`, or the subcommands `ack <run-id>` / `build <repo> [--confirm]` | one JSON result object + a process exit code (0-5, `dev.schema.json`); a completed run's `RUN_COMPLETE` carries a rendered acceptance-matrix report. May open, review, and — only when the target repo has a live, unexpired `dev_grants` entry — merge PRs against that repo's own open issues, entirely through engine code (`plugins/openindu-control-tower/engine/`) with zero ad hoc agent judgment over the GitHub writes themselves. |
+
+### Release & delivery (RULE 11)
+
+| Command                  | Input                                      | Output                                                                                                                                                                                      |
+| ------------------------ | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/build`                 | `<service-name> [--tag <tag>] [--dry-run]` | a Docker image built and pushed to the Aliyun Container Registry (RULE 11 step ④); `--dry-run` only validates the Dockerfile and pushes nothing                                             |
+| `/delivery-check` **\*** | optional `[repo name or PR link]`          | a rendered 6-box RULE 11 checklist (① sub-repo PR → ⑥ `kubectl apply`) with ✅ / ⏳ / N/A per box and a Complete / Partially-complete verdict — a report returned to the thread, not a file |
+
+### Governance & self-maintenance (control-tower repo)
+
+| Command         | Input                                                                                                 | Output                                                                                                                                                                                                                                                       |
+| --------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/adopt`        | `[--dry-run]` — operates on whatever repo the session is in, no repo argument                         | with `--dry-run`: a table only, zero writes; otherwise a PR against that repo adding the plugin reference to `.claude/settings.json`, rewriting Rule #1 to call `/principle`, plus a user-confirmed deletion list for duplicate governance assets            |
+| `/spec-new`     | `<feature brief>`                                                                                     | `spec/NNN-brief-slug.md` (9 sections: background / design points / impact / phased path / rollback / acceptance / self-check / open questions / changelog), submitted to arbiter review; on approval, `status: finalized` + an index row in `spec/README.md` |
+| `/revision-new` | `<change brief>`                                                                                      | `revision/YYYY-MM-DD-brief-slug.md` — a 4-section changelog record (summary / files involved / trigger / impact) with a 3-item verification checklist                                                                                                        |
+| `/memory`       | `[--read <role> \| --add <role> "<lesson>"]` — also read implicitly by every agent at its own startup | read: a role's lesson text surfaced into context; write: one appended line in `team/communications/memory/<role>/{pitfalls,techniques}.md`                                                                                                                   |
+
+### Standalone analysis
+
+| Command                     | Input                                     | Output                                                                                                                                                                                                                                                                         |
+| --------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/codebase-analysis` **\*** | a target codebase (current repo or named) | one markdown report (`<ProjectName>分析报告.md`, project root), following the 7-step flow: problem → feature-to-problem map → components → code deep-dive → architecture → 4+1 views → doc                                                                                     |
+| `/company-analysis` **\***  | a company name or description             | one markdown company-profile report — either the full 11-section report or the compact recurring "每日公司观察" variant; business-analyst's market/competitor-research tool, oriented toward openIndu's own technical-community domain when the audience is engineering-facing |
+
+---
+
 ## Directory structure
 
 ```
