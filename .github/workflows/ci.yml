@@ -60,7 +60,8 @@ jobs:
           fail=0
           for f in plugins/openindu-control-tower/engine/*.test.mjs \
                    plugins/openindu-control-tower/skills/issue-pipeline/scripts/collect-org-issues.test.mjs \
-                   plugins/openindu-control-tower/skills/dev/scripts/*.test.mjs; do
+                   plugins/openindu-control-tower/skills/dev/scripts/*.test.mjs \
+                   scripts/check-pr-scope.test.mjs; do
             echo "::group::$f"
             node "$f" || fail=1
             echo "::endgroup::"
@@ -133,3 +134,10 @@ jobs:
       # （backend/frontend/infra-deploy 作 agent 名已废止，stage-4 改名后多处文档曾残留）。
       - name: roster consistency (seat count + no stale agent names)
         run: node scripts/check-roster.mjs
+
+      # RULE 4 规模上限 + 测试完整性 + 受保护路径可见性——对本仓**每一个** PR 生效，
+      # 不要求 /dev 的自动合并授权。从 engine/ 的 G4/G5 拆出其中与"有没有已授权的
+      # /dev 运行"无关的那部分可见性检查（对比：G4/G5 本身继续原样服务 /dev 自己的
+      # 更严格场景，未被改动）；受保护路径只告警不拦截，理由见脚本头部注释。
+      - name: PR scope guard (RULE 4 size cap / test integrity / protected paths)
+        run: node scripts/check-pr-scope.mjs
