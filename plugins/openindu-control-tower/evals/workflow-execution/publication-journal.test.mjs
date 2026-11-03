@@ -151,6 +151,39 @@ test("moved base can be re-read and reconciled on the same existing PR", () =>
     assert.equal(done.operations["release-1"].readBackHistory.length, 3);
   }));
 
+test("a known PR cannot be marked absent or replayed under another key", () =>
+  fixture(({ repo }) => {
+    const first = publicationTransition({ operations: {} }, intent, repo);
+    const blocked = publicationTransition(
+      first,
+      {
+        ...applied,
+        result: "BLOCKED",
+        reason: "base moved after PR creation",
+        actualBaseSha: "d".repeat(40),
+      },
+      repo,
+    );
+    assert.throws(
+      () =>
+        publicationTransition(
+          blocked,
+          {
+            ...applied,
+            result: "NOT_APPLIED",
+            reason: "incorrect absence claim",
+          },
+          repo,
+        ),
+      /existing PR cannot be marked absent/,
+    );
+    assert.throws(
+      () =>
+        publicationTransition(blocked, { ...intent, key: "release-2" }, repo),
+      /Existing publication/,
+    );
+  }));
+
 test("read-back observations append without overwriting history", () =>
   fixture(({ repo }) => {
     const first = publicationTransition({ operations: {} }, intent, repo);
