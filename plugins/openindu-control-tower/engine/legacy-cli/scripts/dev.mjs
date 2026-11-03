@@ -83,9 +83,9 @@ import {
   ensureRepoClone,
   issueWorktreePath,
 } from "../../../engine/worktree.mjs";
-import { run as collectRepoIssues } from "../../issue-pipeline/scripts/collect-org-issues.mjs";
+import { run as collectRepoIssues } from "../../../skills/issue-pipeline/scripts/collect-org-issues.mjs";
 
-// This runner lives at <repo-root>/plugins/openindu-control-tower/skills/dev/scripts/dev.mjs
+// This runner lives at <repo-root>/plugins/openindu-control-tower/engine/legacy-cli/scripts/dev.mjs
 // -- 5 directories below the repo root -- which is also the control-tower checkout
 // carrier-setup.mjs's setupSystemPrompt reads the principle SKILL.md from (RULE 1's text
 // is injected into every carrier call's system prompt, not just read once at startup).
@@ -110,7 +110,7 @@ const CARRIER_DIR = join(
 );
 
 // spec/005 section 2.1: "`./dev <repo>`（工作区启动器）与 `/dev <repo>`（技能）调用同一
-// 个 runner：skills/dev/scripts/dev.mjs". This file IS that runner. Stage 7 (PR-F) builds
+// 个 runner：engine/legacy-cli/scripts/dev.mjs". This file IS that runner. Stage 7 (PR-F) builds
 // it incrementally: this slice (F8-1) covers the CLI skeleton, route resolution, the
 // structural-exclusion gate, admission A1-A3, and step 1 (issue intake) -- steps 2-6 are
 // wired in the sub-PRs that follow, each importing the already-built library modules
