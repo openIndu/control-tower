@@ -66,28 +66,28 @@ The Claude Code manifest is `.claude-plugin/plugin.json`. The Codex compatibilit
 
 Installed agents appear in the `@` list with the `openindu-control-tower:` prefix — no clash with repo-local agents.
 
-| Agent                                     | Domain     | Role                                                          |
-| ----------------------------------------- | ---------- | ------------------------------------------------------------- |
-| `openindu-control-tower:manager`          | Governance | Classify/dispatch/track tasks, policy exceptions              |
-| `openindu-control-tower:arbiter`          | Governance | Cross-repo arbitration, spec review (narrowed)                |
-| `openindu-control-tower:inspector`        | Governance | Proactive read-only inspection, improvement proposals         |
-| `openindu-control-tower:control-tower`    | Governance | Maintains the brain: principles / route / agents / plugin     |
-| `openindu-control-tower:business-analyst` | Ideation   | Market research, competitor analysis, business case           |
-| `openindu-control-tower:product-manager`  | Ideation   | Requirements, PRDs, acceptance criteria, cross-repo contracts |
-| `openindu-control-tower:architect`        | Design     | Tech selection, system architecture, ADRs, roadmap            |
-| `openindu-control-tower:ui-ux-designer`   | Design     | Interaction, visual, design system, accessibility             |
-| `openindu-control-tower:frontend`         | Build      | Frontend: React / Vue / UniApp (zero business binding)        |
-| `openindu-control-tower:backend`          | Build      | Backend: Spring Boot / FastAPI (zero business binding)        |
-| `openindu-control-tower:edge`             | Build      | Edge: Rust / field-protocol drivers (silent-failure risk)     |
-| `openindu-control-tower:station-control`  | Build      | Station & control: C# / .NET / physical devices (default L3)  |
-| `openindu-control-tower:test`             | Quality    | RULE 2 admission gate (regression judgment, not coverage)     |
-| `openindu-control-tower:reviewer`         | Quality    | RULE 5.2 four-lens pre-review (no approval authority)         |
-| `openindu-control-tower:security`         | Quality    | RULE 5.4 credentials / permissions / exposure surface         |
-| `openindu-control-tower:data`             | Data       | RULE 10 production-SQL protection (plans, human executes)     |
-| `openindu-control-tower:bi-analyst`       | Data       | Metrics, dashboards, experimentation (makes reqs measurable)  |
-| `openindu-control-tower:ops`              | Operations | Day-2 ops: server/db health, logs, runbooks, incidents        |
-| `openindu-control-tower:release`          | Operations | RULE 11 six-stage pipeline + gitops K8s manifests             |
-| `openindu-control-tower:codebase-analyst` | Insight    | Reverse-engineer/onboard to any repo (read-only, 7-step)      |
+| Agent                                     | Domain     | Role                                                                              |
+| ----------------------------------------- | ---------- | --------------------------------------------------------------------------------- |
+| `openindu-control-tower:manager`          | Governance | Classify/dispatch/track tasks; resolve ordinary workflow exceptions within policy |
+| `openindu-control-tower:arbiter`          | Governance | Cross-repo arbitration, spec review (narrowed)                                    |
+| `openindu-control-tower:inspector`        | Governance | Proactive read-only inspection, improvement proposals                             |
+| `openindu-control-tower:control-tower`    | Governance | Maintains the brain: principles / route / agents / plugin                         |
+| `openindu-control-tower:business-analyst` | Ideation   | Market research, competitor analysis, business case                               |
+| `openindu-control-tower:product-manager`  | Ideation   | Requirements, PRDs, acceptance criteria, cross-repo contracts                     |
+| `openindu-control-tower:architect`        | Design     | Tech selection, system architecture, ADRs, roadmap                                |
+| `openindu-control-tower:ui-ux-designer`   | Design     | Interaction, visual, design system, accessibility                                 |
+| `openindu-control-tower:frontend`         | Build      | Frontend: React / Vue / UniApp (zero business binding)                            |
+| `openindu-control-tower:backend`          | Build      | Backend: Spring Boot / FastAPI (zero business binding)                            |
+| `openindu-control-tower:edge`             | Build      | Edge: Rust / field-protocol drivers (silent-failure risk)                         |
+| `openindu-control-tower:station-control`  | Build      | Station & control: C# / .NET / physical devices (default L3)                      |
+| `openindu-control-tower:test`             | Quality    | RULE 2 admission gate (regression judgment, not coverage)                         |
+| `openindu-control-tower:reviewer`         | Quality    | RULE 5.2 four-lens pre-review (no approval authority)                             |
+| `openindu-control-tower:security`         | Quality    | RULE 5.4 credentials / permissions / exposure surface                             |
+| `openindu-control-tower:data`             | Data       | RULE 10 production-SQL protection (plans, human executes)                         |
+| `openindu-control-tower:bi-analyst`       | Data       | Metrics, dashboards, experimentation (makes reqs measurable)                      |
+| `openindu-control-tower:ops`              | Operations | Day-2 ops: server/db health, logs, runbooks, incidents                            |
+| `openindu-control-tower:release`          | Operations | RULE 11 six-stage pipeline + gitops K8s manifests                                 |
+| `openindu-control-tower:codebase-analyst` | Insight    | Reverse-engineer/onboard to any repo (read-only, 7-step)                          |
 
 The SDLC pipeline: `business-analyst → product-manager → architect → ui-ux-designer → build → ops → bi-analyst` (codebase-analyst read-only at any stage; governance/quality cross-cut). `/launch` activates the relevant subset per repo.
 

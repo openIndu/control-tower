@@ -5,23 +5,54 @@ on:
   push:
     branches: [main]
 
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
 jobs:
   checks:
     name: format + plugin + route
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           # check-version-bump.mjs 要比对 origin/main，浅克隆下解析不到
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
 
+      - name: Audit pinned CI tool dependencies
+        shell: bash
+        run: |
+          tool_dir="$(mktemp -d)"
+          trap 'rm -rf "$tool_dir"' EXIT
+          printf '%s\n' '{"name":"openindu-ci-tools","version":"1.0.0","private":true}' > "$tool_dir/package.json"
+          npm install --prefix "$tool_dir" --registry=https://registry.npmjs.org --package-lock-only --ignore-scripts --no-audit --no-fund --save-exact prettier@3.9.10 @anthropic-ai/claude-code@2.1.309
+          npm audit --prefix "$tool_dir" --registry=https://registry.npmjs.org --audit-level=high
+
       # RULE 2 — 提交前格式必须过
       - name: Markdown format (prettier)
-        run: npx --yes prettier@3 --check "**/*.md"
+        run: npx --yes prettier@3.9.10 --check "**/*.md"
+
+      - name: Codex entrypoint synchronization
+        run: node scripts/sync-codex-skills.mjs --check
+
+      - name: Secret scan (Gitleaks)
+        shell: bash
+        run: |
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}:/repo" \
+            ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:b109bc5f8f76a38196a3e413704fc5b9e3c32360bce4e4b603bd6f45b3721dbb \
+            git /repo --redact --no-banner
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
 
       - name: Workflow documentation consistency
         run: node scripts/check-workflow-docs.mjs
@@ -69,13 +100,18 @@ jobs:
           if [ -d plugins/openindu-control-tower/evals/workflow-execution ]; then
             node --test plugins/openindu-control-tower/evals/workflow-execution/*.test.mjs
           fi
+          node --test plugins/openindu-control-tower/evals/prompt-behavior/*.test.mjs
 
       # 插件 schema + skill/agent/hook 文件校验
       - name: Validate plugin
-        run: npx --yes @anthropic-ai/claude-code@latest plugin validate ./plugins/openindu-control-tower --strict
+        run: npx --yes @anthropic-ai/claude-code@2.1.309 plugin validate ./plugins/openindu-control-tower --strict
+        env:
+          DISABLE_AUTOUPDATER: "1"
 
       - name: Validate marketplace
-        run: npx --yes @anthropic-ai/claude-code@latest plugin validate . --strict
+        run: npx --yes @anthropic-ai/claude-code@2.1.309 plugin validate . --strict
+        env:
+          DISABLE_AUTOUPDATER: "1"
 
       # plugin.json 与 marketplace.json 版本号一致、且插件分发内容（skills/
       # agents/ hooks/ reference/）有改动时次版本号确实 +1 —— plugin validate
@@ -140,3 +176,8 @@ jobs:
       # RULE 4 size-cap, test-integrity and protected-path visibility guard.
       - name: PR scope guard (RULE 4 size cap / test integrity / protected paths)
         run: node scripts/check-pr-scope.mjs
+
+      - name: Analyze with CodeQL
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:javascript-typescript"

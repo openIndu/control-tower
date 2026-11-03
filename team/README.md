@@ -23,7 +23,19 @@ The governance assets (principles, agent definitions, manifest) live in the publ
 | **Pure role, zero business binding** | Agents hold only role+skill; business binding in `route.json` + repo `AGENTS.md` (legacy `CLAUDE.md` fallback only) |
 | **Single source**                    | Principles and routing each have one source file; no repo self-hosts copies                                         |
 | **Pre-spawn sync + check**           | Every agent: ① `/principle` ② `git pull origin main` ③ `git status`                                                 |
-| **Clear escalation**                 | Cross-repo conflict → arbiter; policy exception → manager                                                           |
+| **Clear escalation**                 | Cross-repo conflict → arbiter; ordinary workflow exception → manager; policy waiver → human owner                   |
+
+```mermaid
+flowchart LR
+    accTitle: Workflow Exception Authority
+    accDescr: The manager may resolve ordinary task-order or role-selection exceptions while keeping policy gates intact. Requests to waive a principle, human approval, required test, or STOP gate pause and go to the human owner.
+
+    request[Exception request] --> kind{What changes?}
+    kind -->|Task order or role selection only| manager[Manager resolves within policy]
+    kind -->|Principle, human approval, test, or STOP gate| pause[Pause affected action]
+    pause --> human[Explain impact and escalate to human owner]
+    human --> decision[Human decision; agent does not grant waiver]
+```
 
 ## Team architecture
 

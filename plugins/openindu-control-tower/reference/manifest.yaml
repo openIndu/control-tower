@@ -21,7 +21,7 @@ agents:
     plugin_ref: "openindu-control-tower:manager"
     type: meta
     repos: "*"
-    description: "Team manager: classify/dispatch/track tasks, policy exceptions, RULE 11 completeness"
+    description: "Team manager: classify/dispatch/track tasks, ordinary workflow exceptions within policy, RULE 11 completeness"
 
   - id: arbiter
     file: ../agents/arbiter.md
