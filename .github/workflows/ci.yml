@@ -69,12 +69,20 @@ jobs:
                    plugins/openindu-control-tower/engine/carrier/egress-proxy/*.test.mjs \
                    plugins/openindu-control-tower/skills/issue-pipeline/scripts/collect-org-issues.test.mjs \
                    plugins/openindu-control-tower/skills/dev/scripts/*.test.mjs \
+                   plugins/openindu-control-tower/skills/issue-pipeline/scripts/workflow-state.test.mjs \
                    scripts/check-pr-scope.test.mjs; do
             echo "::group::$f"
             node "$f" || fail=1
             echo "::endgroup::"
           done
           exit $fail
+
+      # Additional workflow regression assets run automatically when installed.
+      - name: Workflow execution regressions
+        run: |
+          if [ -d plugins/openindu-control-tower/evals/workflow-execution ]; then
+            node --test plugins/openindu-control-tower/evals/workflow-execution/*.test.mjs
+          fi
 
       # 插件 schema + skill/agent/hook 文件校验
       - name: Validate plugin

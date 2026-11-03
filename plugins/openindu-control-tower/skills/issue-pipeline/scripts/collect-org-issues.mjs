@@ -81,13 +81,18 @@ export function normalizeIssue(repository, issue) {
 
 export function collectIssues(repositories, fetchIssues) {
   const issues = [];
+  const seen = new Set();
   const errors = [];
   for (const repository of repositories) {
     if (repository.hasIssues === false) continue;
     try {
       const repositoryIssues = fetchIssues(repository);
       for (const issue of repositoryIssues) {
-        if (!issue.pull_request) issues.push(normalizeIssue(repository, issue));
+        const key = `${repository.name.toLowerCase()}#${issue.number}`;
+        if (!issue.pull_request && !seen.has(key)) {
+          seen.add(key);
+          issues.push(normalizeIssue(repository, issue));
+        }
       }
     } catch (error) {
       errors.push({ repository: repository.name, error: error.message });
