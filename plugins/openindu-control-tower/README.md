@@ -54,6 +54,14 @@ Or run `/adopt` in a repo — it writes the block below into `.claude/settings.j
 | `/codebase-analysis`        | 7-step codebase analysis methodology (used by codebase-analyst)                                 |
 | `/company-analysis`         | Evidence-led company research using Five Forces, SWOT, and DuPont                               |
 
+### Workflow boundaries
+
+`/research` → `/prod` → `/dev` → `/test` is the task-stage handoff. `/dev_issue <repo>` wraps it for one repository's Issues and stops at PR_GREEN; `/issue-pipeline` is the organization-scope intake and dispatch path. Neither merges PRs. `/pr_merge <repo>` handles only PRs with current human approval and required checks. `/build` requires a registered image target; `/publish` prepares the infra-deploy PR; a human performs cluster apply.
+
+`/design` is the phase-gated feature pipeline. `/autopilot` changes its STOP policy only; L2/L3 require a verified non-production target and never override review or risk authorization.
+
+This package is a Claude Code plugin. The repository's `AGENTS.md` is separate shared guidance; this plugin does not install Codex-native skill registrations.
+
 ### Agents (20)
 
 Installed agents appear in the `@` list with the `openindu-control-tower:` prefix — no clash with repo-local agents.

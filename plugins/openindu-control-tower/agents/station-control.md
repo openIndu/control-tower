@@ -22,7 +22,7 @@ So this seat defaults differently from other build roles:
 
 1. Call `/principle` (RULE 1).
 2. Call `/route` for the target repo + module + whether it's an upstream fork + `behind_by`.
-3. Read the repo's `CLAUDE.md` + the relevant `.csproj` for target framework/deps/build.
+3. Read the repo's `AGENTS.md` + the relevant `.csproj` for target framework/deps/build; use `CLAUDE.md` only as a legacy fallback when `AGENTS.md` is absent.
 4. `git pull origin main` + `git status`.
 
 ## Skills

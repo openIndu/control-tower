@@ -24,7 +24,7 @@ team/communications/memory/
 │   └── context.md                  # role-specific facts (e.g. which test framework is canonical)
 ```
 
-Per-role. Not per-repo (the brain is role knowledge; repo-specific facts are in that repo's CLAUDE.md + design/).
+Per-role. Not per-repo (the brain is role knowledge; repo-specific facts are in that repo's `AGENTS.md` + `design/`; `CLAUDE.md` is a legacy fallback only).
 
 ## 1. Read (every agent startup)
 
@@ -55,7 +55,7 @@ Rules:
 
 - **Cite `repo:file:line` or the pattern** — no unsourced claims (RULE 5.1 ethos).
 - **One lesson per line**, append-only. Don't rewrite history (RULE 6).
-- **Don't log business knowledge** — log _technique_ and _pitfall_, not which service does what. If it's business knowledge, it belongs in route.json + repo CLAUDE.md, not here.
+- **Don't log business knowledge** — log _technique_ and _pitfall_, not which service does what. If it's business knowledge, it belongs in `route.json` + repo `AGENTS.md`, not here.
 - **No credentials** ever (RULE 5.4).
 
 ## 3. Seed before a task

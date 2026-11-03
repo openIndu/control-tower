@@ -5,6 +5,8 @@ description: 'Use when analyzing, reverse-engineering, onboarding to, or documen
 
 # Codebase Analysis Methodology
 
+**Call `/principle` first** (RULE 1).
+
 A logical, top-down approach to understanding any codebase. The 7 steps are
 sequential — each builds on the previous one's findings. The core insight:
 **a project exists to solve problems; code is merely the implementation of

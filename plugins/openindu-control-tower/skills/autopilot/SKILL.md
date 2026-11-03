@@ -1,6 +1,6 @@
 ---
 name: autopilot
-description: "Run the SDLC pipeline at a chosen autonomy tier — L0 human-gated (prod/irreducible), L1 feature-branch semi-auto, L2 staging auto-deploy with auto-rollback, L3 sandbox full-auto. Wraps /design so per-phase STOP points are skipped for L2/L3 and kept for L0/L1. Use when you want the team to run a 0-to-1 idea with minimal intervention."
+description: "Run the SDLC pipeline at a chosen autonomy tier — L0 human-gated, L1 feature-branch, L2 verified staging, or L3 verified disposable sandbox. L2/L3 automation requires a documented target and rollback path. Wraps /design with tiered STOP points; it never bypasses human review or action authorization."
 argument-hint: "<idea> [--tier L3]"
 disable-model-invocation: true
 ---
@@ -40,6 +40,11 @@ If deps are missing: STOP and tell the user "install deps first (pip install -r 
 
 > RULE 4 is never suspended. L0/L1 actions that are L2+ risk (e.g. a prod DB write mid-pipeline) still require human approval regardless of tier. The tier gates the _workflow STOPs_, not the _risk tiers_ of individual actions.
 
+Before selecting L2/L3, verify from `/route` and the target repository's release
+documentation that the staging/sandbox target, deploy mechanism, rollback path,
+health signal and required authorization actually exist. If any are missing,
+stop at PR_GREEN or choose L1; do not infer that a cluster or auto-rollback exists.
+
 ## 1. Classify the request + pick a tier
 
 ```
@@ -49,12 +54,12 @@ If deps are missing: STOP and tell the user "install deps first (pip install -r 
 
 Tier selection rules (auto-pick if not specified):
 
-| Signal                                        | Default tier             |
-| --------------------------------------------- | ------------------------ |
-| new repo, no prod, "experiment" / "prototype" | L3                       |
-| existing repo, feature branch, non-prod       | L1                       |
-| touches prod config / prod DB / main          | L0 (force; refuse lower) |
-| staging / pre-prod deploy                     | L2                       |
+| Signal                                        | Default tier                                             |
+| --------------------------------------------- | -------------------------------------------------------- |
+| new repo, no prod, "experiment" / "prototype" | L3 only with a verified disposable sandbox; otherwise L1 |
+| existing repo, feature branch, non-prod       | L1                                                       |
+| touches prod config / prod DB / main          | L0 (force; refuse lower)                                 |
+| staging / pre-prod deploy                     | L2                                                       |
 
 If the request says "prod" or targets an irreversible action and the user asked L2/L3 → **downgrade to L0** and state why.
 

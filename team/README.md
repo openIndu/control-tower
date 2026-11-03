@@ -17,13 +17,13 @@ The governance assets (principles, agent definitions, manifest) live in the publ
 
 ## Core principles
 
-| Principle                            | Note                                                                             |
-| ------------------------------------ | -------------------------------------------------------------------------------- |
-| **Rule #1: `/principle`**            | Every agent loads `/principle` first; re-load every 20 steps or after compaction |
-| **Pure role, zero business binding** | Agents hold only role+skill; business binding in route.json + repo CLAUDE.md     |
-| **Single source**                    | Principles and routing each have one source file; no repo self-hosts copies      |
-| **Pre-spawn sync + check**           | Every agent: ① `/principle` ② `git pull origin main` ③ `git status`              |
-| **Clear escalation**                 | Cross-repo conflict → arbiter; policy exception → manager                        |
+| Principle                            | Note                                                                                                                |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| **Rule #1: `/principle`**            | Every agent loads `/principle` first; re-load every 20 steps or after compaction                                    |
+| **Pure role, zero business binding** | Agents hold only role+skill; business binding in `route.json` + repo `AGENTS.md` (legacy `CLAUDE.md` fallback only) |
+| **Single source**                    | Principles and routing each have one source file; no repo self-hosts copies                                         |
+| **Pre-spawn sync + check**           | Every agent: ① `/principle` ② `git pull origin main` ③ `git status`                                                 |
+| **Clear escalation**                 | Cross-repo conflict → arbiter; policy exception → manager                                                           |
 
 ## Team architecture
 

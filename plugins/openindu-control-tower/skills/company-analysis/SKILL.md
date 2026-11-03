@@ -5,6 +5,8 @@ description: Research and analyze a company for a decision-ready profile or recu
 
 # Company Analysis
 
+**Call `/principle` first** (RULE 1).
+
 Produce an evidence-led assessment of a company. Make clear what is an externally verifiable fact, what is an analytical inference, and what remains unknown.
 
 ## Establish the research boundary

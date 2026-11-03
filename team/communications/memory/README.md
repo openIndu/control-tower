@@ -33,7 +33,7 @@ Each role dir holds `pitfalls.md`, `techniques.md`, `context.md` (created on dem
 - Every agent reads its own role memory at startup.
 - After a non-trivial task, append a lesson (pitfall or technique) with a `repo:file:line` or pattern citation.
 - **Append-only** (RULE 6); correct a wrong lesson by adding a correction line.
-- **No business knowledge** — role technique only; service/repo binding goes to route.json + repo CLAUDE.md.
+- **No business knowledge** — role technique only; service/repo binding goes to `route.json` + repo `AGENTS.md` (legacy `CLAUDE.md` fallback only).
 - **No credentials** (RULE 5.4).
 
 ## Boundary

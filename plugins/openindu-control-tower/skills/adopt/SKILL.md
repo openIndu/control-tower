@@ -58,7 +58,7 @@ If the file doesn't exist, create it. Existing `permissions` / `hooks` **must be
 
 ## Step 4 — Rule #1 → public principles
 
-At the top of the repo's `CLAUDE.md` (or `AGENTS.md` if absent), replace any principle section with:
+At the top of the repo's `AGENTS.md` (create it if absent), replace any principle section with:
 
 ```markdown
 ## Rule #1 — Agent behavior principles
@@ -90,7 +90,9 @@ For each principle copy, run a diff before concluding:
 git log --oneline -5 -- <copy-path>
 ```
 
-If the copy has content the public principle **doesn't**, that's a repo-specific constraint — don't drop it; fold it into the repo's `CLAUDE.md` "repo-specific constraints" section, or file a spec to upstream it as RULE 12+.
+If the copy has content the public principle **doesn't**, that's a repo-specific constraint — don't drop it; fold it into the repo's `AGENTS.md` repo-specific constraints section, or file a spec to upstream it as RULE 12+.
+
+If a legacy `CLAUDE.md` contains repo-specific constraints, preserve them and link to or consolidate them into `AGENTS.md`; do not delete that file without explicit confirmation.
 
 ### Convergence boundary
 
@@ -107,7 +109,7 @@ Present a table to the user; await explicit confirmation before deleting anythin
 ```
 Onboarding changes:
   ✅ .claude/settings.json      add extraKnownMarketplaces + enabledPlugins
-  ✅ CLAUDE.md                  Rule #1 → /principle
+  ✅ AGENTS.md                  Rule #1 → /principle
 
 Suggested deletions (awaiting your confirmation):
   ❓ .claude/PRINCIPLE.md                  6 RULEs; public has 11

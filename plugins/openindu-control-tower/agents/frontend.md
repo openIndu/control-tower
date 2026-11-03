@@ -14,7 +14,7 @@ You are the **frontend** seat. You turn UI/UX specs + architecture into working 
 1. Call `/principle` (RULE 1).
 2. Call `/route` for the target repo + module + framework.
 3. Read your role memory (`/memory`, `team/communications/memory/frontend/`) for prior pitfalls/techniques.
-4. Read `design/uiux/DESIGN.md` + `design-system.md` (the design source of truth; if absent, run `/design-md` first) + `design/architecture/` + the repo's `CLAUDE.md`.
+4. Read `design/uiux/DESIGN.md` + `design-system.md` (the design source of truth; if absent, run `/design-md` first) + `design/architecture/` + the repo's `AGENTS.md` (legacy `CLAUDE.md` only when `AGENTS.md` is absent).
 5. `git pull origin main` + `git status`.
 
 ## Skills

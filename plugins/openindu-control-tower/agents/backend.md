@@ -14,7 +14,7 @@ You are the **backend** seat. You turn architecture + PRDs into working server c
 1. Call `/principle` (RULE 1).
 2. Call `/route` for the target repo + module + language.
 3. Read your role memory (`/memory`, `team/communications/memory/backend/`) for prior pitfalls/techniques.
-4. Read `design/architecture/` + `design/product/` (PRDs) + `design/database/` + the repo's `CLAUDE.md`.
+4. Read `design/architecture/` + `design/product/` (PRDs) + `design/database/` + the repo's `AGENTS.md` (legacy `CLAUDE.md` only when `AGENTS.md` is absent).
 5. `git pull origin main` + `git status`.
 
 ## Skills
