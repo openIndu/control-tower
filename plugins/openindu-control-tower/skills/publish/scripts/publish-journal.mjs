@@ -62,7 +62,7 @@ export function publicationTransition(state, request, evidenceRoot) {
     need(
       !Object.values(operations).some(
         (o) =>
-          (o.applied && sameIdentity(o)) ||
+          ((o.applied || o.prId) && sameIdentity(o)) ||
           (o.state !== "NOT_APPLIED" &&
             (o.branch === request.branch || sameIdentity(o))),
       ),
@@ -149,6 +149,10 @@ export function publicationTransition(state, request, evidenceRoot) {
     need(
       !(operation.applied && request.result === "NOT_APPLIED"),
       "An applied publication cannot be downgraded",
+    );
+    need(
+      !(operation.prId && request.result === "NOT_APPLIED"),
+      "A publication with an existing PR cannot be marked absent",
     );
     const baseSha = request.actualBaseSha;
     if (request.result === "APPLIED") {
