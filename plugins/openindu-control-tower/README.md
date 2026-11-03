@@ -56,7 +56,7 @@ Or run `/adopt` in a repo — it writes the block below into `.claude/settings.j
 
 ### Workflow boundaries
 
-`/research` → `/prod` → `/dev` → `/test` is the task-stage handoff. `/dev_issue <repo>` wraps it for one repository's Issues and stops at PR_GREEN; `/issue-pipeline` is the organization-scope intake and dispatch path. Neither merges PRs. `/pr_merge <repo>` handles only PRs with current human approval and required checks. `/build` requires a registered image target; `/publish` prepares the infra-deploy PR; a human performs cluster apply.
+`/research` → `/prod` → `/dev` → `/test` is the task-stage handoff. Runtime evidence lives in the isolated task directory; optional design documents committed to a repo are versioned copies whose paths and hashes are recorded in that evidence. `/dev_issue <repo>` wraps the stages for one repository's Issues and stops at PR_GREEN; `/issue-pipeline` is the organization-scope intake and dispatch path, and requires the visible repository inventory to match canonical GitHub entries in `route.json`. Neither merges PRs. `/pr_merge <repo>` handles only PRs with current human approval and required checks. `/autopilot` changes workflow STOP points only and never merges a PR. `/build` requires a registered image target; `/publish` prepares the infra-deploy PR; a human performs cluster apply.
 
 `/design` is the phase-gated feature pipeline. `/autopilot` changes its STOP policy only; L2/L3 require a verified non-production target and never override review or risk authorization.
 
@@ -129,7 +129,7 @@ node scripts/check-roster.mjs
 npx prettier --check "**/*.md"
 ```
 
-Then **bump `version` in `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`** — without a bump, downstream `/plugin update` won't pick it up. Merge via PR (RULE 7).
+Then **bump `version` consistently in `plugins/openindu-control-tower/.claude-plugin/plugin.json`, `.codex-plugin/plugin.json`, and `.claude-plugin/marketplace.json`** — without a synchronized bump, downstream Claude Code or Codex installs may not receive the update. `node scripts/check-version-bump.mjs` validates the three values and the required increment. Merge via PR (RULE 7).
 
 ## Local dev
 

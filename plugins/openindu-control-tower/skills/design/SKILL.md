@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 # /design — SDLC pipeline orchestration
 
-Drives a 0-to-1 feature through the SDLC role pipeline. Each phase's role writes its `design/<domain>/` artifact; the next phase reads it. STOP points at every phase handoff by default; `/autopilot` can relax them per tier.
+Drives a 0-to-1 feature through the SDLC role pipeline. Each phase writes its canonical, versioned evidence to the task-isolated state root; the next phase reads that exact artifact. When the user needs design documents committed to the repository, publish named copies under `design/<domain>/` and record each repository path and content hash in the task evidence. STOP points at every phase handoff by default; `/autopilot` can relax conversation STOPs but never merge gates.
 
 **Call `/principle` first** (RULE 1).
 
@@ -19,10 +19,11 @@ If invoked via `/autopilot <idea> --tier L<n>`, the STOP policy changes by tier:
 
 - **L0** (prod/irreducible): every phase STOP (default behavior).
 - **L1** (feature branch): STOP at phase 1 + final delivery; build/test/review auto-run between.
-- **L2** (staging): one STOP at "staging deploy candidate"; merge → GitOps auto-sync + auto-rollback.
-- **L3** (sandbox): no per-phase STOP; one final notification at "sandbox deployed".
+- **L2** (staging): one STOP at the staging candidate; any merge still requires current human review, required checks and separate authorization before GitOps sync.
+- **L3** (sandbox): no phase STOPs; a PR still needs current human review and required checks before merge, and deployment needs a verified disposable sandbox with authorization and rollback.
 
 RULE 4 (L3 risk actions), RULE 7 (no push to main), RULE 8 (K8s in gitops), RULE 10 (prod SQL) are **never** suspended by any tier. See `/autopilot`.
+Every PR still requires current human review and required checks before merge at every tier; autopilot never merges it.
 
 ---
 
@@ -30,9 +31,9 @@ RULE 4 (L3 risk actions), RULE 7 (no push to main), RULE 8 (K8s in gitops), RULE
 
 **Invoke `codebase-analyst` BEFORE the ideation/design phases** to scan the target repo for existing implementations of the requested feature. This prevents "designing something that already exists" (pilot finding #1 from openindu-website 2026-08-05).
 
-| What codebase-analyst does                                                                     | Output                             |
+| What codebase-analyst does                                                                     | Canonical output                   |
 | ---------------------------------------------------------------------------------------------- | ---------------------------------- |
-| Scans the target repo (via `/route`) for existing endpoints/files/modules matching the feature | `design/insight/<feature>-scan.md` |
+| Scans the target repo (via `/route`) for existing endpoints/files/modules matching the feature | `<task-dir>/codebase-scan-v<N>.md` |
 
 | Result                            | Pipeline adjustment                                                                                                                                                                                             |
 | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -47,8 +48,14 @@ RULE 4 (L3 risk actions), RULE 7 (no push to main), RULE 8 (K8s in gitops), RULE
 ## Task execution contract
 
 Use `reference/workflow-execution.md` for every task. Pass a task ID and exact
-versioned artifact paths to each role. Replace the illustrative shared paths
-below with the task directory; no role may select a shared "latest" input.
+versioned artifact paths to each role. Canonical evidence stays under the task
+directory in the shared state root; never use shared `design/<domain>/` paths
+as runtime handoffs or select a shared "latest" input. Repository design docs
+are optional deliverables: publish an explicitly requested, versioned copy
+under `design/<domain>/`, then record its repository path and SHA-256 in the
+canonical task report. The task report/checkpoint records the hash of that
+mapping, preserving an auditable link to both copies. Verify the committed copy
+at its commit SHA before marking the phase complete.
 All request types, including one-off fixes and enhancements, must record
 research/prod applicability, development and independent test evidence.
 After development, the test role runs UT/IT and starts the local environment
@@ -97,23 +104,25 @@ For each phase:
    - calls `/principle`
    - calls `/route`
    - reads its own role memory (`/memory`, `team/communications/memory/<role>/`)
-   - reads the prior phase's `design/<domain>/` output
-   - writes its own `design/<domain>/` artifact
+   - reads the exact prior phase artifact from the task directory
+   - writes a new versioned canonical artifact to that task directory
+   - when a repository design deliverable is requested, writes a versioned
+     repository copy and records its path and SHA-256 in the canonical artifact
    - **self-verifies** (build roles: build → self-test → self-review → verify) before reporting done
    - writes a completion_report to `team/communications/threads/{task-id}/`
 3. 🛑 **STOP** — show the artifact to the user; confirm before the next phase.
 
 ```
 For feature: <description>
-  □ Phase 0: codebase-analyst → design/insight/<feature>-scan.md      [🛑 confirm scope]
+  □ Phase 0: codebase-analyst → <task-dir>/codebase-scan-v<N>.md [🛑 confirm scope]
   □ Phase 1: business-analyst → <task-dir>/research-v1.md   [🛑 confirm]
   □ Phase 2: product-manager → <task-dir>/prod-v1.md            [🛑 confirm]
-  □ Phase 3: architect → design/architecture/ + ADRs                         [🛑 confirm]
-  □ Phase 4: ui-ux-designer → design/uiux/<screen>-ui.md                     [🛑 confirm]
-  □ Phase 5: route-selected build roles → code + applicable design artifacts [🛑 confirm]
+  □ Phase 3: architect → <task-dir>/architecture-v<N>.md + optional versioned ADR copy [🛑 confirm]
+  □ Phase 4: ui-ux-designer → <task-dir>/uiux-v<N>.md + optional versioned repo copy [🛑 confirm]
+  □ Phase 5: route-selected build roles → code + task evidence [🛑 confirm]
   □ Phase 6: test → UT/IT + local startup + manual acceptance evidence        [🛑 confirm]
-  □ Phase 7: ops → design/ops/ (when applicable)                              [🛑 confirm]
-  □ Phase 8: bi-analyst → design/bi/ (when requested/in scope)                [🛑 confirm]
+  □ Phase 7: ops → <task-dir>/ops-v<N>.md (when applicable; optional repo copy) [🛑 confirm]
+  □ Phase 8: bi-analyst → <task-dir>/bi-v<N>.md (when applicable; optional repo copy) [🛑 confirm]
   □ /delivery-check — RULE 11 completeness                                   [🛑 confirm]
 ```
 
@@ -130,7 +139,7 @@ Each phase's artifact is the next phase's input. If a phase can't proceed (ambig
 
 ## 5. Completion
 
-Pipeline done = all applicable phase artifacts exist + build produces working code + mandatory local test evidence exists + `/delivery-check` shows RULE 11 completeness. Present the full `design/` tree + change list + delivery checklist to the user.
+Pipeline done = all applicable phase artifacts exist + build produces working code + mandatory local test evidence exists + `/delivery-check` shows RULE 11 completeness. Present the task evidence index, any committed design deliverables, the change list and delivery checklist to the user.
 
 ## Boundary
 
@@ -140,7 +149,7 @@ Pipeline done = all applicable phase artifacts exist + build produces working co
 
 When the target repo is a **submodule** of an aggregate repo (e.g. `openindu-backend` under `openindu-website`):
 
-- **Design docs** commit to the **aggregate** repo (e.g. `openindu-website/design/`).
+- Canonical task evidence remains in the shared state root. User-approved **repository design deliverables** commit to the **aggregate** repo (e.g. `openindu-website/design/`) as versioned copies; record their paths and hashes in the canonical task evidence.
 - **Code changes** commit to the **submodule** repo (e.g. `openIndu-backend/`) → submodule PR.
 - After the submodule PR merges, the **aggregate** repo needs a submodule pointer update PR (RULE 11 step ③).
 - Two PRs total (submodule code + aggregate pointer) — this is inherent to the submodule architecture, not a bug. `manager` coordinates both.
@@ -150,3 +159,4 @@ When the target repo is a **submodule** of an aggregate repo (e.g. `openindu-bac
 - 2026-11-03: Bound handoffs to task artifacts and added mandatory test/Issue gates.
 - 2026-11-03: Added the independent local test phase and clarified conditional specialist phases.
 - 2026-11-03: Scoped the diagram and mandatory handoffs by request type; kept agent pre-review distinct from the /design phase gate.
+- 2026-11-03: Separated task-isolated evidence from optional committed design deliverables and bound copies by path and SHA-256.

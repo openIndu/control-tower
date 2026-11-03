@@ -50,8 +50,8 @@ Plus **20 agents** (governance / ideation / design / build / quality / data / op
 
 - **One accepted task:** `/research` → `/prod` → `/dev` → `/test`. Keep the same repo and task ID; each stage consumes the previous artifact/checkpoint.
 - **Issue to green PR:** `/dev_issue <repo>` triages one repo's Issues and runs the accepted items through those stages; it stops at PR_GREEN and does not merge.
-- **Organization intake:** `/issue-pipeline` collects and adversarially triages the authorized openIndu scope, then dispatches accepted work through `/autopilot` or the applicable role-based fix flow; it stops before merging.
-- **Feature design:** `/launch` before `/design` for the phase-gated role pipeline, or `/autopilot` when a tiered STOP policy is appropriate. L2/L3 automation requires a verified staging/sandbox target and never overrides human review or risk authorization.
+- **Organization intake:** `/issue-pipeline` compares the API-visible repository list with canonical GitHub repos in `route.json`, then collects and adversarially triages the authorized openIndu scope; inventory gaps block dispatch. Accepted work goes through `/autopilot` or the applicable role-based fix flow; it stops before merging.
+- **Feature design:** `/launch` before `/design` for the phase-gated role pipeline, or `/autopilot` when a tiered STOP policy is appropriate. Run evidence stays in an isolated task directory; committed design docs are versioned copies linked by path and hash. L2/L3 changes workflow STOP points only; every PR still needs current human review and required checks before merge.
 - **Delivery:** `/pr_merge <repo>` merges only individually eligible PRs with current approval and required CI. `/build` requires a registered image target in `/route`; `/publish` prepares the infra-deploy PR. Cluster apply remains human-only.
 
 **Client entrypoints:** use `/dev` in Claude Code. Codex discovers the same workflow as `$dev` or in its skill picker through `.agents/skills/` when this repo is open, or through the Codex plugin manifest when the plugin is installed. Codex does not register Claude-style `/dev` slash commands.
