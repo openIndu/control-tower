@@ -1,6 +1,6 @@
 ---
 name: design
-description: Orchestrate the 0-to-1 SDLC pipeline across the role agents. Hands off along business-analyst → product-manager → architect → ui-ux-designer → build (backend/frontend/edge/station-control) → ops → bi-analyst, with each phase writing its design/&lt;domain&gt;/ artifact and the next phase reading it. Use when a feature needs the full design pipeline (not a one-off fix).
+description: Orchestrate the phase-gated 0-to-1 SDLC workflow across relevant role agents, including independent local testing and applicable operations or metrics artifacts. Use for a new capability, not a one-off fix.
 argument-hint: "[feature description]"
 disable-model-invocation: true
 ---
@@ -56,42 +56,35 @@ for interactive acceptance and cleanup. Missing verification blocks PR creation.
 
 ## The pipeline
 
-```
-codebase-analyst            → design/insight/<feature>-scan.md (Phase 0: pre-check)
-        │ (scope: enhance existing or new build?)
-        ▼
-business-analyst          → <task-dir>/research-v1.md
-        │ (handoff)
-        ▼
-product-manager           → <task-dir>/prod-v1.md
-        │
-        ▼
-architect                 → design/architecture/ (+ ADRs)
-        │
-        ▼
-ui-ux-designer            → design/uiux/<screen>-ui.md
-        │
-        ▼
-build (backend/frontend/edge/station-control)
-                          → code + design/database/ (backend owns DB design)
-        │
-        ▼
-ops                       → design/ops/runbooks/ + topology
-        │
-        ▼
-bi-analyst                 → design/bi/metrics-registry.md + dashboard spec
+```mermaid
+flowchart LR
+    accTitle: 0-to-1 Feature Design and Build
+    accDescr: The 0-to-1 design workflow checks the codebase, moves through research and product definition into applicable architecture and UI design, selects implementation roles by repository route, and requires independent local testing before the delivery completeness check.
+
+    scan["Phase 0: codebase-analyst<br/>read-only scope scan"] --> research["Phase 1: business-analyst<br/>research-v1.md"]
+    research --> product["Phase 2: product-manager<br/>prod-v1.md"] --> architecture["Phase 3: architect<br/>architecture + ADRs"]
+    architecture --> ux["Phase 4: ui-ux-designer<br/>when applicable"] --> build["Phase 5: route-selected build role(s)<br/>code + applicable design artifacts"]
+    build --> test["Phase 6: test<br/>UT/IT + local startup + manual acceptance"]
+    test --> delivery["/delivery-check<br/>RULE 11 completeness"]
 ```
 
 `codebase-analyst` can be invoked at **any** phase for read-only insight on unfamiliar code (it never edits).
+The `ops` role adds runbooks/topology when the task needs operations design;
+`bi-analyst` adds metrics/dashboard artifacts only when measurement is in scope.
+This diagram is the 0-to-1 path. Enhancements start from the codebase check,
+product manager, and an architecture delta; one-off fixes record research and
+product applicability and still require testing; research-only requests stop
+at the business decision. If a PR is prepared, `reviewer` can provide a
+four-lens pre-review, which never replaces human PR review.
 
 ## 1. Classify the request
 
-| Request type                    | Flow                                                                       |
-| ------------------------------- | -------------------------------------------------------------------------- |
-| 0-to-1 feature (new capability) | Phase 0 pre-check → if not found, full pipeline                            |
-| Enhancement to existing feature | Phase 0 pre-check → product-manager → architect (delta) → build → ops/bi   |
-| One-off fix                     | Record research/prod applicability ? dev ? test ? PR; then /delivery-check |
-| Research / "should we build X"  | Stop at business-analyst; don't proceed to build without a decision        |
+| Request type                    | Flow                                                                                                           |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| 0-to-1 feature (new capability) | Phase 0 pre-check → if not found, full pipeline                                                                |
+| Enhancement to existing feature | Phase 0 pre-check → product-manager → architect (delta) → build → test → applicable ops/BI → `/delivery-check` |
+| One-off fix                     | Record research/prod applicability ? dev ? test ? PR; then /delivery-check                                     |
+| Research / "should we build X"  | Stop at business-analyst; don't proceed to build without a decision                                            |
 
 If the request is vague, STOP and clarify with the user before starting.
 
@@ -117,15 +110,17 @@ For feature: <description>
   □ Phase 2: product-manager → <task-dir>/prod-v1.md            [🛑 confirm]
   □ Phase 3: architect → design/architecture/ + ADRs                         [🛑 confirm]
   □ Phase 4: ui-ux-designer → design/uiux/<screen>-ui.md                     [🛑 confirm]
-  □ Phase 5: build roles → code + design/database/                           [🛑 confirm]
-  □ Phase 6: ops → design/ops/                                              [🛑 confirm]
-  □ Phase 7: bi-analyst → design/bi/                                        [🛑 confirm]
+  □ Phase 5: route-selected build roles → code + applicable design artifacts [🛑 confirm]
+  □ Phase 6: test → UT/IT + local startup + manual acceptance evidence        [🛑 confirm]
+  □ Phase 7: ops → design/ops/ (when applicable)                              [🛑 confirm]
+  □ Phase 8: bi-analyst → design/bi/ (when requested/in scope)                [🛑 confirm]
   □ /delivery-check — RULE 11 completeness                                   [🛑 confirm]
 ```
 
 ## 3. Phase skip rules
 
-- Skip a phase ONLY when its input doesn't exist yet (e.g. skip ui-ux-designer for a pure backend/API feature — note the skip in the thread).
+- Skip an optional phase only when its input or scope does not apply (e.g. skip ui-ux-designer for a pure backend/API feature, or ops/BI artifacts when out of scope); record the reason in the thread.
+- Never skip Phase 6 testing for implementation work: UT/IT, local startup, manual acceptance, and evidence are required before PR creation.
 - Never skip business-analyst + product-manager for a 0-to-1 feature — that's the whole point.
 - architect can be a delta review for enhancements (read existing architecture, produce only the delta ADR).
 
@@ -135,7 +130,7 @@ Each phase's artifact is the next phase's input. If a phase can't proceed (ambig
 
 ## 5. Completion
 
-Pipeline done = all phase artifacts exist + build produces working code + `/delivery-check` shows RULE 11 completeness. Present the full `design/` tree + change list + delivery checklist to the user.
+Pipeline done = all applicable phase artifacts exist + build produces working code + mandatory local test evidence exists + `/delivery-check` shows RULE 11 completeness. Present the full `design/` tree + change list + delivery checklist to the user.
 
 ## Boundary
 
@@ -153,3 +148,5 @@ When the target repo is a **submodule** of an aggregate repo (e.g. `openindu-bac
 ## Change log
 
 - 2026-11-03: Bound handoffs to task artifacts and added mandatory test/Issue gates.
+- 2026-11-03: Added the independent local test phase and clarified conditional specialist phases.
+- 2026-11-03: Scoped the diagram and mandatory handoffs by request type; kept agent pre-review distinct from the /design phase gate.
