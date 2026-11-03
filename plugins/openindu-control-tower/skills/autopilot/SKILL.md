@@ -108,3 +108,11 @@ This closes the loop: idea → build → deploy → monitor → (regression → 
 ## Boundary
 
 `/autopilot` wraps `/design` with a STOP policy + guardrails. It does not replace `/launch` (team startup) — run `/launch` first, then `/autopilot` for the workflow.
+
+## Execution evidence
+
+All modes obey `reference/workflow-execution.md`: explicit task artifact paths, four ordered checkpoints, local interactive testing, persistent repository lease and write reconciliation. A mode can change conversation STOP points; it cannot skip evidence gates.
+
+## Change log
+
+- 2026-11-03: Applied shared stage, task identity and recovery gates to every mode.

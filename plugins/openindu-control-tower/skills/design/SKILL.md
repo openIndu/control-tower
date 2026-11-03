@@ -44,16 +44,26 @@ RULE 4 (L3 risk actions), RULE 7 (no push to main), RULE 8 (K8s in gitops), RULE
 
 ---
 
+## Task execution contract
+
+Use `reference/workflow-execution.md` for every task. Pass a task ID and exact
+versioned artifact paths to each role. Replace the illustrative shared paths
+below with the task directory; no role may select a shared "latest" input.
+All request types, including one-off fixes and enhancements, must record
+research/prod applicability, development and independent test evidence.
+After development, the test role runs UT/IT and starts the local environment
+for interactive acceptance and cleanup. Missing verification blocks PR creation.
+
 ## The pipeline
 
 ```
 codebase-analyst            → design/insight/<feature>-scan.md (Phase 0: pre-check)
         │ (scope: enhance existing or new build?)
         ▼
-business-analyst          → design/business/business-analysis-report.md
+business-analyst          → <task-dir>/research-v1.md
         │ (handoff)
         ▼
-product-manager           → design/product/prd/<feature>-prd.md
+product-manager           → <task-dir>/prod-v1.md
         │
         ▼
 architect                 → design/architecture/ (+ ADRs)
@@ -76,12 +86,12 @@ bi-analyst                 → design/bi/metrics-registry.md + dashboard spec
 
 ## 1. Classify the request
 
-| Request type                    | Flow                                                                     |
-| ------------------------------- | ------------------------------------------------------------------------ |
-| 0-to-1 feature (new capability) | Phase 0 pre-check → if not found, full pipeline                          |
-| Enhancement to existing feature | Phase 0 pre-check → product-manager → architect (delta) → build → ops/bi |
-| One-off fix                     | Skip /design; go straight to the build role + /delivery-check            |
-| Research / "should we build X"  | Stop at business-analyst; don't proceed to build without a decision      |
+| Request type                    | Flow                                                                       |
+| ------------------------------- | -------------------------------------------------------------------------- |
+| 0-to-1 feature (new capability) | Phase 0 pre-check → if not found, full pipeline                            |
+| Enhancement to existing feature | Phase 0 pre-check → product-manager → architect (delta) → build → ops/bi   |
+| One-off fix                     | Record research/prod applicability ? dev ? test ? PR; then /delivery-check |
+| Research / "should we build X"  | Stop at business-analyst; don't proceed to build without a decision        |
 
 If the request is vague, STOP and clarify with the user before starting.
 
@@ -103,8 +113,8 @@ For each phase:
 ```
 For feature: <description>
   □ Phase 0: codebase-analyst → design/insight/<feature>-scan.md      [🛑 confirm scope]
-  □ Phase 1: business-analyst → design/business/business-analysis-report.md   [🛑 confirm]
-  □ Phase 2: product-manager → design/product/prd/<feature>-prd.md            [🛑 confirm]
+  □ Phase 1: business-analyst → <task-dir>/research-v1.md   [🛑 confirm]
+  □ Phase 2: product-manager → <task-dir>/prod-v1.md            [🛑 confirm]
   □ Phase 3: architect → design/architecture/ + ADRs                         [🛑 confirm]
   □ Phase 4: ui-ux-designer → design/uiux/<screen>-ui.md                     [🛑 confirm]
   □ Phase 5: build roles → code + design/database/                           [🛑 confirm]
@@ -139,3 +149,7 @@ When the target repo is a **submodule** of an aggregate repo (e.g. `openindu-bac
 - **Code changes** commit to the **submodule** repo (e.g. `openIndu-backend/`) → submodule PR.
 - After the submodule PR merges, the **aggregate** repo needs a submodule pointer update PR (RULE 11 step ③).
 - Two PRs total (submodule code + aggregate pointer) — this is inherent to the submodule architecture, not a bug. `manager` coordinates both.
+
+## Change log
+
+- 2026-11-03: Bound handoffs to task artifacts and added mandatory test/Issue gates.

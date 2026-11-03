@@ -1,7 +1,7 @@
 ---
 name: issue-pipeline
 description: Collect open issues across a GitHub organization, classify which require action, challenge each actionable recommendation with independent reviewers, and dispatch accepted work through the existing SDLC pipeline until its PR has green CI. Use for organization-wide issue triage and execution, not for a single already-selected issue.
-argument-hint: "[--org openIndu] [--tier L1] [--dry-run]"
+argument-hint: "[--repo NAME] [--org openIndu] [--tier L1] [--dry-run]"
 disable-model-invocation: true
 ---
 
@@ -18,7 +18,8 @@ Call `/principle` first. Run `/launch` before dispatching role agents.
 /issue-pipeline --org openIndu --tier L1
 ```
 
-- Default organization: `openIndu`.
+- Organization: `openIndu` only for execution. Reject another owner before writes.
+- `--repo NAME` restricts collection and all writes to that repository; pass it to the collector. Without it, explicitly authorize the organization snapshot before dispatch.
 - Default tier: `L1`. This creates feature branches and PRs but never merges them.
 - `--dry-run` stops after the adjudicated queue and performs no GitHub writes.
 - This workflow never weakens RULE 4, 7, 8, 10, or 11. A tier controls workflow STOPs, not action authorization.
@@ -102,11 +103,24 @@ Limit work in progress to one active Issue per repository. Independent repositor
 
 ## 5. Dispatch through the existing SDLC
 
-Do not reimplement build delivery here. For each approved item:
+Follow `reference/workflow-execution.md` for task isolation, durable leases,
+stage checkpoints, write intents and recovery. The deterministic script is
+`skills/issue-pipeline/scripts/workflow-state.mjs`; checkpoint failure blocks
+all downstream writes. Store a per-Issue task directory and never overwrite a
+shared business report.
 
-- one-off fix → appropriate build role, quality roles, then `/delivery-check`;
-- enhancement or new capability → `/autopilot "<repo>#<number>: <adjudicated scope>" --tier <tier>`;
-- research-only item → business analyst, stop after the decision artifact.
+Every accepted implementation records research ? prod ? dev ? test, in that
+order, before a PR write. Roles or `/autopilot` may implement these stages but
+cannot bypass their evidence gates. Research-only work stops with its decision;
+it does not count as an implemented Issue. Small fixes may record evidenced
+research/prod applicability decisions; dev and test remain mandatory. An unresolved
+research rejection, requirement blocker, or unavailable local test environment
+blocks dispatch. Test includes actual local startup and interactive validation.
+
+Before each write, reread Issue state and existing PRs for both Issue and branch.
+Reuse existing PRs. Persist intent before the call and authoritative read-back
+afterward, including errors. Resume uncertain writes by reconciliation rather
+than replay. Keep at most one active Issue per repository.
 
 Each implementation must use a dedicated `fix/issue-<number>-<slug>` or `feat/issue-<number>-<slug>` branch. The PR body links the Issue and uses `Closes #<number>` only when the PR fully satisfies all acceptance fields. Never close an Issue merely because work started.
 
@@ -141,3 +155,7 @@ Do not claim organization-wide completion if collection was partial or any accep
 ## Boundary
 
 This skill owns intake, triage, challenge, ordering, and status aggregation. `/autopilot`, build roles, quality roles, and `/delivery-check` continue to own implementation and delivery. It never auto-merges PRs, modifies permissions, writes production data, or deploys production systems.
+
+## Change log
+
+- 2026-11-03: Added four-stage evidence, task isolation, repository scope and durable recovery contract.

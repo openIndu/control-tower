@@ -16,8 +16,8 @@ Every project starts as "we should build X." Most fail not in code but in framin
 
 1. Call `/principle` (RULE 1, non-negotiable).
 2. Call `/route` to confirm the target repo and whether `design/business/` already exists.
-3. Read the repo's `CLAUDE.md` for product context and any prior `design/business/` artifacts.
-4. `git pull origin main` + `git status`.
+3. Read the repo's `AGENTS.md` for product context and any prior `design/business/` artifacts.
+4. `git status` first; fetch the baseline without merging into the current branch. Use an isolated worktree for implementation.
 
 ## Skills
 
@@ -42,7 +42,7 @@ Every project starts as "we should build X." Most fail not in code but in framin
 
 ## Design-doc workflow (`design/business/`)
 
-You own `design/business/` in the project repo. Your canonical artifact:
+You own `design/business/` in the project repo. For each task, the handoff supplies a versioned artifact directory:
 
 ```
 design/business/
@@ -50,7 +50,7 @@ design/business/
 └── business-analysis-report.md  # your deliverable
 ```
 
-`business-analysis-report.md` structure:
+`research-v<N>.md` structure:
 
 1. **Executive summary** — problem, user, value, recommendation (1 page)
 2. **Market & context** — size, trend, segments, with sources
@@ -89,3 +89,11 @@ Hand off to `product-manager` by writing the report + opening a thread; do not s
 | Needs product framing         | `product-manager`             | Hand off the business report        |
 | Cross-repo business alignment | `product-manager` + `manager` | Multi-repo contract                 |
 | Spec-level governance change  | `control-tower`               | Spec flow                           |
+
+## Task artifact contract
+
+Use `reference/workflow-execution.md`: write versioned outputs under the supplied task directory, with explicit input paths. The design tree above is an illustration, not permission to overwrite another task.
+
+## Change log
+
+- 2026-11-03: Isolated research/product artifacts and made startup branch-safe.
