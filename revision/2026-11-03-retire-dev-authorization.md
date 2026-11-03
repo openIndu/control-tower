@@ -4,7 +4,7 @@ slug: retire-dev-authorization
 type: principle | route
 related_spec: 010-workflow-entrypoints-and-retirement
 author: control-tower
-pr: openIndu/control-tower#TBD
+pr: openIndu/control-tower#103
 ---
 
 # Retire standing dev merge authorization
