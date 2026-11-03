@@ -5,8 +5,6 @@ argument-hint: "<feature brief>"
 disable-model-invocation: true
 ---
 
-> **Codex compatibility:** Invoke this workflow as `$spec-new` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
-
 # /spec-new — Draft a spec
 
 RULE 5 requires a reviewable design doc for cross-repo changes and principle evolution. This skill produces a `spec/NNN-brief-slug.md` draft, finalized by **arbiter** review.

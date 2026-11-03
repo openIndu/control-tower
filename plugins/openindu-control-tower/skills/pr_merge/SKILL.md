@@ -5,8 +5,6 @@ argument-hint: "<openIndu/repo> [--dry-run]"
 disable-model-invocation: true
 ---
 
-> **Codex compatibility:** Invoke this workflow as `$pr_merge` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
-
 # /pr_merge — Repository PR merge queue
 
 Call `/principle` first. REASON: classify dependencies and risk. EXECUTE: use the

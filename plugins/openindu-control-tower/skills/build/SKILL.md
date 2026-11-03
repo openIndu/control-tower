@@ -5,8 +5,6 @@ argument-hint: "<service-name> [--tag <tag>] [--dry-run]"
 disable-model-invocation: true
 ---
 
-> **Codex compatibility:** Invoke this workflow as `$build` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
-
 # /build — Image build and push (RULE 11 step ④)
 
 Build a Docker image for an openIndu service and push it to the Aliyun Container Registry. This is step ④ of the RULE 11 delivery pipeline.

@@ -5,8 +5,6 @@ argument-hint: '[--read <role> | --add <role> "<lesson>"]'
 disable-model-invocation: true
 ---
 
-> **Codex compatibility:** Invoke this workflow as `$memory` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
-
 # /memory — Team lessons ledger
 
 Agents are otherwise stateless per task. This skill gives them a **persistent, role-scoped memory** of踩坑、技巧、repeated wins — so the next run reuses them instead of re-deriving. Inspired by ECC's instincts/continuous-learning.

@@ -5,8 +5,6 @@ argument-hint: "[feature description]"
 disable-model-invocation: true
 ---
 
-> **Codex compatibility:** Invoke this workflow as `$design` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
-
 # /design — SDLC pipeline orchestration
 
 Drives a 0-to-1 feature through the SDLC role pipeline. Each phase's role writes its `design/<domain>/` artifact; the next phase reads it. STOP points at every phase handoff by default; `/autopilot` can relax them per tier.

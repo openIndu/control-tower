@@ -5,8 +5,6 @@ argument-hint: "<openIndu/repo> <task-id> [--dry-run]"
 disable-model-invocation: true
 ---
 
-> **Codex compatibility:** Invoke this workflow as `$test` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
-
 # /test — Automated checks and local interactive verification
 
 Call `/principle` and `/route`; load the test role and the task's precise PRD/dev

@@ -5,8 +5,6 @@ argument-hint: "<openIndu/repo> <task-id> <question> [--dry-run]"
 disable-model-invocation: true
 ---
 
-> **Codex compatibility:** Invoke this workflow as `$research` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
-
 # /research — Market and differentiation research
 
 Call `/principle` first, then `/route <repo>`. Load the business-analyst role;

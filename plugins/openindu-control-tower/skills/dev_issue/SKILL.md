@@ -5,8 +5,6 @@ argument-hint: "<openIndu/repo> [--dry-run] [--resume <run-id>]"
 disable-model-invocation: true
 ---
 
-> **Codex compatibility:** Invoke this workflow as `$dev_issue` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
-
 # /dev_issue — Repository Issue to verified PR
 
 Call `/principle` and `/route`. This workflow owns a single explicit GitHub

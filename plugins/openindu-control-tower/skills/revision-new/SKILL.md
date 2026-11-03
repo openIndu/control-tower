@@ -5,8 +5,6 @@ argument-hint: "<change brief>"
 disable-model-invocation: true
 ---
 
-> **Codex compatibility:** Invoke this workflow as `$revision-new` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
-
 # /revision-new — Write a revision record
 
 `spec/` records **WHAT + WHY** (design); `revision/` records **HOW + WHEN** (what was actually done). One-to-one correspondence; traceable.

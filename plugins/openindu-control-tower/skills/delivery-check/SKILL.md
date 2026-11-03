@@ -4,8 +4,6 @@ description: 'Generate and check the RULE 11 delivery-pipeline completeness chec
 argument-hint: "[repo name or PR link]"
 ---
 
-> **Codex compatibility:** Invoke this workflow as `$delivery-check` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
-
 # /delivery-check — RULE 11 delivery-pipeline self-check
 
 openIndu is a submodule-aggregate architecture. Sub-repo merge ≠ live. Miss any box and the change won't reach production.

@@ -4,8 +4,6 @@ description: Query openIndu repo routing — repo URL, type, host (GitHub/Gitee)
 argument-hint: "[repo name or type]"
 ---
 
-> **Codex compatibility:** Invoke this workflow as `$route` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
-
 # /route — openIndu repo routing
 
 **Call `/principle` first** (RULE 1).

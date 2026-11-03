@@ -5,8 +5,6 @@ argument-hint: "<openIndu/repo> <task-id> [--dry-run]"
 disable-model-invocation: true
 ---
 
-> **Codex compatibility:** Invoke this workflow as `$dev` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
-
 # /dev — Implement one accepted task
 
 Call `/principle` and `/route`; load the build role for the repository's actual

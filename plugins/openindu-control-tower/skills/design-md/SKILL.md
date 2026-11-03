@@ -5,8 +5,6 @@ argument-hint: "[--pick <brand> | --generate <description>]"
 disable-model-invocation: true
 ---
 
-> **Codex compatibility:** Invoke this workflow as `$design-md` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
-
 # /design-md — Adopt a DESIGN.md design system
 
 [DESIGN.md](https://stitch.withgoogle.com/docs/design-md/overview/) is Google Stitch's plain-text design-system format — color palette, typography, component stylings, layout, depth, do's/don'ts, responsive, and an agent prompt guide. Drop one in a project and AI agents generate consistent UI. The [awesome-design-md](https://github.com/VoltAgent/awesome-design-md) collection provides ready-made DESIGN.md files extracted from real brands (Stripe, Linear, Vercel, Apple, …).

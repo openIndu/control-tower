@@ -3,8 +3,6 @@ name: company-analysis
 description: Research and analyze a company for a decision-ready profile or recurring daily company-observation column. Use for company research, industry dynamics, competitive position, or daily company analysis. Do not use as a substitute for personalized investment, legal, or tax advice.
 ---
 
-> **Codex compatibility:** Invoke this workflow as `$company-analysis` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
-
 # Company Analysis
 
 **Call `/principle` first** (RULE 1).

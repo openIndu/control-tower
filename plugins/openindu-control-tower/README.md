@@ -60,7 +60,7 @@ Or run `/adopt` in a repo — it writes the block below into `.claude/settings.j
 
 `/design` is the phase-gated feature pipeline. `/autopilot` changes its STOP policy only; L2/L3 require a verified non-production target and never override review or risk authorization.
 
-The Claude Code manifest is `.claude-plugin/plugin.json`. The Codex compatibility manifest is `.codex-plugin/plugin.json` at the repository root; it points to the canonical skills. Repo-local Codex entrypoints live in `.agents/skills/` and are generated from the canonical skills. Invoke skills as `$dev` in Codex; literal `/dev` remains a Claude Code command.
+The Claude Code manifest is `.claude-plugin/plugin.json`. The Codex compatibility manifest is `.codex-plugin/plugin.json` at the repository root; it exposes `.agents/skills/` wrappers that map to canonical skills. Invoke skills as `$dev` in Codex; literal `/dev` remains a Claude Code command.
 
 ### Agents (20)
 

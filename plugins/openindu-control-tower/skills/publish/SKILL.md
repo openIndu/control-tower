@@ -5,8 +5,6 @@ argument-hint: "<openIndu/repo> <task-id> [--dry-run]"
 disable-model-invocation: true
 ---
 
-> **Codex compatibility:** Invoke this workflow as `$publish` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
-
 # /publish — Publish through infra-deploy
 
 Call `/principle` and `/route`. Load the release role. REASON: choose the exact

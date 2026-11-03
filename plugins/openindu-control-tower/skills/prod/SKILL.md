@@ -5,8 +5,6 @@ argument-hint: "<openIndu/repo> <task-id> [--dry-run]"
 disable-model-invocation: true
 ---
 
-> **Codex compatibility:** Invoke this workflow as `$prod` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
-
 # /prod — Product definition
 
 Call `/principle` and `/route`; load the product-manager role. REASON: clarify

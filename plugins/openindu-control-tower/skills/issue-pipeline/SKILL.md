@@ -5,8 +5,6 @@ argument-hint: "[--repo NAME] [--org openIndu] [--tier L1] [--dry-run]"
 disable-model-invocation: true
 ---
 
-> **Codex compatibility:** Invoke this workflow as `$issue-pipeline` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
-
 # /issue-pipeline — Organization issue intake and delivery
 
 Turn an organization's open Issue backlog into an auditable work queue. Collection is deterministic; judgment is structured and adversarial; delivery reuses `/autopilot` instead of creating a second SDLC implementation.

@@ -9,8 +9,9 @@ skills while retaining the Claude Code slash-command distribution.
 
 - Add `.codex-plugin/plugin.json` pointing to the existing canonical skill tree.
 - Add repo-local `.agents/skills/<name>/SKILL.md` entrypoints for all 22 skills.
-- Add Codex invocation guidance to canonical skill files: use `$name` in Codex;
-  Claude Code continues to use `/name`.
+- Add Codex invocation guidance to generated wrappers: use `$name` in Codex;
+  referenced workflow names map to Codex skills, while canonical files remain
+  the sole workflow source.
 - Add `scripts/sync-codex-skills.mjs` to generate the thin repo-local entrypoints.
 - Document the client-specific invocation syntax and bump the shared plugin
   version to 5.46.0.

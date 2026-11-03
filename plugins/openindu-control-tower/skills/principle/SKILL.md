@@ -4,8 +4,6 @@ description: The sole authoritative source of openIndu's 11 AI Agent behavior RU
 when_to_use: Session start, sub-agent launch, recovery after context compaction, before git push, before editing K8s YAML, before creating a Gitee PR, before production SQL, before reporting completion, when judging whether an action needs human review.
 ---
 
-> **Codex compatibility:** Invoke this workflow as `$principle` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
-
 # Principle — Agent behavior rules (openIndu edition)
 
 > The **sole rule source** for openIndu community AI agents. Every sub-repo's CLAUDE.md / AGENTS.md must point Rule #1 here (call `/principle`); no sub-repo may establish its own rules.

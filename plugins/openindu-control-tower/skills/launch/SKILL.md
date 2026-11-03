@@ -5,8 +5,6 @@ argument-hint: "[initial task description]"
 disable-model-invocation: true
 ---
 
-> **Codex compatibility:** Invoke this workflow as `$launch` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
-
 # /launch — Bring up the openIndu team
 
 Start the `openindu-maintainers` team and spawn manager. Repeat-safe: running again sends a message if the team exists, doesn't re-spawn.

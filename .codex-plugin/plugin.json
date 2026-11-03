@@ -10,7 +10,7 @@
   "repository": "https://github.com/openIndu/control-tower",
   "license": "Apache-2.0",
   "keywords": ["openindu", "workflow", "governance", "development", "skills"],
-  "skills": "./plugins/openindu-control-tower/skills/",
+  "skills": "./.agents/skills/",
   "interface": {
     "displayName": "openIndu Workflow",
     "shortDescription": "OpenIndu repository workflows",
