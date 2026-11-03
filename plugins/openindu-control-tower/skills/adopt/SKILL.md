@@ -5,6 +5,8 @@ argument-hint: "[--dry-run]"
 disable-model-invocation: true
 ---
 
+> **Codex compatibility:** Invoke this workflow as `$adopt` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
+
 # /adopt — Onboard a sub-repo to the public principles
 
 Wire the current repo to `openindu-control-tower@openindu` so it shares the org's principle set, governance agents, and skills.

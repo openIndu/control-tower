@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="openIndu Workflow">
+  <rect width="128" height="128" rx="24" fill="#102a43"/>
+  <path d="M64 18 28 38v48l36 24 36-24V38L64 18Z" fill="none" stroke="#58d6c4" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M45 75V53h12v22m14 0V43h12v32" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="45" cy="85" r="6" fill="#58d6c4"/>
+  <circle cx="83" cy="85" r="6" fill="#58d6c4"/>
+</svg>

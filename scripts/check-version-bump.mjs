@@ -30,6 +30,7 @@ const PLUGIN_JSON = join(
   "plugin.json",
 );
 const MARKETPLACE_JSON = join(repoRoot, ".claude-plugin", "marketplace.json");
+const CODEX_PLUGIN_JSON = join(repoRoot, ".codex-plugin", "plugin.json");
 const PLUGIN_JSON_REL = "plugins/openindu-control-tower/.claude-plugin/plugin.json";
 
 const DISTRIBUTED_PREFIXES = [
@@ -38,6 +39,8 @@ const DISTRIBUTED_PREFIXES = [
   "plugins/openindu-control-tower/hooks/",
   "plugins/openindu-control-tower/reference/",
   "plugins/openindu-control-tower/.claude-plugin/",
+  ".agents/skills/",
+  ".codex-plugin/",
 ];
 // eval 夹具是测试资产，不随 /plugin update 分发给下游仓库，改动不要求版本号 +1
 const EXCLUDED_PREFIX = "plugins/openindu-control-tower/evals/";
@@ -68,10 +71,11 @@ if (!marketplaceEntry) {
   fail(`marketplace.json 里找不到 openindu-control-tower 插件条目`);
 }
 const marketplaceVersion = marketplaceEntry.version;
+const codexPluginVersion = readJson(CODEX_PLUGIN_JSON).version;
 
-if (pluginVersion !== marketplaceVersion) {
+if (pluginVersion !== marketplaceVersion || pluginVersion !== codexPluginVersion) {
   fail(
-    `plugin.json（${pluginVersion}）与 marketplace.json（${marketplaceVersion}）版本号不一致`,
+    `Claude plugin (${pluginVersion}), Codex plugin (${codexPluginVersion}), and marketplace (${marketplaceVersion}) versions must match`,
   );
 }
 
@@ -120,7 +124,7 @@ if (next.major !== base.major || next.minor !== base.minor + 1) {
       `  origin/main： ${baseVersion}`,
       `  本分支：      ${pluginVersion}`,
       ``,
-      `  改为 ${base.major}.${base.minor + 1}.0（或更高 patch），plugin.json 与 marketplace.json 两处都要改`,
+      `  改为 ${base.major}.${base.minor + 1}.0（或更高 patch），并同步 Claude、Codex 和 marketplace manifest`,
     ].join("\n"),
   );
 }

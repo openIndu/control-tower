@@ -54,7 +54,7 @@
 - **功能设计：** `/launch` 后运行逐阶段设有人类停止点的 `/design`；需要分层停止策略时使用 `/autopilot`。L2/L3 必须有已验证的 staging/sandbox 目标，不能绕过人工评审或风险授权。
 - **交付：** `/pr_merge <repo>` 只合并逐个满足当前人工批准和必需 CI 的 PR。`/build` 要求 `/route` 注册镜像目标；`/publish` 准备 infra-deploy PR；集群 apply 仍由人工执行。
 
-**客户端边界：** 本仓通过 Claude Code 插件分发这些 slash command。`AGENTS.md` 是可供读取该文件的工具共用的项目指导，但本仓当前没有打包 Codex 原生 skill 注册。
+**客户端入口：** Claude Code 中使用 `/dev`；Codex 中通过 `$dev` 或 skill picker 调用同一工作流。本仓打开时由 `.agents/skills/` 提供项目级发现；将 Codex 插件安装到其他仓库后也可使用。Codex 不会把这些 skill 注册为 Claude 风格的 `/dev` slash command。
 
 ---
 
@@ -167,7 +167,9 @@ control-tower/
 ├── route.json                       # 同步产物（唯一源在插件内）
 ├── .claude/settings.json            # 引用公共插件
 ├── .claude-plugin/marketplace.json  # 市场目录
-├── plugins/openindu-control-tower/       # ★ Claude Code 公共插件
+├── plugins/openindu-control-tower/       # ★ canonical skills 和 Claude Code 插件
+├── .agents/skills/                       # Codex 本地发现入口（生成文件）
+├── .codex-plugin/plugin.json             # Codex 插件 manifest
 │   ├── .claude-plugin/plugin.json
 │   ├── skills/                      # 22 个 skill：principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / dev / dev_issue / prod / publish / research / test / issue-pipeline / pr_merge
 │   ├── agents/                      # 20 个 agent（SDLC 角色，零业务绑定）
@@ -190,6 +192,7 @@ control-tower/
 - **改路由**：只改 `plugins/openindu-control-tower/reference/route.json`，然后 `node scripts/sync-route.mjs`
 - **新增 agent**：在 `plugins/openindu-control-tower/agents/` 建文件 → 注册进 `reference/manifest.yaml` → 更新清单 → bump version
 - **新增 skill**：在 `plugins/openindu-control-tower/skills/<name>/SKILL.md` 建目录 → bump version
+- **同步 Codex 入口**：修改 canonical skill 后运行 `node scripts/sync-codex-skills.mjs --write`
 - **发版**：改完 bump `plugin.json` 与 `marketplace.json` 的 `version`，下游才能 `/plugin update` 拿到
 - **强制 PR**：本仓库受 RULE 7 保护，插件 hook 会阻断 push main
 

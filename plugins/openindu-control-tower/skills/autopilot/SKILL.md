@@ -5,6 +5,8 @@ argument-hint: "<idea> [--tier L3]"
 disable-model-invocation: true
 ---
 
+> **Codex compatibility:** Invoke this workflow as `$autopilot` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
+
 # /autopilot — Tiered autonomous SDLC
 
 Runs the full pipeline (`/design`) at a chosen **autonomy tier**. The tiers decide which STOP points are kept. This skill does NOT remove RULE 4's human gate for irreversible actions — it scopes _where_ full autonomy is safe (sandbox/new repo) vs where humans stay (prod).

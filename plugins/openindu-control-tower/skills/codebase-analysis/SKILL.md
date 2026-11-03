@@ -3,6 +3,8 @@ name: codebase-analysis
 description: 'Use when analyzing, reverse-engineering, onboarding to, or documenting any large codebase. Triggers on requests like "分析这个项目", "explain the architecture", "trace the call stack", "how does X work", "code review", or when needing to understand an unfamiliar codebase before making changes. Follows a 7-step logical flow: problem → features → components → code deep-dive → architecture → 4+1 view → markdown output.'
 ---
 
+> **Codex compatibility:** Invoke this workflow as `$codebase-analysis` in Codex. Translate referenced Claude slash skills such as `/principle` to the corresponding Codex skill, such as `$principle`; Codex does not register `/...` commands.
+
 # Codebase Analysis Methodology
 
 **Call `/principle` first** (RULE 1).
