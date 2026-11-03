@@ -46,19 +46,9 @@ jobs:
       - name: RULE 7 hook tests
         run: node plugins/openindu-control-tower/hooks/block-push-main.test.mjs
 
-      # Legacy tests stay active until their complete module is retired.
-      - name: Control tower unit tests
+      - name: Workflow helper unit tests
         run: |
           fail=0
-          for root in plugins/openindu-control-tower/engine plugins/openindu-control-tower/skills/dev/scripts; do
-            if [ -d "$root" ]; then
-              while IFS= read -r f; do
-                echo "::group::$f"
-                node "$f" || fail=1
-                echo "::endgroup::"
-              done < <(find "$root" -type f -name '*.test.mjs' | sort)
-            fi
-          done
           for f in plugins/openindu-control-tower/skills/issue-pipeline/scripts/collect-org-issues.test.mjs \
                    plugins/openindu-control-tower/skills/issue-pipeline/scripts/workflow-state.test.mjs \
                    plugins/openindu-control-tower/skills/issue-pipeline/scripts/build-source.test.mjs \
@@ -144,9 +134,6 @@ jobs:
       - name: roster consistency (seat count + no stale agent names)
         run: node scripts/check-roster.mjs
 
-      # RULE 4 规模上限 + 测试完整性 + 受保护路径可见性——对本仓**每一个** PR 生效，
-      # 不要求 /dev 的自动合并授权。从 engine/ 的 G4/G5 拆出其中与"有没有已授权的
-      # /dev 运行"无关的那部分可见性检查（对比：G4/G5 本身继续原样服务 /dev 自己的
-      # 更严格场景，未被改动）；受保护路径只告警不拦截，理由见脚本头部注释。
+      # RULE 4 size-cap, test-integrity and protected-path visibility guard.
       - name: PR scope guard (RULE 4 size cap / test integrity / protected paths)
         run: node scripts/check-pr-scope.mjs

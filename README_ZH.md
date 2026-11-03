@@ -32,7 +32,12 @@
 | `/adopt`                    | 让某个仓接入并收敛重复治理资产                                                                  |
 | `/issue-pipeline`           | 扫描并分类全组织的 open issue                                                                   |
 | `/pr_merge <openIndu/repo>` | Inspect and serially merge eligible PRs with current approval, strict required CI and read-back |
-| `/dev`                      | 对单个仓库跑确定性的 issue→PR→合并流水线                                                        |
+| `/dev`                      | 针对一个已确认任务进行开发，并将确切源码 SHA 交给 `/test` 验证                                  |
+| `/research`                 | 调研同类产品、路线与证据支持的差异化机会                                                        |
+| `/prod`                     | 明确产品需求、MVP 范围和验收矩阵                                                                |
+| `/test`                     | 执行 UT/IT、启动本地环境、手动验证并保留证据                                                    |
+| `/publish`                  | 基于不可变镜像准备并核对 infra-deploy Gitee 发布 PR                                             |
+| `/dev_issue`                | 遍历单仓库 Issue，依次完成调研、产品定义、开发、测试并提交通过 CI 的 PR                         |
 | `/spec-new`                 | 起草新 spec（特性/流程/守则变更）                                                               |
 | `/revision-new`             | 为一次改动创建变更记录（changelog）                                                             |
 | `/build`                    | 为 openIndu 服务构建并推送镜像（RULE 11 第④步）                                                 |
@@ -148,18 +153,17 @@ business-analyst → product-manager → architect → ui-ux-designer → [front
 control-tower/
 ├── README.md
 ├── README_ZH.md                      # 中文版
-├── CLAUDE.md                        # 项目 Claude 上下文
+├── AGENTS.md                        # Shared agent instructions
 ├── route.json                       # 同步产物（唯一源在插件内）
 ├── .claude/settings.json            # 引用公共插件
 ├── .claude-plugin/marketplace.json  # 市场目录
 ├── plugins/openindu-control-tower/       # ★ Claude Code 公共插件
 │   ├── .claude-plugin/plugin.json
-│   ├── skills/                      # 16 个：principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / dev / issue-pipeline / pr_merge
+│   ├── skills/                      # 22 个 skill：principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / dev / dev_issue / prod / publish / research / test / issue-pipeline / pr_merge
 │   ├── agents/                      # 20 个 agent（SDLC 角色，零业务绑定）
-│   ├── engine/                      # 确定性 /dev 引擎（spec/005）：states / guards / admission / carrier / pr-lifecycle 等
-│   ├── evals/                       # eval 套件：dev-reasoning-layer（spec/005）+ standing-authorization（spec/006）
+│   ├── evals/                       # workflow-execution 回归评估
 │   ├── hooks/                       # 主干保护
-│   ├── reference/                   # route.json + dev.schema.json + manifest.yaml + coding-standards/
+│   ├── reference/                   # route.json + manifest.yaml + coding-standards/
 │   └── README.md
 ├── scripts/                          # sync-route / check-roster / check-version-bump / detect-modules
 ├── .github/workflows/ci.yml

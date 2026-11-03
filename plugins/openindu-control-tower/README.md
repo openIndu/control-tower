@@ -38,7 +38,12 @@ Or run `/adopt` in a repo — it writes the block below into `.claude/settings.j
 | `/autopilot`                | Run the pipeline at a chosen autonomy tier (L0-L3)                                              |
 | `/issue-pipeline`           | Triage organization Issues, adversarially review, then dispatch                                 |
 | `/pr_merge <openIndu/repo>` | Inspect and serially merge eligible PRs with current approval, strict required CI and read-back |
-| `/dev`                      | Deterministic org-wide issue pipeline — scope, PR, grant-gated merge (spec/005)                 |
+| `/dev`                      | Implement one accepted task and hand off its exact source SHA to `/test`                        |
+| `/research`                 | Market and competitor research with evidence-backed differentiation and experiments             |
+| `/prod`                     | Define the scoped product requirements, MVP and acceptance matrix                               |
+| `/test`                     | Run UT/IT, start the local app, manually verify acceptance and retain evidence                  |
+| `/publish`                  | Prepare and reconcile an infra-deploy Gitee release PR from a verified immutable image          |
+| `/dev_issue`                | Process one repo's Issues through research, product, development, testing and green PRs         |
 | `/design-md`                | Adopt a DESIGN.md design system for UI work                                                     |
 | `/memory`                   | Read/write the team's reusable lessons ledger                                                   |
 | `/build`                    | Build + push a Docker image to the registry (RULE 11 step ④)                                    |

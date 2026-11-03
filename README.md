@@ -32,7 +32,12 @@ Available immediately after onboarding:
 | `/adopt`                    | Onboard a repo and converge duplicate governance assets                                         |
 | `/issue-pipeline`           | Collect and triage open issues across the whole org                                             |
 | `/pr_merge <openIndu/repo>` | Inspect and serially merge eligible PRs with current approval, strict required CI and read-back |
-| `/dev`                      | Run the deterministic org-wide issue→PR→merge pipeline against one repo                         |
+| `/dev`                      | Implement one accepted task and hand off its exact source SHA to `/test`                        |
+| `/research`                 | Market and competitor research with evidence-backed differentiation and experiments             |
+| `/prod`                     | Define the scoped product requirements, MVP and acceptance matrix                               |
+| `/test`                     | Run UT/IT, start the local app, manually verify acceptance and retain evidence                  |
+| `/publish`                  | Prepare and reconcile an infra-deploy Gitee release PR from a verified immutable image          |
+| `/dev_issue`                | Process one repo's Issues through research, product, development, testing and green PRs         |
 | `/spec-new`                 | Draft a new spec (feature / process / principle change)                                         |
 | `/revision-new`             | Create a revision record (changelog) for a change                                               |
 | `/build`                    | Build and push a Docker image for an openIndu service (RULE 11 step 4)                          |
@@ -53,7 +58,7 @@ Plus **20 agents** (governance / ideation / design / build / quality / data / op
         │  · plugins/openindu-control-tower/    │
         │      ├─ 11 principles (sole src)│
         │      ├─ 20 SDLC role agents     │
-        │      ├─ 17 workflow skills      │
+        │      ├─ 22 workflow skills      │
         │      └─ trunk-protection hook   │
         │  · route.json (repo routing, data)│
         │  · spec/ revision/ design & change│
@@ -169,18 +174,17 @@ Auto-detects team state: creates + spawns manager if absent; sends a message if 
 control-tower/
 ├── README.md
 ├── README_ZH.md                      # Chinese version
-├── CLAUDE.md                         # Project Claude context
+├── AGENTS.md                          # Shared agent instructions
 ├── route.json                        # Sync product (sole source in the plugin)
 ├── .claude/settings.json            # References the public plugin
 ├── .claude-plugin/marketplace.json  # Marketplace catalog
 ├── plugins/openindu-control-tower/       # ★ Public Claude Code plugin
 │   ├── .claude-plugin/plugin.json
-│   ├── skills/                      # 17: principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / dev / issue-pipeline / pr_merge
+│   ├── skills/                      # 22 skills: principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / dev / dev_issue / prod / publish / research / test / issue-pipeline / pr_merge
 │   ├── agents/                      # 20 agents (SDLC roles, zero business binding)
-│   ├── engine/                      # deterministic /dev engine (spec/005): states / guards / admission / carrier / pr-lifecycle etc.
-│   ├── evals/                       # eval suites: dev-reasoning-layer (spec/005) + standing-authorization (spec/006)
+│   ├── evals/                       # workflow-execution regression suite
 │   ├── hooks/                       # Trunk protection
-│   ├── reference/                   # route.json + dev.schema.json + manifest.yaml + coding-standards/
+│   ├── reference/                   # route.json + manifest.yaml + coding-standards/
 │   └── README.md
 ├── scripts/                          # sync-route / check-roster / check-version-bump / detect-modules
 ├── .github/workflows/ci.yml
