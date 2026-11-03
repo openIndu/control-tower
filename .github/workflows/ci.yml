@@ -46,29 +46,20 @@ jobs:
       - name: RULE 7 hook tests
         run: node plugins/openindu-control-tower/hooks/block-push-main.test.mjs
 
-      # spec/005 阶段 4：/dev 引擎的确定性逻辑（状态机、准入 A1-A3、守卫
-      # G1-G11、熔断器、回滚识别、./dev ack、日志脱敏等）零 LLM 调用，全靠
-      # 这些单元测试做回归判断（RULE 2）。一直在本地跑绿，但从没接入 CI——
-      # 也就是说引擎代码改坏了不会有任何红灯，挂上。issue 收集脚本的测试
-      # （C1 阶段新增 --repo 时写的）同理，一并接上。
-      #
-      # 阶段 7（PR-F8-1）：skills/dev/scripts/dev.mjs 是真正的 runner 入口，
-      # 不在 engine/ 目录下，上面的 glob 覆盖不到——单独补一条，否则这份
-      # PR 会悄悄产出一个本地测过但 CI 永远不跑的文件。
-      #
-      # spec/005 §2.6 修订（2026-11-02）排查时发现：engine/*.test.mjs 这条
-      # glob 只匹配 engine/ 顶层，engine/carrier/ 与
-      # engine/carrier/egress-proxy/ 两层子目录下的测试（invoker.test.mjs、
-      # run-agent.test.mjs、proxy.test.mjs）一直在本地跑绿、从未接入
-      # CI——跟上面这条注释警告的正是同一类空洞，补上。
-      - name: /dev engine unit tests
+      # Legacy tests stay active until their complete module is retired.
+      - name: Control tower unit tests
         run: |
           fail=0
-          for f in plugins/openindu-control-tower/engine/*.test.mjs \
-                   plugins/openindu-control-tower/engine/carrier/*.test.mjs \
-                   plugins/openindu-control-tower/engine/carrier/egress-proxy/*.test.mjs \
-                   plugins/openindu-control-tower/skills/issue-pipeline/scripts/collect-org-issues.test.mjs \
-                   plugins/openindu-control-tower/skills/dev/scripts/*.test.mjs \
+          for root in plugins/openindu-control-tower/engine plugins/openindu-control-tower/skills/dev/scripts; do
+            if [ -d "$root" ]; then
+              while IFS= read -r f; do
+                echo "::group::$f"
+                node "$f" || fail=1
+                echo "::endgroup::"
+              done < <(find "$root" -type f -name '*.test.mjs' | sort)
+            fi
+          done
+          for f in plugins/openindu-control-tower/skills/issue-pipeline/scripts/collect-org-issues.test.mjs \
                    plugins/openindu-control-tower/skills/issue-pipeline/scripts/workflow-state.test.mjs \
                    plugins/openindu-control-tower/skills/issue-pipeline/scripts/build-source.test.mjs \
                    plugins/openindu-control-tower/skills/issue-pipeline/scripts/merge-gate.test.mjs \

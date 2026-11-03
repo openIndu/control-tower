@@ -73,3 +73,4 @@ control-tower 提交 arbiter（threads 中写 review_request）
 | 006 | [修订 RULE 5.2 / RULE 4：有期限、逐仓列名的常设合并授权](./006-standing-merge-authorization.md)                            | finalized  | control-tower | 2026-10-28 |
 | 007 | [协调 spec 001/002/003 的过时结论——定稿现行 20 席编制，标记 003 为 superseded](./007-roster-and-backlog-reconciliation.md) | finalized  | control-tower | 2026-11-02 |
 | 009 | [Workflow evidence, recovery and merge gates](./009-workflow-execution-gates.md)                                           | finalized  | control-tower | 2026-11-03 |
+| 010 | [Workflow entrypoints and legacy dev retirement](./010-workflow-entrypoints-and-retirement.md)                             | finalized  | control-tower | 2026-11-03 |
