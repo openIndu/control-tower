@@ -1,6 +1,6 @@
 {
   "name": "openindu-control-tower",
-  "version": "5.47.0",
+  "version": "5.48.0",
   "description": "openIndu workflow skills for product research, development, testing, build, release, issue handling, and governance.",
   "author": {
     "name": "openIndu Community",

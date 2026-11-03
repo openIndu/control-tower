@@ -189,28 +189,28 @@ delta; one-off fixes record research/product applicability and still require
 testing; research-only requests stop at the business decision. `reviewer` can
 pre-review a PR but never replaces required human review.
 
-| Domain     | Agent                | Core responsibility                                               |
-| ---------- | -------------------- | ----------------------------------------------------------------- |
-| Governance | **manager**          | Classify/dispatch/track tasks, policy exceptions                  |
-| Governance | **arbiter**          | Cross-repo arbitration, spec review                               |
-| Governance | **inspector**        | Proactive inspection                                              |
-| Governance | **control-tower**    | Principles / routing / agent definitions / plugin                 |
-| Ideation   | **business-analyst** | Market research, competitor analysis, business case               |
-| Ideation   | **product-manager**  | Requirements, PRDs, acceptance criteria, contracts                |
-| Design     | **architect**        | Tech selection, system architecture, ADRs                         |
-| Design     | **ui-ux-designer**   | Interaction, visual, design system, accessibility                 |
-| Build      | **frontend**         | React / Vue / UniApp (zero business binding)                      |
-| Build      | **backend**          | Spring Boot / FastAPI (zero business binding)                     |
-| Build      | **edge**             | Rust / field-protocol drivers                                     |
-| Build      | **station-control**  | C# / .NET / physical devices (default L3)                         |
-| Quality    | **test**             | UT/IT, local startup and manual acceptance; RULE 2 admission gate |
-| Quality    | **reviewer**         | RULE 5.2 four-lens pre-review                                     |
-| Quality    | **security**         | RULE 5.4 credentials / permissions / exposure                     |
-| Data       | **data**             | RULE 10 production-SQL protection                                 |
-| Data       | **bi-analyst**       | Metrics, dashboards, experimentation                              |
-| Operations | **ops**              | Day-2 ops: server/db/logs/runbooks                                |
-| Operations | **release**          | RULE 11 six-stage delivery + K8s manifests                        |
-| Insight    | **codebase-analyst** | Reverse-engineer/onboard to any repo (read-only)                  |
+| Domain     | Agent                | Core responsibility                                                               |
+| ---------- | -------------------- | --------------------------------------------------------------------------------- |
+| Governance | **manager**          | Classify/dispatch/track tasks; resolve ordinary workflow exceptions within policy |
+| Governance | **arbiter**          | Cross-repo arbitration, spec review                                               |
+| Governance | **inspector**        | Proactive inspection                                                              |
+| Governance | **control-tower**    | Principles / routing / agent definitions / plugin                                 |
+| Ideation   | **business-analyst** | Market research, competitor analysis, business case                               |
+| Ideation   | **product-manager**  | Requirements, PRDs, acceptance criteria, contracts                                |
+| Design     | **architect**        | Tech selection, system architecture, ADRs                                         |
+| Design     | **ui-ux-designer**   | Interaction, visual, design system, accessibility                                 |
+| Build      | **frontend**         | React / Vue / UniApp (zero business binding)                                      |
+| Build      | **backend**          | Spring Boot / FastAPI (zero business binding)                                     |
+| Build      | **edge**             | Rust / field-protocol drivers                                                     |
+| Build      | **station-control**  | C# / .NET / physical devices (default L3)                                         |
+| Quality    | **test**             | UT/IT, local startup and manual acceptance; RULE 2 admission gate                 |
+| Quality    | **reviewer**         | RULE 5.2 four-lens pre-review                                                     |
+| Quality    | **security**         | RULE 5.4 credentials / permissions / exposure                                     |
+| Data       | **data**             | RULE 10 production-SQL protection                                                 |
+| Data       | **bi-analyst**       | Metrics, dashboards, experimentation                                              |
+| Operations | **ops**              | Day-2 ops: server/db/logs/runbooks                                                |
+| Operations | **release**          | RULE 11 six-stage delivery + K8s manifests                                        |
+| Insight    | **codebase-analyst** | Reverse-engineer/onboard to any repo (read-only)                                  |
 
 For code changes, the test role owns UT/IT and local verification. The `data` role is selected for production SQL/data repair; `security` for security-sensitive scope; `release` for applicable RULE 11 delivery. Governance, codebase analysis, reviewer pre-review, operations, and metrics roles join only when their scope applies. Definitions and each specialist's scope are in [`plugins/openindu-control-tower/agents/`](./plugins/openindu-control-tower/agents/). All agents are pure role+skill, **zero business binding**. The diagram shows common handoffs, not a requirement to activate every seat. Agent pre-review does not replace the human review required before merge.
 
