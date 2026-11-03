@@ -19,32 +19,42 @@
 
 接入后立刻可用：
 
-| 命令                        | 作用                                                                                            |
-| --------------------------- | ----------------------------------------------------------------------------------------------- |
-| `/principle`                | 加载 11 条 Agent 行为守则（Rule #1）                                                            |
-| `/route`                    | 查仓库位置、镜像、域名、走哪种 PR                                                               |
-| `/launch`                   | 拉起 `openindu-maintainers` 团队                                                                |
-| `/design`                   | 编排 0→1 SDLC 角色流水线                                                                        |
-| `/autopilot`                | 分层自主跑流水线（L0-L3）                                                                       |
-| `/design-md`                | 采用 DESIGN.md 设计系统做 UI                                                                    |
-| `/memory`                   | 读写团队可复用踩坑记忆                                                                          |
-| `/delivery-check`           | RULE 11 交付链路完成度自检                                                                      |
-| `/adopt`                    | 让某个仓接入并收敛重复治理资产                                                                  |
-| `/issue-pipeline`           | 扫描并分类全组织的 open issue                                                                   |
-| `/pr_merge <openIndu/repo>` | Inspect and serially merge eligible PRs with current approval, strict required CI and read-back |
-| `/dev`                      | 针对一个已确认任务进行开发，并将确切源码 SHA 交给 `/test` 验证                                  |
-| `/research`                 | 调研同类产品、路线与证据支持的差异化机会                                                        |
-| `/prod`                     | 明确产品需求、MVP 范围和验收矩阵                                                                |
-| `/test`                     | 执行 UT/IT、启动本地环境、手动验证并保留证据                                                    |
-| `/publish`                  | 基于不可变镜像准备并核对 infra-deploy Gitee 发布 PR                                             |
-| `/dev_issue`                | 遍历单仓库 Issue，依次完成调研、产品定义、开发、测试并提交通过 CI 的 PR                         |
-| `/spec-new`                 | 起草新 spec（特性/流程/守则变更）                                                               |
-| `/revision-new`             | 为一次改动创建变更记录（changelog）                                                             |
-| `/build`                    | 为 openIndu 服务构建并推送镜像（RULE 11 第④步）                                                 |
-| `/codebase-analysis`        | 逆向分析并整理一个陌生代码库                                                                    |
-| `/company-analysis`         | 调研分析一家公司——business-analyst 的市场/竞品研究工具                                          |
+| 命令                        | 作用                                                                    |
+| --------------------------- | ----------------------------------------------------------------------- |
+| `/principle`                | 加载 11 条 Agent 行为守则（Rule #1）                                    |
+| `/route`                    | 查仓库位置、镜像、域名、走哪种 PR                                       |
+| `/launch`                   | 拉起 `openindu-maintainers` 团队                                        |
+| `/design`                   | 编排 0→1 SDLC 角色流水线                                                |
+| `/autopilot`                | 分层自主跑流水线（L0-L3）                                               |
+| `/design-md`                | 采用 DESIGN.md 设计系统做 UI                                            |
+| `/memory`                   | 读写团队可复用踩坑记忆                                                  |
+| `/delivery-check`           | RULE 11 交付链路完成度自检                                              |
+| `/adopt`                    | 让某个仓接入并收敛重复治理资产                                          |
+| `/issue-pipeline`           | 扫描并分类全组织的 open issue                                           |
+| `/pr_merge <openIndu/repo>` | 仅合入当前 head 已获人工批准且必需 CI 全绿的 PR，并逐个回读结果         |
+| `/dev`                      | 针对一个已确认任务进行开发，并将确切源码 SHA 交给 `/test` 验证          |
+| `/research`                 | 调研同类产品、路线与证据支持的差异化机会                                |
+| `/prod`                     | 明确产品需求、MVP 范围和验收矩阵                                        |
+| `/test`                     | 执行 UT/IT、启动本地环境、手动验证并保留证据                            |
+| `/publish`                  | 基于不可变镜像准备并核对 infra-deploy Gitee 发布 PR                     |
+| `/dev_issue`                | 遍历单仓库 Issue，依次完成调研、产品定义、开发、测试并提交通过 CI 的 PR |
+| `/spec-new`                 | 起草新 spec（特性/流程/守则变更）                                       |
+| `/revision-new`             | 为一次改动创建变更记录（changelog）                                     |
+| `/build`                    | 为 openIndu 服务构建并推送镜像（RULE 11 第④步）                         |
+| `/codebase-analysis`        | 逆向分析并整理一个陌生代码库                                            |
+| `/company-analysis`         | 调研分析一家公司——business-analyst 的市场/竞品研究工具                  |
 
 外加 **20 个 agent**（治理/需求/设计/构建/质量/数据/运维/洞察，零业务绑定）和一个阻断 `git push origin main` 的 hook。
+
+### 工作流关系
+
+- **单个已确认任务：** `/research` → `/prod` → `/dev` → `/test`。各阶段使用相同仓库和 task ID，按前序产物与 checkpoint 交接。
+- **Issue 到绿灯 PR：** `/dev_issue <repo>` 只处理指定仓库的 Issue；已接受条目依次经过上述阶段，达到 PR_GREEN 后停止，不负责合并。
+- **组织级 Issue 入口：** `/issue-pipeline` 收集并对授权的 openIndu 范围做对抗式分诊，再将接受的任务交给 `/autopilot`；同样不负责合并。
+- **功能设计：** `/launch` 后运行逐阶段设有人类停止点的 `/design`；需要分层停止策略时使用 `/autopilot`。L2/L3 必须有已验证的 staging/sandbox 目标，不能绕过人工评审或风险授权。
+- **交付：** `/pr_merge <repo>` 只合并逐个满足当前人工批准和必需 CI 的 PR。`/build` 要求 `/route` 注册镜像目标；`/publish` 准备 infra-deploy PR；集群 apply 仍由人工执行。
+
+**客户端边界：** 本仓通过 Claude Code 插件分发这些 slash command。`AGENTS.md` 是可供读取该文件的工具共用的项目指导，但本仓当前没有打包 Codex 原生 skill 注册。
 
 ---
 

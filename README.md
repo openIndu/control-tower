@@ -46,6 +46,16 @@ Available immediately after onboarding:
 
 Plus **20 agents** (governance / ideation / design / build / quality / data / operations / insight, zero business binding) and a hook that blocks `git push origin main`.
 
+### Workflow map
+
+- **One accepted task:** `/research` → `/prod` → `/dev` → `/test`. Keep the same repo and task ID; each stage consumes the previous artifact/checkpoint.
+- **Issue to green PR:** `/dev_issue <repo>` triages one repo's Issues and runs the accepted items through those stages; it stops at PR_GREEN and does not merge.
+- **Organization intake:** `/issue-pipeline` collects and adversarially triages the authorized openIndu scope, then dispatches accepted work through `/autopilot`; it also stops before merging.
+- **Feature design:** `/launch` before `/design` for the phase-gated role pipeline, or `/autopilot` when a tiered STOP policy is appropriate. L2/L3 automation requires a verified staging/sandbox target and never overrides human review or risk authorization.
+- **Delivery:** `/pr_merge <repo>` merges only individually eligible PRs with current approval and required CI. `/build` requires a registered image target in `/route`; `/publish` prepares the infra-deploy PR. Cluster apply remains human-only.
+
+**Client boundary:** this repository publishes the slash commands as a Claude Code plugin. Its `AGENTS.md` is shared project guidance for tools that read it; this repository does not currently package Codex-native skill registrations.
+
 ---
 
 ## Core positioning

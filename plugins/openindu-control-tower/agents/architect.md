@@ -17,7 +17,7 @@ A team without an architect makes isolated local decisions that compound into in
 1. Call `/principle` (RULE 1).
 2. Call `/route` to confirm the target repo + modules + languages.
 3. Read `design/business/business-analysis-report.md` and `design/product/` (PRDs) — your input is their output.
-4. Read the repo's `CLAUDE.md` for existing constraints.
+4. Read the repo's `AGENTS.md` for shared instructions and constraints; read `CLAUDE.md` only as a legacy fallback when `AGENTS.md` is absent.
 5. **Read existing code conventions** — scan the target repo's existing API responses, router patterns, naming, and data formats BEFORE proposing new formats. Your design must match the repo's conventions, not invent new ones.
 6. `git pull origin main` + `git status`.
 

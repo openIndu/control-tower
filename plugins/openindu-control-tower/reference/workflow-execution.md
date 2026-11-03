@@ -1,7 +1,8 @@
 # Workflow execution contract v1
 
-This contract applies to `/design`, `/autopilot`, `/issue-pipeline`, `/build` and
-`/pr_merge`. Load `/principle`; this contract grants no merge/deploy authority.
+This contract applies to `/research`, `/prod`, `/dev`, `/test`, `/dev_issue`,
+`/design`, `/autopilot`, `/issue-pipeline`, `/build`, `/publish` and `/pr_merge`.
+Load `/principle`; this contract grants no merge/deploy authority.
 
 ## Task identity and artifacts
 

@@ -22,7 +22,8 @@ Use `/route <service-name>` to get the service's `image` registry path. If no im
 | `openindu-backend`          | `${OPENINDU_REGISTRY}/openindu/openindu-backend` | `openIndu-backend/Dockerfile`    |
 | `openindu-admin`            | `${OPENINDU_REGISTRY}/openindu/openindu-admin`   | `openIndu-admin/Dockerfile.k8s`  |
 | `openindu-portal`           | `${OPENINDU_REGISTRY}/openindu/openindu-portal`  | `openIndu-portal/Dockerfile.k8s` |
-| Other (studio/platform/etc) | per their own registry                           | per their own repo               |
+| Repo with a registered `image` in `/route` | use that exact image target | per its own release documentation |
+| Repo without a registered image target (including tooling-only repos) | none — stop | do not infer a registry or publish target |
 
 > `${OPENINDU_REGISTRY}` is this deployment's Aliyun Container Registry host. It is deliberately not committed — export it in your shell or take it from your `docker login` target. The `${OPENINDU_PROD_DB_*}` placeholders in `route.json` work the same way (RULE 5.4: infrastructure endpoints are injected, never committed).
 
@@ -33,7 +34,7 @@ Use `/route <service-name>` to get the service's `image` registry path. If no im
 ## 2. Determine the tag
 
 ```
-/build openindu-backend                    # auto-generate: git short SHA of the built commit
+/build openindu-backend                    # auto-generate: full source commit SHA
 /build openindu-backend --tag v1.2.3       # explicit semver
 /build openindu-backend --tag hotfix-xxx   # hotfix
 /build openindu-backend --dry-run          # validate Dockerfile only, don't push

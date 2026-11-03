@@ -6,6 +6,8 @@ argument-hint: "[repo name or type]"
 
 # /route — openIndu repo routing
 
+**Call `/principle` first** (RULE 1).
+
 **Data source (sole)**: read with the Read tool:
 
 ```

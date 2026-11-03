@@ -23,6 +23,9 @@ jobs:
       - name: Markdown format (prettier)
         run: npx --yes prettier@3 --check "**/*.md"
 
+      - name: Workflow documentation consistency
+        run: node scripts/check-workflow-docs.mjs
+
       # JSON 必须可解析（route.json 曾因未转义引号在 main 上失效）
       - name: JSON syntax
         run: |

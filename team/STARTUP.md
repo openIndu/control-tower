@@ -72,7 +72,7 @@ openindu-maintainers (Team)
 ## 与 manager 交互
 
 ```
-@manager 检查所有子仓 CLAUDE.md 是否符合 11 条守则
+@manager 检查所有子仓 AGENTS.md 是否引用 11 条统一守则；仅对尚无 AGENTS.md 的旧仓检查 CLAUDE.md
 @manager 把 openindu-backend 的 Dockerfile 多阶段构建优化
 @manager 在 infra-deploy 仓为 web-api 加 SMS_SIGN_NAME 配置项
 @manager 为新特性"用户头像上传"创建 spec 设计

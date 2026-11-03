@@ -29,7 +29,7 @@ This cuts the old 4-hop path to 2 hops.
 ```
 manager → arbiter (review_request)
   │
-  ├── A. spec/cross-cutting (CLAUDE.md / agent prompt / principle / workflow templates)
+  ├── A. spec/cross-cutting (AGENTS.md / legacy CLAUDE.md / agent prompt / principle / workflow templates)
   │     → route to control-tower (single source)
   ├── B. K8s manifest (Deployment/ConfigMap/Secret/Ingress/Service)
   │     → route to release agent (RULE 8, manifests land in gitops repo)
