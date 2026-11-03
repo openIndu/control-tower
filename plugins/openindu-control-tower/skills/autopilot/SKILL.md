@@ -31,14 +31,21 @@ If deps are missing: STOP and tell the user "install deps first (pip install -r 
 
 ## The four tiers
 
-| Tier   | Scope                                                        | STOP behavior                                                  | Deploy                                                             |
-| ------ | ------------------------------------------------------------ | -------------------------------------------------------------- | ------------------------------------------------------------------ |
-| **L0** | production / irreversible (main merge, prod DB, prod deploy) | every phase STOP, human at each gate                           | human                                                              |
-| **L1** | feature branch in an existing repo                           | phase STOP at design + delivery; build auto-runs test/review   | PR green → human merges                                            |
-| **L2** | staging / pre-prod                                           | skip per-phase STOP; one STOP at staging deploy                | merge → GitOps auto-sync to staging + auto-rollback on health fail |
-| **L3** | sandbox / new / experimental repo                            | skip ALL per-phase STOP; one final STOP at "done" notification | auto-deploy to sandbox; never touches prod                         |
+| Tier   | Scope                                                        | STOP behavior                                                | Deploy                                                               |
+| ------ | ------------------------------------------------------------ | ------------------------------------------------------------ | -------------------------------------------------------------------- |
+| **L0** | production / irreversible (main merge, prod DB, prod deploy) | every phase STOP, human at each gate                         | human                                                                |
+| **L1** | feature branch in an existing repo                           | phase STOP at design + delivery; build auto-runs test/review | PR green → human merges                                              |
+| **L2** | staging / pre-prod                                           | skip per-phase STOP; one STOP at staging candidate           | after eligible human-reviewed merge, GitOps may auto-sync to staging |
+| **L3** | sandbox / new / experimental repo                            | skip ALL phase STOPs; one final STOP at "done" notification  | sandbox deploy only if independently authorized and verified         |
 
 > RULE 4 is never suspended. L0/L1 actions that are L2+ risk (e.g. a prod DB write mid-pipeline) still require human approval regardless of tier. The tier gates the _workflow STOPs_, not the _risk tiers_ of individual actions.
+
+**Merge invariant for every tier:** `/autopilot` never merges a PR. The current
+head must pass independent human review and every required check, then an
+authorized merge path such as `/pr_merge` may act. A workflow STOP or user
+authorization to run autopilot does not replace that review. GitOps auto-sync
+can occur only after such a merge; if its target, health signal or rollback path
+cannot be verified, stop at `PR_GREEN`.
 
 Before selecting L2/L3, verify from `/route` and the target repository's release
 documentation that the staging/sandbox target, deploy mechanism, rollback path,
@@ -77,8 +84,8 @@ Pass the tier to `/design` as the STOP policy:
 
 - **L0**: every phase STOP (unchanged behavior).
 - **L1**: STOP at phase 1 (business/product alignment) + final delivery; build/test/review auto-run between.
-- **L2**: one STOP at "staging deploy candidate ready"; then merge → GitOps auto-syncs to staging with auto-rollback on health-check failure.
-- **L3**: no per-phase STOP; the whole pipeline runs; one final STOP/notification at "sandbox deployed".
+- **L2**: one STOP at "staging deploy candidate ready"; do not merge automatically. After current human review, required checks and separate merge authorization pass, GitOps may auto-sync to staging if its verified release documentation supports it.
+- **L3**: no per-phase STOP; the workflow may prepare a sandbox deployment, but a PR still requires current human review and required checks before merge. Use only a verified disposable sandbox and its documented authorization/rollback path; otherwise stop at `PR_GREEN`.
 
 ## 3. Guardrails that NEVER drop, regardless of tier
 

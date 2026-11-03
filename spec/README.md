@@ -75,3 +75,4 @@ control-tower 提交 arbiter（threads 中写 review_request）
 | 009 | [Workflow evidence, recovery and merge gates](./009-workflow-execution-gates.md)                                           | finalized  | control-tower | 2026-11-03 |
 | 010 | [Workflow entrypoints and legacy dev retirement](./010-workflow-entrypoints-and-retirement.md)                             | finalized  | control-tower | 2026-11-03 |
 | 011 | [Remove mandatory real-model evaluation as a release gate](./011-risk-tiered-prompt-validation.md)                         | finalized  | control-tower | 2026-11-03 |
+| 012 | [Clarify workflow artifact, Issue coverage and autonomy contracts](./012-workflow-contract-clarity-and-coverage.md)        | finalized  | control-tower | 2026-11-03 |

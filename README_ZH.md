@@ -50,8 +50,8 @@
 
 - **单个已确认代码任务：** `/research` → `/prod` → `/dev` → `/test`。各阶段使用相同仓库和 task ID，按前序产物与 checkpoint 交接；小型修复可将调研或产品定义记为有证据的不适用。
 - **Issue 到绿灯 PR：** `/dev_issue <repo>` 只处理指定仓库的 Issue；已接受条目依次经过上述阶段，达到 PR_GREEN 后停止，不负责合并。
-- **组织级 Issue 入口：** `/issue-pipeline` 收集并对授权的 openIndu 范围做对抗式分诊，再按任务交给 `/autopilot` 或相应角色执行修复；同样不负责合并。
-- **功能设计：** `/launch` 后运行逐阶段设有人类停止点的 `/design`；需要分层停止策略时使用 `/autopilot`。L2/L3 必须有已验证的 staging/sandbox 目标，不能绕过人工评审或风险授权。
+- **组织级 Issue 入口：** `/issue-pipeline` 将 API 可见仓库与 `route.json` 中的 GitHub 仓库清单核对；存在缺失或多余仓库时停止派发，再对授权的 openIndu 范围做对抗式分诊。接受的任务交给 `/autopilot` 或相应角色执行；不负责合并。
+- **功能设计：** `/launch` 后运行逐阶段设有人类停止点的 `/design`；运行证据保存在隔离的 task 目录，需入库的设计文档以带版本的副本提交，并在任务证据中记录路径和 hash。`/autopilot` 的 L2/L3 只调整流程停止点，不自动合并；所有 PR 仍需当前人工评审和必需检查。
 - **交付：** `/pr_merge <repo>` 只合并逐个满足当前人工批准和必需 CI 的 PR。`/build` 要求 `/route` 注册镜像目标；`/publish` 准备 infra-deploy PR；集群 apply 仍由人工执行。
 
 **客户端入口：** Claude Code 中使用 `/dev`；Codex 中通过 `$dev` 或 skill picker 调用同一工作流。本仓打开时由 `.agents/skills/` 提供项目级发现；将 Codex 插件安装到其他仓库后也可使用。Codex 不会把这些 skill 注册为 Claude 风格的 `/dev` slash command。

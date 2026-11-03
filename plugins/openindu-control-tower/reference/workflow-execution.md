@@ -14,6 +14,15 @@ Each stage writes a new versioned artifact; never overwrite completed artifacts.
 The state file records paths and SHA-256 hashes. Product and downstream roles
 receive the exact task ID and artifact path, never a shared "latest" report.
 
+`/design` follows the same rule for every phase report, including codebase scans,
+architecture, UI, ops, and BI evidence. A repository design document is an
+optional deliverable copy, not a runtime handoff: give it a task-specific,
+versioned path and record its repository path and SHA-256 in the canonical task
+report. The workflow checkpoint hashes that report, linking the external task
+evidence to the committed copy. For submodule work, commit the requested design
+copy to the aggregate repository as specified by `/design`; verify the copy at
+its resulting commit SHA before marking the phase complete.
+
 ## Stage gates
 
 Every task records these in order:

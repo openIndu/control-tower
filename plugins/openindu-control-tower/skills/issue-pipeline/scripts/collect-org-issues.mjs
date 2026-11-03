@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 const NO_ACTION_LABELS = new Set([
@@ -29,7 +29,13 @@ export function parseArgs(argv) {
     else if (argument === "--state") options.state = argv[++index];
     else if (argument === "--output") options.output = argv[++index];
     else if (argument === "--repo") options.repo = argv[++index];
-    else if (argument === "--help") options.help = true;
+    else if (argument === "--route") {
+      const value = argv[++index];
+      if (!value || value.startsWith("--")) {
+        throw new Error("--route requires a value");
+      }
+      options.route = value;
+    } else if (argument === "--help") options.help = true;
     else throw new Error(`Unknown argument: ${argument}`);
   }
   if (!options.org) throw new Error("--org requires a value");
@@ -138,13 +144,36 @@ export function run(options, github = ghJson) {
       { per_page: 100, state: options.state },
     ),
   );
+  const observedNames = repositories.map(({ name }) => name);
+  const expectedNames = options.expectedRepositories ?? null;
+  const expectedSet = expectedNames
+    ? new Set(expectedNames.map((name) => name.toLowerCase()))
+    : null;
+  const observedSet = new Set(observedNames.map((name) => name.toLowerCase()));
+  const missingRepositories = expectedNames
+    ? expectedNames.filter((name) => !observedSet.has(name.toLowerCase()))
+    : [];
+  const unexpectedRepositories = expectedNames
+    ? observedNames.filter((name) => !expectedSet.has(name.toLowerCase()))
+    : [];
+  const inventoryMismatch =
+    missingRepositories.length > 0 || unexpectedRepositories.length > 0;
   return {
     schemaVersion: 1,
     organization: options.org,
     repo: options.repo,
     state: options.state,
     generatedAt: new Date().toISOString(),
-    complete: errors.length === 0,
+    complete: errors.length === 0 && !inventoryMismatch,
+    coverage: expectedNames
+      ? {
+          source: options.inventorySource ?? "provided",
+          expectedRepositoryCount: expectedNames.length,
+          observedRepositoryCount: repositories.length,
+          missingRepositories,
+          unexpectedRepositories,
+        }
+      : null,
     repositoryCount: repositories.length,
     issueCount: issues.length,
     errors,
@@ -153,7 +182,7 @@ export function run(options, github = ghJson) {
 }
 
 function usage() {
-  return "Usage: collect-org-issues.mjs [--org openIndu] [--repo NAME] [--state open|closed|all] [--output FILE]";
+  return "Usage: collect-org-issues.mjs [--org openIndu --route <route.json> | --repo NAME] [--state open|closed|all] [--output FILE]";
 }
 
 function main() {
@@ -162,6 +191,62 @@ function main() {
     if (options.help) {
       console.log(usage());
       return;
+    }
+    if (!options.repo && !options.route) {
+      throw new Error(
+        "Organization collection requires --route with the canonical repository inventory",
+      );
+    }
+    if (options.route) {
+      const route = JSON.parse(readFileSync(options.route, "utf8"));
+      if (route.org?.toLowerCase() !== options.org.toLowerCase()) {
+        throw new Error(
+          `Route inventory organization (${route.org ?? "missing"}) does not match ${options.org}`,
+        );
+      }
+      if (!options.repo) {
+        const expectedRepositories = Object.entries(route.repos ?? {}).flatMap(
+          ([name, entry]) => {
+            let url;
+            try {
+              url = new URL(entry.url);
+            } catch {
+              throw new Error(`Route inventory has an invalid URL for ${name}`);
+            }
+            const [owner, repository] = url.pathname.split("/").filter(Boolean);
+            if (url.hostname.toLowerCase() !== "github.com") return [];
+            if (url.protocol !== "https:") {
+              throw new Error(`Route URL for ${name} must use HTTPS`);
+            }
+            if (owner?.toLowerCase() !== options.org.toLowerCase()) {
+              throw new Error(
+                `Route URL for ${name} does not belong to ${options.org}`,
+              );
+            }
+            if (repository?.toLowerCase() !== name.toLowerCase()) {
+              throw new Error(
+                `Route key ${name} does not match its canonical GitHub URL`,
+              );
+            }
+            return [name];
+          },
+        );
+        if (expectedRepositories.length === 0) {
+          throw new Error(
+            `Route inventory has no GitHub repositories for ${options.org}`,
+          );
+        }
+        if (
+          new Set(expectedRepositories.map((name) => name.toLowerCase()))
+            .size !== expectedRepositories.length
+        ) {
+          throw new Error(
+            "Route inventory contains duplicate repository names",
+          );
+        }
+        options.expectedRepositories = expectedRepositories;
+        options.inventorySource = "reference/route.json";
+      }
     }
     const result = run(options);
     const json = `${JSON.stringify(result, null, 2)}\n`;
