@@ -53,19 +53,52 @@ holding an incompatible lease. Never steal a paused run's lease.
    PRs/branch effects first and reuse a matching publication. The journal rejects
    replay under another key. Do not use the GitHub task reconciler for Gitee URLs.
 
-4. Push the release branch and create a Gitee PR with fully English title/body.
-   After success or error, read from Gitee: PR ID/URL, source/target branches,
-   head SHA, diff and actual image value. Journal `action: "reconcile"` with key,
-   `result`, reason and hashed read-back artifact. APPLIED requires `prId`, `url`,
-   `actualBranch`, `actualBaseBranch`, full `actualBaseSha`, `actualHeadSha` and
-   `actualImage` equal to intent. If the base moves after PR creation, first record
-   BLOCKED with the same PR identity and observed base SHA, then use
-   `action: "refresh_base"` to re-read that existing PR's branches, head, image
-   and new base SHA. This updates the same intent; it never creates another PR.
-   Every read-back is appended to history; an APPLIED record cannot be downgraded
-   to NOT_APPLIED or replayed under another key. Independent task/image releases
-   remain allowed. NOT_APPLIED records evidence of
-   absence; BLOCKED preserves uncertain effects. Never blindly recreate a PR.
+4. Push the release branch, then create the PR with the authenticated Gitee CLI.
+   Do not create it with a raw API request or by extracting Git credentials.
+
+   - Record `gitee --version` in the task trace. Run `gitee auth status`; if the CLI is not authenticated, record BLOCKED and
+     ask the user to sign in with `gitee auth login`. Never run `gitee auth token`
+     or print, copy, or store the credential.
+   - Read `gitee repo view openIndu/infra-deploy --json`. Parse the full JSON
+     response to verify the target repository, PR capability, write permission,
+     and current default branch. Use bare `--json`; the field-projection form
+     `--json=field1,field2` returned empty objects with the locally verified CLI
+     v0.3.3.
+     The default branch must match the journal's `baseBranch`. Read the branch
+     object with `gitee api /repos/openIndu/infra-deploy/branches/<baseBranch> -p`
+     and verify its `commit.sha` matches the journal's `baseSha` immediately before
+     creating the PR.
+   - Query `gitee pr list --repo openIndu/infra-deploy --state open --head <branch> --base <baseBranch> --json`.
+     Reuse an existing PR only after reading it back and confirming its branch,
+     base, source SHA, manifest diff, and image. If the same branch points to
+     different content or the state is ambiguous, record BLOCKED; do not create a
+     duplicate.
+   - Prepare a fully English title and body, then run:
+
+     ```text
+     gitee pr create --repo openIndu/infra-deploy --base "$baseBranch" --head "$branch" --title "$title" --body "$body" --json
+     ```
+
+     Do not use `--ai`; the release summary and rollback details must come from
+     verified evidence. Do not pass `--no-template` unless the repository template
+     has been checked and intentionally should be skipped.
+
+   - Capture the PR number and URL from the CLI response. Read the created PR back
+     using `gitee pr view <number> --repo openIndu/infra-deploy --json`, then inspect its diff with
+     `gitee pr diff <number> --repo openIndu/infra-deploy`. Verify source and base
+     branches, full head SHA, intended manifest-only diff, and actual image value.
+
+   After success or error, inspect Gitee before retrying. Journal
+   `action: "reconcile"` with key, `result`, reason and hashed read-back artifact.
+   APPLIED requires `prId`, `url`, `actualBranch`, `actualBaseBranch`, full
+   `actualBaseSha`, `actualHeadSha` and `actualImage` equal to intent. If the base
+   moves after PR creation, first record BLOCKED with the same PR identity and
+   observed base SHA, then use `action: "refresh_base"` to re-read that existing
+   PR's branches, head, image and new base SHA. This updates the same intent; it
+   never creates another PR. Every read-back is appended to history; an APPLIED
+   record cannot be downgraded to NOT_APPLIED or replayed under another key.
+   Independent task/image releases remain allowed. NOT_APPLIED records evidence
+   of absence; BLOCKED preserves uncertain effects. Never blindly recreate a PR.
 
 ## Report and apply boundary
 
