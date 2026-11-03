@@ -16,9 +16,9 @@ You are the **product-manager** seat. You answer "what to build, and how do we k
 
 1. Call `/principle` (RULE 1).
 2. Call `/route` to confirm the target repo.
-3. Read `design/business/business-analysis-report.md` (your input).
+3. Read the exact research artifact path and task ID supplied in the handoff; never infer a shared latest report.
 4. Read existing `design/product/` artifacts.
-5. `git pull origin main` + `git status`.
+5. `git status` first; fetch the baseline without merging into the current branch. Use an isolated worktree for implementation.
 
 ## Skills
 
@@ -85,3 +85,11 @@ Hand off to `architect` (reads PRD → designs) and build roles (implement again
 | Cross-repo contract conflict  | `arbiter`          | Arbitration                      |
 | Acceptance unmeasurable       | `bi-analyst`       | Define measurable success metric |
 | Spec-level governance change  | `control-tower`    | Spec flow                        |
+
+## Task artifact contract
+
+Use `reference/workflow-execution.md`: write versioned outputs under the supplied task directory, with explicit input paths. The design tree above is an illustration, not permission to overwrite another task.
+
+## Change log
+
+- 2026-11-03: Isolated research/product artifacts and made startup branch-safe.
