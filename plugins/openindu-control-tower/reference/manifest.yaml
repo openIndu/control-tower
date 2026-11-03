@@ -6,7 +6,7 @@
 # Principle source: ../skills/principle/SKILL.md (load via /principle)
 # Routing source: ./route.json (query via /route)
 # All agents are pure role+skill — ZERO business binding (no specific repos/services).
-# Business binding lives in route.json (data) + each repo's CLAUDE.md + design/ dirs.
+# Business binding lives in route.json (data) + each repo's AGENTS.md + design/ dirs.
 # ============================================================
 
 team:
@@ -208,7 +208,7 @@ roster:
 coverage_notes:
   generic: "Fork ownership, empty repos, meta repos are declared per-repo in route.json (delivery_owner/status), not enumerated here."
 
-# ---- Skills (15) ----
+# ---- Skills (22) ----
 skills:
   - id: principle
     file: ../skills/principle/SKILL.md
@@ -255,6 +255,27 @@ skills:
   - id: company-analysis
     file: ../skills/company-analysis/SKILL.md
     description: "Evidence-led company research using six layers plus Five Forces, SWOT, and DuPont"
+  - id: research
+    file: ../skills/research/SKILL.md
+    description: "Market and competitor research with evidence-backed differentiation and experiments"
+  - id: prod
+    file: ../skills/prod/SKILL.md
+    description: "Product requirements, MVP scope and executable acceptance criteria"
+  - id: dev
+    file: ../skills/dev/SKILL.md
+    description: "Implement one accepted task and hand off its exact source SHA to local testing"
+  - id: test
+    file: ../skills/test/SKILL.md
+    description: "Run UT/IT, start the local environment, manually verify and retain evidence"
+  - id: publish
+    file: ../skills/publish/SKILL.md
+    description: "Prepare and reconcile an infra-deploy Gitee release PR using an immutable image"
+  - id: dev_issue
+    file: ../skills/dev_issue/SKILL.md
+    description: "Process one openIndu repository's Issues through research, product, dev, test and green PR"
+  - id: pr_merge
+    file: ../skills/pr_merge/SKILL.md
+    description: "Serially merge eligible PRs for one repository after current approval and required checks"
 
 # ---- Escalation rules ----
 escalation_rules:

@@ -42,7 +42,7 @@ The control layer **does not enumerate concrete repos**. This repo only defines 
 
 ```mermaid
 graph TD
-    brain["control-tower (brain)<br/>marketplace.json + plugins/openindu-control-tower<br/>11 principles + 20 agents + 17 skills + hook"]
+    brain["control-tower (brain)<br/>marketplace.json + plugins/openindu-control-tower<br/>11 principles + 20 agents + 22 skills + hook"]
     settings["each repo's .claude/settings.json<br/>6-line reference → effective on clone → /plugin update pulls updates"]
     brain --> settings
     settings --> aggregate
@@ -150,13 +150,13 @@ Auto-detects team state: creates + spawns manager if absent; messages if manager
 
 ---
 
-## Commands & workflows (17 skills)
+## Commands & workflows (22 skills)
 
-Each is `plugins/openindu-control-tower/skills/<name>/SKILL.md`. 12 of the 17 carry
+Each is `plugins/openindu-control-tower/skills/<name>/SKILL.md`. 17 of the 22 carry
 `disable-model-invocation: true` — the model never triggers them from conversation context, only
 an explicit `/<name>` call does. The 5 marked **\*** below have no such flag and may be
 auto-invoked. Every skill's first line of work is `/principle` (RULE 1); omitted from the
-"Input" column below since it's constant across all 17.
+"Input" column below since it's constant across all 22.
 
 ### Reference (read-only, no writes)
 
@@ -174,13 +174,18 @@ auto-invoked. Every skill's first line of work is `/principle` (RULE 1); omitted
 | `/autopilot` | `<idea> [--tier L0\|L1\|L2\|L3]`                 | the same artifact tree as `/design` (it wraps `/design`), but the STOP policy is tier-controlled — L0 gates every phase, L1 gates only the ends, L2 auto-syncs to staging behind one STOP, L3 runs end to end to a sandbox deploy with one final notification. RULE 4/7/8/10 are never relaxed by the tier. |
 | `/design-md` | `[--pick <brand> \| --generate "<description>"]` | `design/uiux/DESIGN.md` — a 9-section design-system document (palette / type / components / layout / depth / do's-and-don'ts / responsive / agent-prompt guide) that becomes ui-ux-designer's and frontend's source of truth                                                                                |
 
-### Org-wide batch pipelines (deterministic engine, spec/005)
+### Workflow entrypoints (spec/010)
 
-| Command           | Input                                                                                                                                                                        | Output                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/issue-pipeline` | `[--org openIndu] [--tier L1] [--dry-run]`                                                                                                                                   | an adjudicated, prioritized queue over every open issue in the org (`ACTION` / `NEEDS_TRIAGE` / `NO_ACTION`, each with an independent adversarial review); accepted items are dispatched through `/autopilot`; ends with a per-issue status table (`NO_ACTION` / `NEEDS_TRIAGE` / `PR_GREEN` / `BLOCKED` / `FAILED` / `PENDING_APPROVAL`) — never merges anything itself                                                                    |
-| `/pr_merge`       | `<openIndu/repo> [--dry-run]`                                                                                                                                                | Serial merge queue with current-head human review, strict required checks, repository lease and authoritative read-back                                                                                                                                                                                                                                                                                                                     |
-| `/dev`            | `--repo <repo> [--dry-run \| --resume <run-id> \| --no-merge \| --max-issues N \| --max-total-budget-usd N]`, or the subcommands `ack <run-id>` / `build <repo> [--confirm]` | one JSON result object + a process exit code (0-5, `dev.schema.json`); a completed run's `RUN_COMPLETE` carries a rendered acceptance-matrix report. May open, review, and — only when the target repo has a live, unexpired `dev_grants` entry — merge PRs against that repo's own open issues, entirely through engine code (`plugins/openindu-control-tower/engine/`) with zero ad hoc agent judgment over the GitHub writes themselves. |
+| Command           | Input                                             | Output                                                                                                             |
+| ----------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `/research`       | `<openIndu/repo> <task-id> <question>`            | Evidence-backed competitor, roadmap and differentiation report with a go/pivot/stop decision                       |
+| `/prod`           | `<openIndu/repo> <task-id>`                       | Scoped PRD, prioritized MVP and acceptance matrix for the same task                                                |
+| `/dev`            | `<openIndu/repo> <task-id>`                       | Implementation of one accepted task; hands its exact source SHA to `/test`                                         |
+| `/test`           | `<openIndu/repo> <task-id>`                       | UT/IT results, locally started environment, manual verification and cleanup evidence                               |
+| `/dev_issue`      | `<openIndu/repo> [--dry-run] [--resume <run-id>]` | Enumerates one repository's Issues, runs research → prod → dev → test and stops at green PRs                       |
+| `/publish`        | `<openIndu/repo> <task-id> [--dry-run]`           | Verified image and manifest change prepared as an English infra-deploy Gitee PR; production apply stays human-only |
+| `/pr_merge`       | `<openIndu/repo> [--dry-run]`                     | Serially merges that repository's eligible PRs after current approval, required checks and read-back               |
+| `/issue-pipeline` | `[--org openIndu] [--tier L1] [--dry-run]`        | Compatibility organization-wide triage queue; does not replace the repository-scoped `/dev_issue` flow             |
 
 ### Release & delivery (RULE 11)
 
@@ -213,18 +218,17 @@ auto-invoked. Every skill's first line of work is `/principle` (RULE 1); omitted
 control-tower/
 ├── README.md
 ├── README_ZH.md                      # Chinese version
-├── CLAUDE.md                         # this file
+├── AGENTS.md                          # this file
 ├── route.json                        # sync product (sole source in the plugin)
 ├── .claude/settings.json            # references the public plugin
 ├── .claude-plugin/marketplace.json  # marketplace catalog
 ├── plugins/openindu-control-tower/       # ★ public Claude Code plugin (org-wide)
 │   ├── .claude-plugin/plugin.json
-│   ├── skills/                      # 17: principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / dev / issue-pipeline / pr_merge
+│   ├── skills/                      # 22 skills: principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / dev / dev_issue / prod / publish / research / test / issue-pipeline / pr_merge
 │   ├── agents/                      # 20 agents (SDLC roles, zero business binding)
-│   ├── engine/                      # deterministic /dev engine (spec/005): states / guards / admission / carrier / pr-lifecycle etc., one .mjs + one .test.mjs each
-│   ├── evals/                       # eval suites: dev-reasoning-layer (spec/005) + standing-authorization (spec/006)
+│   ├── evals/                       # workflow-execution regression suite
 │   ├── hooks/                       # trunk protection (RULE 7)
-│   ├── reference/                   # route.json (sole source) + dev.schema.json + manifest.yaml + coding-standards/
+│   ├── reference/                   # route.json (sole source) + manifest.yaml + coding-standards/
 │   └── README.md
 ├── scripts/                          # sync-route / check-roster / check-version-bump / detect-modules
 ├── .github/workflows/ci.yml         # prettier + plugin validate + route + roster consistency
