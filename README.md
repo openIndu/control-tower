@@ -50,11 +50,48 @@ Plus **20 agents** (governance / ideation / design / build / quality / data / op
 
 - **One accepted task:** `/research` → `/prod` → `/dev` → `/test`. Keep the same repo and task ID; each stage consumes the previous artifact/checkpoint.
 - **Issue to green PR:** `/dev_issue <repo>` triages one repo's Issues and runs the accepted items through those stages; it stops at PR_GREEN and does not merge.
-- **Organization intake:** `/issue-pipeline` collects and adversarially triages the authorized openIndu scope, then dispatches accepted work through `/autopilot`; it also stops before merging.
+- **Organization intake:** `/issue-pipeline` collects and adversarially triages the authorized openIndu scope, then dispatches accepted work through `/autopilot` or the applicable role-based fix flow; it stops before merging.
 - **Feature design:** `/launch` before `/design` for the phase-gated role pipeline, or `/autopilot` when a tiered STOP policy is appropriate. L2/L3 automation requires a verified staging/sandbox target and never overrides human review or risk authorization.
 - **Delivery:** `/pr_merge <repo>` merges only individually eligible PRs with current approval and required CI. `/build` requires a registered image target in `/route`; `/publish` prepares the infra-deploy PR. Cluster apply remains human-only.
 
 **Client entrypoints:** use `/dev` in Claude Code. Codex discovers the same workflow as `$dev` or in its skill picker through `.agents/skills/` when this repo is open, or through the Codex plugin manifest when the plugin is installed. Codex does not register Claude-style `/dev` slash commands.
+
+The entrypoints converge on the same evidence-backed code-change stages;
+routine fixes may record research/product applicability as not applicable.
+Intake, merge, and delivery remain separate boundaries:
+
+```mermaid
+flowchart LR
+    accTitle: Task Intake to Pull Request
+    accDescr: A direct task, one repository's Issues, or organization intake converges on applicable research/product work, code implementation, and test evidence. Organization dispatch starts the team first. Work stops at a green pull request until human review and merge authorization.
+
+    task([Accepted implementation task]) --> stages["Applicable /research + /prod → /dev → /test for code changes"]
+    repo_issues["/dev_issue <repo><br/>snapshot + triage"] --> stages
+    org_issues["/issue-pipeline<br/>organization intake + triage"] --> launch["/launch before role dispatch"] --> dispatch{Choose implementation path}
+    dispatch -->|Tiered orchestration| autopilot["/autopilot"] --> stages
+    dispatch -->|Role-based fix| stages
+    stages --> green_pr[PR_GREEN: PR, evidence, required CI]
+    green_pr --> human_gate{Human review and merge authorization}
+    human_gate -->|Approved| merge["/pr_merge <repo>"]
+```
+
+After merge, image build and GitOps publication are separate delivery steps.
+Production apply remains a human operation:
+
+```mermaid
+flowchart LR
+    accTitle: Aggregate Service Image Release
+    accDescr: For an image-backed aggregate service, the source and aggregate pointer PR are merged and read back before delivery. Generic targets use build then publish; openindu-website uses its repo-local release workflow. A human merges GitOps and applies the release.
+
+    merged[Merged source PR] --> pin[Aggregate pointer PR] --> pin_merge[Human review, merge, and read-back] --> path{Delivery path}
+    path -->|Generic target| build["/build: verified image"] --> publish["/publish: infra-deploy PR"] --> human_merge[Human review and GitOps merge]
+    path -->|openindu-website| website_release["Repo /release: build + GitOps PR"] --> human_merge
+    human_merge --> apply[Human cluster apply]
+```
+
+This diagram is for image-backed aggregate services. Independent release flows
+and submodule-only repos follow their `/route` contract; `/build` stops when no
+image target is registered, and `/publish` requires a matching GitOps manifest.
 
 ---
 
@@ -135,38 +172,47 @@ Call `/principle` for the full text. Summary:
 
 ## Team structure (v5.0.0 — 20 SDLC role agents)
 
-The `openindu-maintainers` team has **20 agents**, all provided by the public plugin. The SDLC pipeline:
+The public plugin provides a catalog of **20 role agents**. `/launch` activates a repo-specific subset based on the task, route, languages, and modules; the catalog is not 20 agents that must all run for every task.
 
+```mermaid
+flowchart LR
+    accTitle: SDLC Role Responsibilities
+    accDescr: The 0-to-1 feature path starts with read-only codebase analysis, then moves through research, product, design, route-selected implementation, required local testing, and human review. Other specialists are selected by scope and risk.
+
+    scan["codebase-analyst<br/>Phase 0 for /design; read-only"] --> research[business-analyst] --> product[product-manager] --> architecture[architect] --> ux[ui-ux-designer] --> build["Route-selected build role(s)"]
+    build --> test[test: UT/IT + local manual verification] --> human[Human PR review before merge]
 ```
-business-analyst → product-manager → architect → ui-ux-designer → [frontend/backend/edge/station-control] → ops → bi-analyst
-                                          ↑ codebase-analyst (read-only, any stage)
-governance (manager/arbiter/inspector/control-tower) + quality (test/reviewer/security) cross-cut
-```
 
-| Domain     | Agent                | Core responsibility                                 |
-| ---------- | -------------------- | --------------------------------------------------- |
-| Governance | **manager**          | Classify/dispatch/track tasks, policy exceptions    |
-| Governance | **arbiter**          | Cross-repo arbitration, spec review                 |
-| Governance | **inspector**        | Proactive inspection                                |
-| Governance | **control-tower**    | Principles / routing / agent definitions / plugin   |
-| Ideation   | **business-analyst** | Market research, competitor analysis, business case |
-| Ideation   | **product-manager**  | Requirements, PRDs, acceptance criteria, contracts  |
-| Design     | **architect**        | Tech selection, system architecture, ADRs           |
-| Design     | **ui-ux-designer**   | Interaction, visual, design system, accessibility   |
-| Build      | **frontend**         | React / Vue / UniApp (zero business binding)        |
-| Build      | **backend**          | Spring Boot / FastAPI (zero business binding)       |
-| Build      | **edge**             | Rust / field-protocol drivers                       |
-| Build      | **station-control**  | C# / .NET / physical devices (default L3)           |
-| Quality    | **test**             | RULE 2 admission gate                               |
-| Quality    | **reviewer**         | RULE 5.2 four-lens pre-review                       |
-| Quality    | **security**         | RULE 5.4 credentials / permissions / exposure       |
-| Data       | **data**             | RULE 10 production-SQL protection                   |
-| Data       | **bi-analyst**       | Metrics, dashboards, experimentation                |
-| Operations | **ops**              | Day-2 ops: server/db/logs/runbooks                  |
-| Operations | **release**          | RULE 11 six-stage delivery + K8s manifests          |
-| Insight    | **codebase-analyst** | Reverse-engineer/onboard to any repo (read-only)    |
+This is the 0-to-1 path; `codebase-analyst` owns `/design` Phase 0 and is
+otherwise on demand. Enhancements use a codebase check and architecture
+delta; one-off fixes record research/product applicability and still require
+testing; research-only requests stop at the business decision. `reviewer` can
+pre-review a PR but never replaces required human review.
 
-Definitions in [`plugins/openindu-control-tower/agents/`](./plugins/openindu-control-tower/agents/). All agents are pure role+skill, **zero business binding**; `/launch` activates the relevant subset per repo (by `route.json` language/modules).
+| Domain     | Agent                | Core responsibility                                               |
+| ---------- | -------------------- | ----------------------------------------------------------------- |
+| Governance | **manager**          | Classify/dispatch/track tasks, policy exceptions                  |
+| Governance | **arbiter**          | Cross-repo arbitration, spec review                               |
+| Governance | **inspector**        | Proactive inspection                                              |
+| Governance | **control-tower**    | Principles / routing / agent definitions / plugin                 |
+| Ideation   | **business-analyst** | Market research, competitor analysis, business case               |
+| Ideation   | **product-manager**  | Requirements, PRDs, acceptance criteria, contracts                |
+| Design     | **architect**        | Tech selection, system architecture, ADRs                         |
+| Design     | **ui-ux-designer**   | Interaction, visual, design system, accessibility                 |
+| Build      | **frontend**         | React / Vue / UniApp (zero business binding)                      |
+| Build      | **backend**          | Spring Boot / FastAPI (zero business binding)                     |
+| Build      | **edge**             | Rust / field-protocol drivers                                     |
+| Build      | **station-control**  | C# / .NET / physical devices (default L3)                         |
+| Quality    | **test**             | UT/IT, local startup and manual acceptance; RULE 2 admission gate |
+| Quality    | **reviewer**         | RULE 5.2 four-lens pre-review                                     |
+| Quality    | **security**         | RULE 5.4 credentials / permissions / exposure                     |
+| Data       | **data**             | RULE 10 production-SQL protection                                 |
+| Data       | **bi-analyst**       | Metrics, dashboards, experimentation                              |
+| Operations | **ops**              | Day-2 ops: server/db/logs/runbooks                                |
+| Operations | **release**          | RULE 11 six-stage delivery + K8s manifests                        |
+| Insight    | **codebase-analyst** | Reverse-engineer/onboard to any repo (read-only)                  |
+
+For code changes, the test role owns UT/IT and local verification. The `data` role is selected for production SQL/data repair; `security` for security-sensitive scope; `release` for applicable RULE 11 delivery. Governance, codebase analysis, reviewer pre-review, operations, and metrics roles join only when their scope applies. Definitions and each specialist's scope are in [`plugins/openindu-control-tower/agents/`](./plugins/openindu-control-tower/agents/). All agents are pure role+skill, **zero business binding**. The diagram shows common handoffs, not a requirement to activate every seat. Agent pre-review does not replace the human review required before merge.
 
 ### Startup
 

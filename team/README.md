@@ -27,32 +27,41 @@ The governance assets (principles, agent definitions, manifest) live in the publ
 
 ## Team architecture
 
-The team is **flat** — teammates can't spawn teammates. Runtime form: one-shot fan-out + file aggregation, NOT a tree:
+The public plugin contains 20 role definitions; `/launch` selects the relevant
+subset for the repo and task. Team members do not spawn other teammates. The
+manager coordinates work, while each role owns its own scope and reports through
+the task thread. The arbiter is a review role, not a manager subordinate in the
+SDLC delivery chain.
 
-```
-user
- │
- ▼
-manager ──spawn──► arbiter        (a normal sub-agent, not a teammate)
- │                    │
- │              writes review_decision.md
- │                    │
- │◄───────reads file──┘
- │
- │  🛑 STOP 1: dispatch plan pending user confirmation
- │
- ├──spawn──► role agent A ─┐
- ├──spawn──► role agent B ─┼─► each writes completion_report.md
- └──spawn──► role agent C ─┘  (parallel, run_in_background)
- │
- │◄───────reads files──────────┘
- │
- │  🛑 STOP 2: change list pending user confirmation
- ▼
-user
+```mermaid
+flowchart TB
+    accTitle: Team Coordination and Review
+    accDescr: The manager uses arbiter review on the standard track, skips it only for qualifying fast-track work, and gathers role-agent reports between two mandatory user confirmation checkpoints.
+
+    user([User task]) --> manager[Manager: classify and coordinate]
+    manager -. standard track .-> arbiter[Arbiter: independent review]
+    manager -->|fast-track criteria all pass| stop1[STOP 1: confirm dispatch plan]
+    arbiter -. review decision .-> stop1
+    stop1 -->|user confirms| role_a[Relevant role agent A]
+    stop1 --> role_b[Relevant role agent B]
+    stop1 --> role_c[Relevant role agent C]
+    role_a --> thread["Shared task thread: assignments, evidence, reports"]
+    role_b --> thread
+    role_c --> thread
+    thread --> manager
+    manager --> stop2[STOP 2: confirm change list + delivery checklist]
+    stop2 --> report[User-facing status]
 ```
 
-**Don't think of it as a hierarchy.** Sub-agents can't talk to each other or message manager back — all coordination goes through markdown files in `team/communications/threads/`. This constraint means tasks must be sliceable into independent blocks, or parallelism is pointless.
+Sub-agents do not communicate with one another directly; coordination and
+evidence aggregation use Markdown files under
+`team/communications/threads/{task-id}/`. Parallel dispatch is appropriate only
+for independent work. The manager flow has two user confirmation gates: STOP 1
+before role-agent dispatch, and STOP 2 before final delivery reporting.
+Fast-track tasks skip arbiter review only when every published criterion passes;
+other tasks use standard arbiter review before STOP 1. `/design` also has
+phase-level confirmations by default; `/autopilot` applies its documented tier
+policy without relaxing RULE 4/7/8/10 or human PR review.
 
 ## Agent roster (v5.0.0 — 20 SDLC roles)
 
@@ -67,28 +76,41 @@ user
 | Operations | ops / release                                 |
 | Insight    | codebase-analyst                              |
 
-Pipeline: `business-analyst → product-manager → architect → ui-ux-designer → build → ops → bi-analyst`. Definitions in [`../plugins/openindu-control-tower/agents/`](../plugins/openindu-control-tower/agents/). All zero business binding; `/launch` activates the relevant subset per repo.
+```mermaid
+flowchart LR
+    accTitle: SDLC Role Handoffs
+    accDescr: The /design feature path begins with read-only codebase analysis, then hands off from research through product and design to route-selected implementation, required independent testing, and human PR review.
+
+    scan["codebase-analyst: Phase 0 for /design"] --> ba[business-analyst] --> pm[product-manager] --> architect[architect] --> ux[ui-ux-designer] --> build[Route-selected build roles]
+    build --> test[test: UT/IT + local manual verification] --> human[Human PR review before merge]
+```
+
+The arrows show common handoffs, not a universal fixed sequence. The build
+seat is selected from `route.json` by language/modules; one or more seats may
+be needed in a multi-language repo. UT/IT and local verification are required
+for code implementation. Human review is mandatory before merge; the agent
+`reviewer` seat offers optional pre-review when appropriate. `codebase-analyst`
+is mandatory in `/design` Phase 0, and otherwise read-only/on demand.
+Governance roles coordinate or review when the task requires them; security is
+activated for relevant risks; `data` covers production SQL/data repair; `ops`
+and `bi-analyst` produce scope-specific artifacts; `release` owns applicable
+RULE 11 delivery stages. Definitions in
+[`../plugins/openindu-control-tower/agents/`](../plugins/openindu-control-tower/agents/).
+All are pure role+skill, zero business binding.
 
 ## Spec design flow
 
-```
-trigger (manager dispatch / control-tower self-discovery / inspector proposal)
-        │
-        ▼
-control-tower calls /principle + /route
-        │
-        ▼
-/spec-new first-pass draft
-  · role/responsibility consistency
-  · contract alignment with上下游 repos
-  · RULE 7-11 hard-constraint check
-        │
-        ▼
-submit to arbiter (5 dimensions: principle compliance, cross-repo contract, conflict, minimal change, rollback)
-        │
-        ├── pass → write to spec/NNN-*.md, finalized
-        ├── revise → control-tower revises → re-review (max 3 rounds)
-        └── deadlock → escalate to manager
+```mermaid
+flowchart TB
+    accTitle: Spec Review and Finalization
+    accDescr: A spec proposal is drafted after principle and route checks, then reviewed by the arbiter. It is finalized on approval, revised for another review up to three rounds, or escalated to the manager on deadlock.
+
+    trigger["Manager dispatch / self-discovery / inspector proposal"] --> preflight["Load /principle + /route"]
+    preflight --> draft["/spec-new: first-pass draft"]
+    draft --> arbiter["Arbiter review: principles, contracts, conflicts, scope, rollback"]
+    arbiter -->|Approved| final["Write spec/NNN-*.md"]
+    arbiter -->|Revise, max 3 rounds| draft
+    arbiter -->|Deadlock| manager[Escalate to manager]
 ```
 
 ## Comms protocol

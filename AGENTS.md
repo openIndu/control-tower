@@ -107,26 +107,15 @@ A sub-repo onboards by writing in `.claude/settings.json`:
 
 ## Team structure (v5.0.0 — 20 SDLC role agents)
 
-`openindu-maintainers` has **20 agents**, all via the public plugin. The SDLC pipeline:
+The public plugin provides a catalog of **20 role agents**. `/launch` activates a repo- and task-specific subset; it does not require all 20 agents to run for each task.
 
 ```mermaid
-graph LR
-    subgraph PIPELINE["SDLC pipeline"]
-        BA[business-analyst] --> PM[product-manager] --> ARCH[architect] --> UX[ui-ux-designer]
-        UX --> FE[frontend]
-        UX --> BE[backend]
-        UX --> EDGE[edge]
-        UX --> SC[station-control]
-        FE --> OPS[ops]
-        BE --> OPS
-        EDGE --> OPS
-        SC --> OPS
-        OPS --> BI[bi-analyst]
-    end
+flowchart LR
+    accTitle: SDLC Role Responsibilities
+    accDescr: For /design, read-only codebase analysis is Phase 0 before research and product; route-selected implementation then receives independent local testing and human PR review. Other specialist roles are activated by scope.
 
-    CA["codebase-analyst<br/>read-only, any stage"] -.-> PIPELINE
-    GOV["governance<br/>manager / arbiter / inspector / control-tower"] -. cross-cuts .-> PIPELINE
-    QUAL["quality<br/>test / reviewer / security"] -. cross-cuts .-> PIPELINE
+    scan["codebase-analyst: Phase 0 for /design"] --> ba[business-analyst] --> pm[product-manager] --> architect[architect] --> ux[ui-ux-designer] --> builders[Route-selected build roles]
+    builders --> test[test: UT/IT + local manual verification] --> human[Human PR review before merge]
 ```
 
 | Domain     | Agents                                     |
@@ -140,7 +129,7 @@ graph LR
 | Operations | ops, release                               |
 | Insight    | codebase-analyst                           |
 
-All agents are pure role+skill, **zero business binding**. `/launch` activates the relevant subset per repo (by `route.json` language/modules). See [`plugins/openindu-control-tower/agents/`](./plugins/openindu-control-tower/agents/).
+All agents are pure role+skill, **zero business binding**. `/launch` selects the relevant subset by task, repo route, language, and modules. The diagram shows responsibilities and common handoffs; it does not imply every role runs sequentially for every task. `codebase-analyst` is mandatory Phase 0 for `/design`, otherwise read-only/on demand. For code changes, `test` owns UT/IT and local verification; `reviewer` provides optional pre-review but never replaces human PR review. Select `data` for production SQL/data repair and `security` for security-sensitive scope; operations, release, and metrics roles are scope-dependent. See [`plugins/openindu-control-tower/agents/`](./plugins/openindu-control-tower/agents/).
 
 ### Startup
 
@@ -161,6 +150,11 @@ preserve explicit-only intent in their generated instructions. Load the
 principles first: `/principle` in Claude Code, `$principle` or the canonical
 principle file in Codex.
 
+See the [README workflow map](./README.md#workflow-map) for Mermaid intake and
+delivery diagrams. `/design` is phase-gated; eligible generic targets use
+`/build` then `/publish`, while `openindu-website` uses its repo-local
+`/release`. Production cluster apply is human-only.
+
 ### Reference (read-only, no writes)
 
 | Command             | Input                          | Output                                                                                                                                                                                            |
@@ -170,25 +164,25 @@ principle file in Codex.
 
 ### SDLC pipeline orchestration
 
-| Command      | Input                                            | Output                                                                                                                                                                                                                                                 |
-| ------------ | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `/launch`    | optional `[initial task description]`            | the `openindu-maintainers` team brought up — manager spawned (or messaged if already up) with a role roster activated by the current repo's language; no file artifact, state lives in `~/.claude/teams/openindu-maintainers/`                         |
-| `/design`    | `<feature description>`                          | the `design/<domain>/` artifact tree, written phase by phase (business-analyst → product-manager → architect → ui-ux-designer → build role → ops → bi-analyst), each phase gated by a human STOP; ends with working code + a passing `/delivery-check` |
-| `/autopilot` | `<idea> [--tier L0\|L1\|L2\|L3]`                 | the same artifact tree as `/design`, with a tiered STOP policy. L2/L3 deployment is available only when a verified non-production target and rollback path exist; the tier never relaxes review or RULE 4/7/8/10.                                      |
-| `/design-md` | `[--pick <brand> \| --generate "<description>"]` | `design/uiux/DESIGN.md` — a 9-section design-system document (palette / type / components / layout / depth / do's-and-don'ts / responsive / agent-prompt guide) that becomes ui-ux-designer's and frontend's source of truth                           |
+| Command      | Input                                            | Output                                                                                                                                                                                                                         |
+| ------------ | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/launch`    | optional `[initial task description]`            | the `openindu-maintainers` team brought up — manager spawned (or messaged if already up) with a role roster activated by the current repo's language; no file artifact, state lives in `~/.claude/teams/openindu-maintainers/` |
+| `/design`    | `<feature description>`                          | The phase-gated 0-to-1 artifact workflow with mandatory UT/IT and local manual testing; UI/ops/BI phases are scope-dependent; ends with `/delivery-check`.                                                                     |
+| `/autopilot` | `<idea> [--tier L0\|L1\|L2\|L3]`                 | the same artifact tree as `/design`, with a tiered STOP policy. L2/L3 deployment is available only when a verified non-production target and rollback path exist; the tier never relaxes review or RULE 4/7/8/10.              |
+| `/design-md` | `[--pick <brand> \| --generate "<description>"]` | `design/uiux/DESIGN.md` — a 9-section design-system document (palette / type / components / layout / depth / do's-and-don'ts / responsive / agent-prompt guide) that becomes ui-ux-designer's and frontend's source of truth   |
 
 ### Workflow entrypoints (spec/010)
 
-| Command           | Input                                             | Output                                                                                                                                   |
-| ----------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `/research`       | `<openIndu/repo> <task-id> <question>`            | Evidence-backed competitor, roadmap and differentiation report with a go/pivot/stop decision                                             |
-| `/prod`           | `<openIndu/repo> <task-id>`                       | Scoped PRD, prioritized MVP and acceptance matrix for the same task                                                                      |
-| `/dev`            | `<openIndu/repo> <task-id>`                       | Implementation of one accepted task; hands its exact source SHA to `/test`                                                               |
-| `/test`           | `<openIndu/repo> <task-id>`                       | UT/IT results, locally started environment, manual verification and cleanup evidence                                                     |
-| `/dev_issue`      | `<openIndu/repo> [--dry-run] [--resume <run-id>]` | Enumerates one repository's Issues, runs research → prod → dev → test and stops at green PRs                                             |
-| `/publish`        | `<openIndu/repo> <task-id> [--dry-run]`           | Verified image and manifest change prepared as an English infra-deploy Gitee PR; production apply stays human-only                       |
-| `/pr_merge`       | `<openIndu/repo> [--dry-run]`                     | Serially merges that repository's eligible PRs after current approval, required checks and read-back                                     |
-| `/issue-pipeline` | `[--org openIndu] [--tier L1] [--dry-run]`        | Organization-scope issue collection, adversarial triage and dispatch of accepted work through `/autopilot` to PR_GREEN; never merges PRs |
+| Command           | Input                                             | Output                                                                                                                                                 |
+| ----------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/research`       | `<openIndu/repo> <task-id> <question>`            | Evidence-backed competitor, roadmap and differentiation report with a go/pivot/stop decision                                                           |
+| `/prod`           | `<openIndu/repo> <task-id>`                       | Scoped PRD, prioritized MVP and acceptance matrix for the same task                                                                                    |
+| `/dev`            | `<openIndu/repo> <task-id>`                       | Implementation of one accepted task; hands its exact source SHA to `/test`                                                                             |
+| `/test`           | `<openIndu/repo> <task-id>`                       | UT/IT results, locally started environment, manual verification and cleanup evidence                                                                   |
+| `/dev_issue`      | `<openIndu/repo> [--dry-run] [--resume <run-id>]` | Enumerates one repository's Issues, runs research → prod → dev → test and stops at green PRs                                                           |
+| `/publish`        | `<openIndu/repo> <task-id> [--dry-run]`           | Verified image and manifest change prepared as an English infra-deploy Gitee PR; production apply stays human-only                                     |
+| `/pr_merge`       | `<openIndu/repo> [--dry-run]`                     | Serially merges that repository's eligible PRs after current approval, required checks and read-back                                                   |
+| `/issue-pipeline` | `[--org openIndu] [--tier L1] [--dry-run]`        | Organization-scope issue collection, adversarial triage, and dispatch through applicable role-based SDLC or `/autopilot` to PR_GREEN; never merges PRs |
 
 ### Release & delivery (RULE 11)
 

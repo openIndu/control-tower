@@ -48,13 +48,45 @@
 
 ### 工作流关系
 
-- **单个已确认任务：** `/research` → `/prod` → `/dev` → `/test`。各阶段使用相同仓库和 task ID，按前序产物与 checkpoint 交接。
+- **单个已确认代码任务：** `/research` → `/prod` → `/dev` → `/test`。各阶段使用相同仓库和 task ID，按前序产物与 checkpoint 交接；小型修复可将调研或产品定义记为有证据的不适用。
 - **Issue 到绿灯 PR：** `/dev_issue <repo>` 只处理指定仓库的 Issue；已接受条目依次经过上述阶段，达到 PR_GREEN 后停止，不负责合并。
-- **组织级 Issue 入口：** `/issue-pipeline` 收集并对授权的 openIndu 范围做对抗式分诊，再将接受的任务交给 `/autopilot`；同样不负责合并。
+- **组织级 Issue 入口：** `/issue-pipeline` 收集并对授权的 openIndu 范围做对抗式分诊，再按任务交给 `/autopilot` 或相应角色执行修复；同样不负责合并。
 - **功能设计：** `/launch` 后运行逐阶段设有人类停止点的 `/design`；需要分层停止策略时使用 `/autopilot`。L2/L3 必须有已验证的 staging/sandbox 目标，不能绕过人工评审或风险授权。
 - **交付：** `/pr_merge <repo>` 只合并逐个满足当前人工批准和必需 CI 的 PR。`/build` 要求 `/route` 注册镜像目标；`/publish` 准备 infra-deploy PR；集群 apply 仍由人工执行。
 
 **客户端入口：** Claude Code 中使用 `/dev`；Codex 中通过 `$dev` 或 skill picker 调用同一工作流。本仓打开时由 `.agents/skills/` 提供项目级发现；将 Codex 插件安装到其他仓库后也可使用。Codex 不会把这些 skill 注册为 Claude 风格的 `/dev` slash command。
+
+各入口的受理范围、停止点和交付边界不同：
+
+```mermaid
+flowchart LR
+    accTitle: 从任务受理到 PR 合并
+    accDescr: 直接任务、单仓 Issue 和组织级 Issue 入口汇入调研、产品定义、开发与独立测试。流程停在已验证 PR，之后还需人工评审与合并授权。
+
+    task[已接受代码任务] --> stages["按适用性 /research + /prod → /dev → /test（代码变更必须测试）"]
+    repo_issue["/dev_issue <repo><br/>单仓快照 + 分诊已接受项"] --> stages
+    org_issue["/issue-pipeline<br/>授权范围内的组织级分诊"] --> launch["派发角色前运行 /launch"] --> dispatch{选择实现路径}
+    dispatch -->|分层编排| autopilot["/autopilot"] --> stages
+    dispatch -->|角色执行修复| stages
+    stages --> green[PR_GREEN：PR + 证据 + 必需 CI]
+    green --> gate{人工评审与合并授权}
+    gate -->|批准| merge["/pr_merge <repo>"]
+```
+
+合并后，镜像构建与 GitOps 发布是独立交付步骤；生产集群 apply 由人工执行：
+
+```mermaid
+flowchart LR
+    accTitle: 聚合服务镜像发布
+    accDescr: 对有镜像的聚合服务，先合并源码和聚合仓库指针 PR 并回读；通用目标走 /build + /publish，openindu-website 走仓库 /release。GitOps 合并和集群 apply 由人工完成。
+
+    merged[源码 PR 已合并] --> pointer[聚合仓库指针 PR] --> pointer_merge[人工评审、合并并回读] --> path{交付路径}
+    path -->|通用目标| build["/build：已验证镜像"] --> publish["/publish：infra-deploy PR"] --> human_merge[人工评审并合并 GitOps]
+    path -->|openindu-website| website_release[仓库 /release：构建 + GitOps PR] --> human_merge
+    human_merge --> apply[人工执行集群 apply]
+```
+
+此图仅描述有镜像目标的聚合服务。独立发布和仅 submodule 的仓库遵循各自 `/route` 契约；未登记镜像目标时 `/build` 会停止，`/publish` 也必须存在对应 GitOps manifest。
 
 ---
 
@@ -114,38 +146,41 @@
 
 ## 团队架构（v5.0.0 — 20 个 SDLC 角色 agent）
 
-`openindu-maintainers` 团队包含 **20 个 agent**，全部由公共插件提供。SDLC 流水线：
+公共插件提供 **20 个角色 agent**。`/launch` 根据任务、路由、语言和模块激活相应子集，并不表示每项任务都要同时运行全部 20 个 agent。
 
+```mermaid
+flowchart LR
+    accTitle: SDLC 角色职责与交接
+    accDescr: 常见功能路径从市场调研、产品和设计进入按路由选择的开发角色，再经过必需的本地测试和人工 PR 评审。治理及专项角色按任务与风险加入。
+
+    scan["codebase-analyst：/design Phase 0"] --> ba[business-analyst] --> pm[product-manager] --> architect[architect] --> ux[ui-ux-designer] --> build[按路由选择的开发角色]
+    build --> test[test：UT/IT + 本地手动验证] --> human[合并前人工 PR 评审]
 ```
-business-analyst → product-manager → architect → ui-ux-designer → [frontend/backend/edge/station-control] → ops → bi-analyst
-                                          ↑ codebase-analyst（只读洞察，任意阶段）
-治理（manager/arbiter/inspector/control-tower）+ 质量（test/reviewer/security）横切
-```
 
-| 域   | Agent                | 核心职责                            |
-| ---- | -------------------- | ----------------------------------- |
-| 治理 | **manager**          | 任务分配、进度跟踪、策略例外决策    |
-| 治理 | **arbiter**          | 跨仓仲裁、spec 审核                 |
-| 治理 | **inspector**        | 主动巡检                            |
-| 治理 | **control-tower**    | 守则 / 路由 / agent 定义 / 公共插件 |
-| 需求 | **business-analyst** | 市场调研、竞品分析、商业案例        |
-| 需求 | **product-manager**  | 需求、PRD、验收标准、跨仓契约       |
-| 设计 | **architect**        | 技术选型、系统架构、ADR             |
-| 设计 | **ui-ux-designer**   | 交互、视觉、设计系统、无障碍        |
-| 构建 | **frontend**         | React / Vue / UniApp（零业务绑定）  |
-| 构建 | **backend**          | Spring Boot / FastAPI（零业务绑定） |
-| 构建 | **edge**             | Rust / 现场协议驱动                 |
-| 构建 | **station-control**  | C# / .NET / 物理设备（默认 L3）     |
-| 质量 | **test**             | RULE 2 准入门槛                     |
-| 质量 | **reviewer**         | RULE 5.2 四视角预审                 |
-| 质量 | **security**         | RULE 5.4 凭证 / 权限 / 暴露面       |
-| 数据 | **data**             | RULE 10 生产 SQL 防护               |
-| 数据 | **bi-analyst**       | 指标、看板、实验                    |
-| 运维 | **ops**              | 服务器/DB/日志/运行手册             |
-| 运维 | **release**          | RULE 11 六段交付 + K8s 清单         |
-| 洞察 | **codebase-analyst** | 逆向/onboarding 任意仓（只读）      |
+| 域   | Agent                | 核心职责                                   |
+| ---- | -------------------- | ------------------------------------------ |
+| 治理 | **manager**          | 任务分配、进度跟踪、策略例外决策           |
+| 治理 | **arbiter**          | 跨仓仲裁、spec 审核                        |
+| 治理 | **inspector**        | 主动巡检                                   |
+| 治理 | **control-tower**    | 守则 / 路由 / agent 定义 / 公共插件        |
+| 需求 | **business-analyst** | 市场调研、竞品分析、商业案例               |
+| 需求 | **product-manager**  | 需求、PRD、验收标准、跨仓契约              |
+| 设计 | **architect**        | 技术选型、系统架构、ADR                    |
+| 设计 | **ui-ux-designer**   | 交互、视觉、设计系统、无障碍               |
+| 构建 | **frontend**         | React / Vue / UniApp（零业务绑定）         |
+| 构建 | **backend**          | Spring Boot / FastAPI（零业务绑定）        |
+| 构建 | **edge**             | Rust / 现场协议驱动                        |
+| 构建 | **station-control**  | C# / .NET / 物理设备（默认 L3）            |
+| 质量 | **test**             | UT/IT、本地启动与手动验收；RULE 2 准入门槛 |
+| 质量 | **reviewer**         | RULE 5.2 四视角预审                        |
+| 质量 | **security**         | RULE 5.4 凭证 / 权限 / 暴露面              |
+| 数据 | **data**             | RULE 10 生产 SQL 防护                      |
+| 数据 | **bi-analyst**       | 指标、看板、实验                           |
+| 运维 | **ops**              | 服务器/DB/日志/运行手册                    |
+| 运维 | **release**          | RULE 11 六段交付 + K8s 清单                |
+| 洞察 | **codebase-analyst** | 逆向/onboarding 任意仓（只读）             |
 
-定义见 [`plugins/openindu-control-tower/agents/`](./plugins/openindu-control-tower/agents/)。所有 agent 纯角色+技能，**零业务绑定**；`/launch` 按 `route.json` 的语言/模块激活相关子集。
+代码变更由 test 角色负责 UT/IT 与本地验证；`codebase-analyst` 是 `/design` 必需的 Phase 0，其余场景按需只读启用。生产 SQL/数据修复时选用 `data`，安全敏感变更时选用 `security`，适用的 RULE 11 交付由 `release` 负责。PR 准备阶段可由 `reviewer` 预审，但不能代替合并前的人工评审。治理、运维和指标角色按各自范围加入。箭头表示常见交接，不是每个任务都必须经过的固定流水线。开发角色由 `route.json` 的语言/模块决定，多语言仓库可启用多个角色。各专项角色的职责见 [`plugins/openindu-control-tower/agents/`](./plugins/openindu-control-tower/agents/)。所有 agent 纯角色+技能，**零业务绑定**。
 
 ### 启动
 
