@@ -31,7 +31,6 @@ Available immediately after onboarding:
 | `/delivery-check`    | Self-check the RULE 11 delivery pipeline completeness                               |
 | `/adopt`             | Onboard a repo and converge duplicate governance assets                             |
 | `/issue-pipeline`    | Collect and triage open issues across the whole org                                 |
-| `/dev`               | Run the deterministic org-wide issue→PR→merge pipeline against one repo             |
 | `/spec-new`          | Draft a new spec (feature / process / principle change)                             |
 | `/revision-new`      | Create a revision record (changelog) for a change                                   |
 | `/build`             | Build and push a Docker image for an openIndu service (RULE 11 step 4)              |
@@ -174,12 +173,10 @@ control-tower/
 ├── .claude-plugin/marketplace.json  # Marketplace catalog
 ├── plugins/openindu-control-tower/       # ★ Public Claude Code plugin
 │   ├── .claude-plugin/plugin.json
-│   ├── skills/                      # 16: principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / dev / issue-pipeline
+│   ├── skills/                      # 15: principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / issue-pipeline
 │   ├── agents/                      # 20 agents (SDLC roles, zero business binding)
-│   ├── engine/                      # deterministic /dev engine (spec/005): states / guards / admission / carrier / pr-lifecycle etc.
-│   ├── evals/                       # eval suites: dev-reasoning-layer (spec/005) + standing-authorization (spec/006)
 │   ├── hooks/                       # Trunk protection
-│   ├── reference/                   # route.json + dev.schema.json + manifest.yaml + coding-standards/
+│   ├── reference/                   # route.json + manifest.yaml + coding-standards/
 │   └── README.md
 ├── scripts/                          # sync-route / check-roster / check-version-bump / detect-modules
 ├── .github/workflows/ci.yml

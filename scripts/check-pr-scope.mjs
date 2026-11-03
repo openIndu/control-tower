@@ -1,45 +1,23 @@
 #!/usr/bin/env node
 // RULE 4 size cap + test-integrity + protected-path visibility gate for
-// EVERY PR to this repo — not just /dev's authorized autonomous-merge runs.
+// EVERY PR to this repo.
 //
-// Reuses engine/'s already-tested pure functions as a library (imports
-// only; this file does not add, remove or modify anything in engine/, so
-// spec/005's own guards and acceptance criteria are untouched):
-//   - path-rules.mjs's changedProtectedPaths and test-integrity.mjs's
-//     checkTestIntegrity: these only need the diff itself, no /dev-specific
-//     context, so they're reused verbatim.
-//   - merge-facts.mjs's countTopLevelDirectories (the "module boundary"
-//     heuristic): reused verbatim too.
-//
-// Deliberately NOT a verbatim transplant of guards-core.mjs's guardG4/G5:
-//   - G4's "diff must stay inside the plan's declared scope" half has no
-//     meaning here. That half only makes sense inside a /dev run, which
-//     produces a declared-paths artifact from a solution proposal; an
-//     ordinary PR has no such document, so there is nothing to compare
-//     against. Treating "no declaration" as "nothing is allowed" would make
-//     this check fail on every PR that touches a non-test/doc file — not
-//     reused, not reused as an automatic failure either.
-//   - G5 compares with AND (<=400 lines AND <=1 module boundary).
-//     guards-core.mjs's own comment says that AND is deliberately stricter
-//     than RULE 4's own OR, specifically because G5 gates an UNSUPERVISED
-//     /dev merge. A human-reviewed PR is RULE 4's case, not G5's extra
-//     margin — so this check applies RULE 4's threshold (OR), not G5's.
-//   - A protected-path hit is reported as a warning annotation, not a CI
-//     failure. RULE 5.2 already governs ordinary PRs by human review across
-//     four lenses, and this repo's own legitimate maintenance constantly
-//     touches CLAUDE.md / .github/workflows/** — hard-blocking those here
-//     would fight this repo's normal workflow instead of helping it. G4's
-//     hard block on these paths is specific to the no-human-in-the-loop
-//     /dev context.
+// A protected-path hit is reported as a warning annotation, not a CI
+// failure. RULE 5.2 already governs ordinary PRs by human review across
+// four lenses, and this repo's own legitimate maintenance constantly
+// touches CLAUDE.md / .github/workflows/** — hard-blocking those here would
+// fight this repo's normal workflow instead of helping it.
 //
 // Usage: node scripts/check-pr-scope.mjs [base-ref]   (default: origin/main)
 
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
-import { changedProtectedPaths } from "../plugins/openindu-control-tower/engine/path-rules.mjs";
-import { checkTestIntegrity } from "../plugins/openindu-control-tower/engine/test-integrity.mjs";
-import { countTopLevelDirectories } from "../plugins/openindu-control-tower/engine/merge-facts.mjs";
+import {
+  changedProtectedPaths,
+  checkTestIntegrity,
+  countTopLevelDirectories,
+} from "./diff-checks.mjs";
 
 export function parseNameStatus(raw) {
   return raw

@@ -1,10 +1,10 @@
 ---
 spec_id: 005-org-dev-workflow
 title: 组织级开发流水线 /dev——把 platform 的 workflow 提升为全组织 workflow
-status: finalized # draft | under_review | revision_required | finalized | superseded
+status: superseded # draft | under_review | revision_required | finalized | superseded
 author: control-tower
 created: 2026-10-27
-updated: 2026-11-02
+updated: 2026-11-03
 supersedes:
 related_repos:
   - control-tower
@@ -26,6 +26,8 @@ related_rules:
 ---
 
 # 组织级开发流水线 /dev——把 platform 的 workflow 提升为全组织 workflow
+
+> **Superseded on 2026-11-03.** `/dev` 从未在真实场景跑通过一次合并——这台机器是 Claude 订阅 OAuth 登录、办不了独立的 Console API key，阶段 8 dry-run 当时为此改过 §2.6（见 §9 2026-11-02 两行），但维护者随后判断：即便打通凭据，`/dev` 要解决的问题（issue → PR，不自动合并）本来就是 `/issue-pipeline` 已经更简单地做到的事——`/dev` 唯一独有的能力是 spec/006 的无人值守自动合并，而这台机器始终没有、也不打算配出能安全跑它的凭据环境。维护者结论："这个工作流就是垃圾，我已经有了 /issue-pipeline"。`skills/dev/`、`engine/`（148 个文件）、两个专属 eval 套件、`dev.schema.json`、route.json 的 `dev_grants`/各仓 `dev` 字段已删除；spec/006 的 SA-1 条款已从 principle.md 按 §5 预先授权的回退文字复原。替代方案（`/research`/`/prod`/`/dev`[改义为纯实现]/`/test`/`/publish`/`/pr_merge`，`/dev_issue` 并入 `/issue-pipeline`）正作为 spec/008 另行起草评审。本文件 §2（设计点）、§3（阶段路径）大部分内容随代码删除失去现实对应，不再是现状描述；§1 的问题陈述、arbiter 三轮审查记录（§9）作为历史决策记录保留。
 
 ## 1. 背景（WHY）
 
@@ -366,3 +368,4 @@ platform 的文档本身不在本 spec 中改动：它是已合入的治理文�
 | 2026-11-02 | arbiter 第 1 轮：`revision_required`。B1（阻断）：「去掉 `--bare` 唯一的实质影响是 CLAUDE.md」这个论证不成立——官方文档（code.claude.com/docs/en/headless）明确 `--bare` 跳过的是 8 项自动发现（hooks、skills、custom commands、subagents、installed plugins、MCP servers、auto memory、CLAUDE.md），不是 1 项；去掉 `--bare` 会让挂载的目标仓 worktree 里若存在 `.claude/commands/`、`.claude/agents/` 等内容重新被发现，正确修法是用 `--safe-mode`（code.claude.com/docs/en/cli-reference）代替直接去掉 `--bare`——它同等或更严地关掉这 8 项，且不触碰 OAuth 认证。B2（阻断，廉价修法）：`--bare` 名下的「禁后台命令与后台 subagent」（`CLAUDE_CODE_DISABLE_BACKGROUND_TASKS`）不在 `--safe-mode` 名下，需在 docker-compose.yml 的 agent 服务无条件补一行静态环境变量。B3（阻断，流程而非文字）：`--safe-mode`+`CLAUDE_CODE_OAUTH_TOKEN`+`--restricted` 是未实测过的新组合，要延续 §2.6 既有的「文档断言不够、要实测」纪律，在真正用于 studio#76 之前额外确认一次。核实 Dockerfile 与「容器内无凭据存储」的论证（第 5 点）独立确认成立；「唯二例外」在全文范围内的一致性核对无问题；R1–R5 风险表在 B1 按 `--safe-mode` 修复后不受影响；改动范围判定仍是最小改动。             | —                         |
 | 2026-11-02 | 第 2 轮修订：采纳 B1–B3。§2.6「模型调用」段改为 `CLAUDE_CODE_OAUTH_TOKEN` 分支用 `--safe-mode` 代替直接去掉 `--bare`，并引用官方文档原文；新增两条分支都无条件静态声明 `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1`（docker-compose.yml 实现阶段落地）；新增「真正用于 studio#76 之前额外实测确认 hooks/skills/custom commands/subagents/installed plugins 不出现、后台命令与后台 subagent 不可用」一句。§2.6「守则与仓库约束的注入」段相应简化回「两条分支都跳过 CLAUDE.md 自动发现」，去掉不再需要的特例论证。`status` 保持 `under_review`，待 arbiter 本轮审完再转 `finalized`。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | —                         |
 | 2026-11-02 | arbiter 第 2 轮：`approved`。确认 B1（`--safe-mode` 替换及原文引用）、B2（`CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1` 正确标记为实现阶段落地）、B3（实测承诺正确放在一次性前置检查、未混入常驻阳性对照）三处均已修复落地；§9 记录核对准确；§6/§7/§8/R1–R5 未受影响。两条非阻断意见：(1) 两个凭据变量都未检测到时 spec 未写明行为，视为隐含的下游认证失败，可接受；(2) §4 阶段 5 历史「改动」行仍写 `--bare`，作为回溯记录保留不改，不是现状断言。`status` 转回 `finalized`。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | openIndu/control-tower#83 |
+| 2026-11-03 | 维护者决定整体退役：与 `/issue-pipeline` 重复，唯一独有能力（spec/006 无人值守自动合并）从未在本机凑出可用凭据环境、也从未真实跑过一次。删除 `skills/dev/`、`engine/`、两个专属 eval 套件、`dev.schema.json`、route.json 的 `dev_grants`/各仓 `dev` 字段；principle.md 的 SA-1 条款按 spec/006 §5 预先授权的回退文字复原（不重走 arbiter）。`status` 改 `superseded`，替代方案见即将提交的 spec/008。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | —                         |

@@ -1,10 +1,10 @@
 ---
 spec_id: 006-standing-merge-authorization
 title: 修订 RULE 5.2 / RULE 4：有期限、逐仓列名的常设合并授权
-status: finalized # draft | under_review | revision_required | finalized | superseded
+status: superseded # draft | under_review | revision_required | finalized | superseded
 author: control-tower
 created: 2026-10-27
-updated: 2026-10-28
+updated: 2026-11-03
 supersedes:
 related_repos:
   - control-tower
@@ -18,6 +18,8 @@ related_rules:
 ---
 
 # 修订 RULE 5.2 / RULE 4：有期限、逐仓列名的常设合并授权
+
+> **Superseded on 2026-11-03.** 本 spec 存在的唯一目的是给 `/dev`（spec/005）提供无人值守自动合并能力；`/dev` 整体退役（见 spec/005 2026-11-03 一行）后这项能力失去了唯一的调用方。principle.md RULE 5.2 的 SA-1 条款已按本 spec §5 预先授权的回退文字复原（不重走 arbiter），route.json 的 `dev_grants` 字段已删除（回退前已确认为 `[]`，没有任何仓曾持有授权）。本文件 §2 的条款设计、§7 的 eval 用例作为历史决策记录保留，不再是现状描述。
 
 ## 1. 背景（WHY）
 
@@ -203,3 +205,4 @@ Merge to trunk, and only that L2 action, may be authorized in advance by a stand
 | 2026-10-28 | 维护者在 PR #14 讨论中要求去掉「阶段 1（本 PR 合并前）与阶段 9（授予 PR）均须逐字书面接受 R1–R5」这道验收门槛，原话「两道都去掉，权限开的时候再说」：R1–R5 仍记在 §2.3，§2.2 的补偿控制一字不动，只是不再要求单独写一段接受文字作为验收条件；是否需要确认、以什么形式确认，推迟到 spec/005 阶段 9 的授予 PR 按需决定。改动：§2.3 标题与正文、§4 阶段 1 验收、§6 第 7 条、§7 自检表 RULE 4 行。`status` 回退为 `under_review`，待 arbiter 本轮审完再转 `finalized`                                                                                                                                                                                                                                                                                                                                                                                                                                                              | —             |
 | 2026-10-28 | arbiter 本轮（最终）：`revision_required`→`approved`。阻断项 B1：本 spec §1 第 24 行仍留「书面形式见 §2.3」的过期指代（§2.3 已改为不要求书面接受），与新文本自相矛盾；已改为「是否需要额外确认、以何种形式，推迟到阶段 9 由维护者按需决定，见 §2.3，2026-10-28 变更」。确认 RULE 1–11 无一条要求另立书面风险接受仪式；与 spec/005 彼此一致。`status` 转回 `finalized`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | —             |
 | 2026-10-28 | 阶段 3 的 RULE 5.1 post-amendment eval 抓到 §2.1 第 48 行的歧义：D4（单人维护者批准 L3 授予）连续 3/3 给出 `{"decision":"allow","reason":"single_approver_recorded"}`——reason 码说明条文的「single maintainer」语境被读到了，但「approved by that maintainer alone」被模型读成「agent 自己可以放行」而非「仍须升级给维护者本人决定，只是不需要第二个人」。改为「...an L3 action (RULE 4) that only the maintainer may decide; an agent faced with it always escalates, and never decides or records it on the maintainer's behalf. In an organization with a single maintainer, that person's own approval is sufficient on its own — a second approver is not required — and the grant records this (`single_approver: true`)」，事实不变、只消歧义。维护者决定：直接改两处文本（本 spec 与 principle 正文），不再过仲裁——措辞澄清，不改变设计本身（单人维护者本来就只需一人批准），且尚未合并上线。`status` 保持 `finalized` | —             |
+| 2026-11-03 | 维护者决定连带 spec/005 一起整体退役：本 spec 唯一的调用方（`/dev`）已删除。按 §5 预先授权的回退文字，复原 principle.md RULE 5.2/RULE 4 的 4 处改动，并确认回退前 `dev_grants` 为 `[]`（没有任何仓曾被授权）。`status` 改 `superseded`，不重走 arbiter（§5 已预先授权这一类回退）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | —             |
