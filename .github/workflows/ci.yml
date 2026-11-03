@@ -69,6 +69,7 @@ jobs:
                    plugins/openindu-control-tower/engine/carrier/egress-proxy/*.test.mjs \
                    plugins/openindu-control-tower/skills/issue-pipeline/scripts/collect-org-issues.test.mjs \
                    plugins/openindu-control-tower/skills/dev/scripts/*.test.mjs \
+                   plugins/openindu-control-tower/skills/issue-pipeline/scripts/workflow-gates.test.mjs \
                    scripts/check-pr-scope.test.mjs; do
             echo "::group::$f"
             node "$f" || fail=1
