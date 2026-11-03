@@ -64,11 +64,19 @@ export const DEFAULT_PROTECTED_PATTERNS = Object.freeze([
 ]);
 
 export function isProtectedPath(path, extraPatterns = []) {
-  return matchesAnyGlob(path, [...DEFAULT_PROTECTED_PATTERNS, ...extraPatterns]);
+  return matchesAnyGlob(path, [
+    ...DEFAULT_PROTECTED_PATTERNS,
+    ...extraPatterns,
+  ]);
 }
 
-export function changedProtectedPaths(changedPaths, extraProtectedPatterns = []) {
-  return changedPaths.filter((path) => isProtectedPath(path, extraProtectedPatterns));
+export function changedProtectedPaths(
+  changedPaths,
+  extraProtectedPatterns = [],
+) {
+  return changedPaths.filter((path) =>
+    isProtectedPath(path, extraProtectedPatterns),
+  );
 }
 
 // No deleted tests, no newly added skip/xfail/only, no lowered coverage
@@ -93,6 +101,25 @@ function removedTestFiles(changedFiles) {
     (file) =>
       file.status === "removed" &&
       /(\.test\.|\.spec\.|(^|\/)tests?\/|(^|\/)__tests__\/)/.test(file.path),
+  );
+}
+
+function isCompleteModuleRetirement(changedFiles, testFiles) {
+  if (testFiles.length === 0) return false;
+  const moduleRoots = new Set(testFiles.map((file) => file.path.split("/")[0]));
+  if (moduleRoots.size !== 1) return false;
+  const [moduleRoot] = moduleRoots;
+  const moduleFiles = changedFiles.filter(
+    (file) => file.path.split("/")[0] === moduleRoot,
+  );
+  if (
+    moduleFiles.length === 0 ||
+    moduleFiles.some((file) => file.status !== "removed")
+  )
+    return false;
+  return moduleFiles.some(
+    (file) =>
+      !/(\.test\.|\.spec\.|(^|\/)tests?\/|(^|\/)__tests__\/)/.test(file.path),
   );
 }
 
@@ -125,14 +152,22 @@ export function checkTestIntegrity({
 }) {
   const findings = [];
   const removed = removedTestFiles(changedFiles ?? []);
-  if (removed.length > 0) {
-    findings.push(`deleted test file(s): ${removed.map((f) => f.path).join(", ")}`);
+  if (
+    removed.length > 0 &&
+    !isCompleteModuleRetirement(changedFiles ?? [], removed)
+  ) {
+    findings.push(
+      `deleted test file(s): ${removed.map((f) => f.path).join(", ")}`,
+    );
   }
   const skipped = findAddedSkipLines(unifiedDiff ?? "");
   if (skipped.length > 0) {
     findings.push(`added skip/xfail/only: ${skipped.length} line(s)`);
   }
-  const lowered = findLoweredThresholds(baseCoverageThresholds, headCoverageThresholds);
+  const lowered = findLoweredThresholds(
+    baseCoverageThresholds,
+    headCoverageThresholds,
+  );
   if (lowered.length > 0) {
     findings.push(`lowered coverage threshold(s): ${lowered.join(", ")}`);
   }

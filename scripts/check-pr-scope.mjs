@@ -54,15 +54,26 @@ export function sumNumstat(raw) {
 // RULE 4 (principle.md): "Hard上限 per change: ≤400 lines OR ≤1 module
 // boundary" — passes if EITHER side is within bound; see header comment for
 // why this is the OR, not guardG5's stricter AND.
-export function withinRule4SizeCap({ totalLinesChanged, moduleBoundariesTouched }) {
+export function withinRule4SizeCap({
+  totalLinesChanged,
+  moduleBoundariesTouched,
+}) {
   return totalLinesChanged <= 400 || moduleBoundariesTouched <= 1;
 }
 
-export function evaluateScope({ changedFiles, unifiedDiff, totalLinesChanged, moduleBoundariesTouched }) {
+export function evaluateScope({
+  changedFiles,
+  unifiedDiff,
+  totalLinesChanged,
+  moduleBoundariesTouched,
+}) {
   const paths = changedFiles.map((f) => f.path);
   const integrityFindings = checkTestIntegrity({ changedFiles, unifiedDiff });
   const protectedHits = changedProtectedPaths(paths);
-  const sizeOk = withinRule4SizeCap({ totalLinesChanged, moduleBoundariesTouched });
+  const sizeOk = withinRule4SizeCap({
+    totalLinesChanged,
+    moduleBoundariesTouched,
+  });
   return {
     sizeOk,
     totalLinesChanged,
@@ -78,11 +89,22 @@ function git(args) {
 }
 
 export function gatherFromGit(baseRef, headRef = "HEAD") {
-  const changedFiles = parseNameStatus(git(["diff", "--name-status", `${baseRef}...${headRef}`]));
+  const changedFiles = parseNameStatus(
+    git(["diff", "--name-status", `${baseRef}...${headRef}`]),
+  );
   const unifiedDiff = git(["diff", `${baseRef}...${headRef}`]);
-  const totalLinesChanged = sumNumstat(git(["diff", "--numstat", `${baseRef}...${headRef}`]));
-  const moduleBoundariesTouched = countTopLevelDirectories(changedFiles.map((f) => f.path));
-  return { changedFiles, unifiedDiff, totalLinesChanged, moduleBoundariesTouched };
+  const totalLinesChanged = sumNumstat(
+    git(["diff", "--numstat", `${baseRef}...${headRef}`]),
+  );
+  const moduleBoundariesTouched = countTopLevelDirectories(
+    changedFiles.map((f) => f.path),
+  );
+  return {
+    changedFiles,
+    unifiedDiff,
+    totalLinesChanged,
+    moduleBoundariesTouched,
+  };
 }
 
 export function main(baseRef = process.argv[2] ?? "origin/main") {
