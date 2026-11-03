@@ -130,15 +130,21 @@ Statement: process reform's core is not "make the agent run" — it's ensuring e
 
 MUST:
 
-- Any new/changed agent / prompt / toolchain (even a one-character prompt change) must pass eval before going live
-- Live gates:
-  - ≥ 20 representative real-case eval set; programmatic assertions preferred over manual judgment
-  - Regression comparison vs previous version: pass rate, regression cases, performance, token cost
-  - Model / prompt / tool all have explicit version numbers, in version control
+- For every new/changed agent / prompt / toolchain, document the affected behavior,
+  representative scenarios, and expected outcomes before going live
+- Run relevant deterministic tests / contract checks where behavior can be
+  expressed programmatically; CI, applicable security scans, and human review
+  remain release gates
+- Keep model / prompt / tool versions explicit and version-controlled where
+  applicable
+- Real-model evaluation is optional evidence, not a universal release gate. When
+  run, record model / prompt / tool versions, case-set revision, pass rate,
+  regressions, performance, and cost. When not run or provider-blocked, record
+  `not run`; never report it as passed
 - Production must collect: full trace (input, tool-call sequence, output, latency, cost, errors), failure rate, downgrade rate, human-correction rate
 - Track DORA four + AI-specific metrics (per-PR incident rate, bug/developer, review-pass rate, AI-suggestion adoption rate)
 
-MUST NOT: do not go live on "looks fine"; do not let the eval set become a decoration; do not deploy agents in environments without trace.
+MUST NOT: do not go live on "looks fine" alone; do not misrepresent an unrun or blocked evaluation as passed; do not deploy agents in environments without trace.
 
 ### 5.2 Review
 
