@@ -1,6 +1,6 @@
 # openindu-control-tower
 
-The openIndu community's org-wide Claude Code plugin — one principle set, 20 maintainer agents (governance / ideation / design / build / quality / data / operations / insight, zero business binding), workflow skills, and a main-branch protection hook. Zero-copy reuse across all openIndu repos.
+The openIndu community's org-wide workflow package — one principle set, 20 maintainer agents (governance / ideation / design / build / quality / data / operations / insight, zero business binding), workflow skills, and a main-branch protection hook. Claude Code uses `/skill`; Codex uses `$skill` through its plugin package. Zero-copy reuse across all openIndu repos.
 
 ## Install
 
@@ -60,7 +60,7 @@ Or run `/adopt` in a repo — it writes the block below into `.claude/settings.j
 
 `/design` is the phase-gated feature pipeline. `/autopilot` changes its STOP policy only; L2/L3 require a verified non-production target and never override review or risk authorization.
 
-This package is a Claude Code plugin. The repository's `AGENTS.md` is separate shared guidance; this plugin does not install Codex-native skill registrations.
+The Claude Code manifest is `.claude-plugin/plugin.json`. The Codex compatibility manifest is `.codex-plugin/plugin.json` at the repository root; it exposes `.agents/skills/` wrappers that map to canonical skills. Invoke skills as `$dev` in Codex; literal `/dev` remains a Claude Code command.
 
 ### Agents (20)
 

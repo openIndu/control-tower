@@ -1,0 +1,28 @@
+{
+  "name": "openindu-control-tower",
+  "version": "5.46.0",
+  "description": "openIndu workflow skills for product research, development, testing, build, release, issue handling, and governance.",
+  "author": {
+    "name": "openIndu Community",
+    "url": "https://github.com/openIndu"
+  },
+  "homepage": "https://github.com/openIndu/control-tower",
+  "repository": "https://github.com/openIndu/control-tower",
+  "license": "Apache-2.0",
+  "keywords": ["openindu", "workflow", "governance", "development", "skills"],
+  "skills": "./.agents/skills/",
+  "interface": {
+    "displayName": "openIndu Workflow",
+    "shortDescription": "OpenIndu repository workflows",
+    "longDescription": "Discoverable Codex skills for openIndu's research, product, development, testing, build, publication, issue, merge, and governance workflows. Invoke them as $skill-name in Codex.",
+    "developerName": "openIndu Community",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Repository workflow guidance",
+      "Issue-to-PR workflows",
+      "Build and release preparation"
+    ],
+    "composerIcon": "./.codex-plugin/openindu-mark.svg",
+    "logo": "./.codex-plugin/openindu-mark.svg"
+  }
+}

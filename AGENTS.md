@@ -1,6 +1,6 @@
 # openIndu Control Tower
 
-This repo is the **control center (Control Tower)** of the openIndu community's AI end-to-end development workflow — an independent "brain" separate from business sub-repos. It maintains cross-repo routing, Agent behavior principles, and Agent prompts, and distributes these assets to every repo via a **Claude Code plugin**.
+This repo is the **control center (Control Tower)** of the openIndu community's AI end-to-end development workflow — an independent "brain" separate from business sub-repos. It maintains cross-repo routing, Agent behavior principles, and Agent prompts, and distributes workflows through Claude Code and Codex skill packages.
 
 ---
 
@@ -38,7 +38,9 @@ The control layer **does not enumerate concrete repos**. This repo only defines 
 
 ---
 
-## Distribution: the public plugin
+## Distribution: Claude Code and Codex
+
+Claude Code commands use `/name`. Codex skills use `$name` or the Codex skill picker; Codex does not register Claude-style slash commands. The root `.codex-plugin/plugin.json` packages the canonical skills for Codex plugin installation, while `.agents/skills/` provides repo-local discovery when this repository is open. The latter wrappers are generated from `plugins/openindu-control-tower/skills/` by `node scripts/sync-codex-skills.mjs --write`.
 
 ```mermaid
 graph TD
@@ -78,7 +80,7 @@ A sub-repo onboards by writing in `.claude/settings.json`:
 | Maintain principles        | `plugins/openindu-control-tower/skills/principle/SKILL.md` (sole source of 11 RULEs)      |
 | Maintain agent definitions | `plugins/openindu-control-tower/agents/*.md` (20 SDLC role agents, zero business binding) |
 | Spec design + review       | `spec/` first-pass by control-tower → arbiter review                                      |
-| Distribute assets          | plugin version release; downstream `/plugin update`                                       |
+| Distribute assets          | Claude Code marketplace release and Codex plugin package version                          |
 | Delivery pipeline          | RULE 11: sub-repo PR → merge → aggregate submodule → /build → gitops PR → apply           |
 
 ---
@@ -152,11 +154,12 @@ Auto-detects team state: creates + spawns manager if absent; messages if manager
 
 ## Commands & workflows (22 skills)
 
-Each is `plugins/openindu-control-tower/skills/<name>/SKILL.md`. 17 of the 22 carry
-`disable-model-invocation: true` — the model never triggers them from conversation context, only
-an explicit `/<name>` call does. The 5 marked **\*** below have no such flag and may be
-auto-invoked. Every skill's first line of work is `/principle` (RULE 1); omitted from the
-"Input" column below since it's constant across all 22.
+Canonical instructions live at `plugins/openindu-control-tower/skills/<name>/SKILL.md`.
+Use `/<name>` in Claude Code and `$<name>` (or the skill picker) in Codex. The
+`disable-model-invocation` flag governs Claude Code behavior; Codex entrypoints
+preserve explicit-only intent in their generated instructions. Load the
+principles first: `/principle` in Claude Code, `$principle` or the canonical
+principle file in Codex.
 
 ### Reference (read-only, no writes)
 
@@ -222,14 +225,16 @@ control-tower/
 ├── route.json                        # sync product (sole source in the plugin)
 ├── .claude/settings.json            # references the public plugin
 ├── .claude-plugin/marketplace.json  # marketplace catalog
-├── plugins/openindu-control-tower/       # ★ public Claude Code plugin (org-wide)
+├── plugins/openindu-control-tower/       # ★ canonical skills and Claude Code plugin
 │   ├── .claude-plugin/plugin.json
-│   ├── skills/                      # 22 skills: principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / dev / dev_issue / prod / publish / research / test / issue-pipeline / pr_merge
+│   ├── skills/                      # 22 canonical workflows shared by both clients
 │   ├── agents/                      # 20 agents (SDLC roles, zero business binding)
 │   ├── evals/                       # workflow-execution regression suite
 │   ├── hooks/                       # trunk protection (RULE 7)
 │   ├── reference/                   # route.json (sole source) + manifest.yaml + coding-standards/
 │   └── README.md
+├── .agents/skills/                   # Codex repo-local discovery entrypoints (generated)
+├── .codex-plugin/plugin.json         # Codex plugin manifest
 ├── scripts/                          # sync-route / check-roster / check-version-bump / detect-modules
 ├── .github/workflows/ci.yml         # prettier + plugin validate + route + roster consistency
 ├── spec/                            # feature designs (control-tower design → arbiter review)

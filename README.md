@@ -2,7 +2,7 @@
 
 > **Language:** English | [中文](README_ZH.md)
 
-> The **control center** of the openIndu community's AI end-to-end development workflow — an independent "brain" separate from business repos. It maintains cross-repo routing, Agent behavior principles, and Agent prompts, and distributes these assets to every repo in the org as a **Claude Code plugin**.
+> The **control center** of the openIndu community's AI end-to-end development workflow — an independent "brain" separate from business repos. It maintains cross-repo routing, Agent behavior principles, and Agent prompts, and distributes workflows through Claude Code and Codex skill packages.
 
 ---
 
@@ -54,7 +54,7 @@ Plus **20 agents** (governance / ideation / design / build / quality / data / op
 - **Feature design:** `/launch` before `/design` for the phase-gated role pipeline, or `/autopilot` when a tiered STOP policy is appropriate. L2/L3 automation requires a verified staging/sandbox target and never overrides human review or risk authorization.
 - **Delivery:** `/pr_merge <repo>` merges only individually eligible PRs with current approval and required CI. `/build` requires a registered image target in `/route`; `/publish` prepares the infra-deploy PR. Cluster apply remains human-only.
 
-**Client boundary:** this repository publishes the slash commands as a Claude Code plugin. Its `AGENTS.md` is shared project guidance for tools that read it; this repository does not currently package Codex-native skill registrations.
+**Client entrypoints:** use `/dev` in Claude Code. Codex discovers the same workflow as `$dev` or in its skill picker through `.agents/skills/` when this repo is open, or through the Codex plugin manifest when the plugin is installed. Codex does not register Claude-style `/dev` slash commands.
 
 ---
 
@@ -188,7 +188,9 @@ control-tower/
 ├── route.json                        # Sync product (sole source in the plugin)
 ├── .claude/settings.json            # References the public plugin
 ├── .claude-plugin/marketplace.json  # Marketplace catalog
-├── plugins/openindu-control-tower/       # ★ Public Claude Code plugin
+├── plugins/openindu-control-tower/       # ★ Canonical workflow and Claude Code plugin
+├── .agents/skills/                       # Codex discovery entrypoints (generated)
+├── .codex-plugin/plugin.json             # Codex plugin package manifest
 │   ├── .claude-plugin/plugin.json
 │   ├── skills/                      # 22 skills: principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / dev / dev_issue / prod / publish / research / test / issue-pipeline / pr_merge
 │   ├── agents/                      # 20 agents (SDLC roles, zero business binding)
@@ -211,6 +213,7 @@ control-tower/
 - **Edit routing**: only edit `plugins/openindu-control-tower/reference/route.json`, then `node scripts/sync-route.mjs`
 - **Add an agent**: create a file under `plugins/openindu-control-tower/agents/` → register in `reference/manifest.yaml` → update listings → bump version
 - **Add a skill**: create `plugins/openindu-control-tower/skills/<name>/SKILL.md` → bump version
+- **Refresh Codex entrypoints**: run `node scripts/sync-codex-skills.mjs --write` after changing canonical skills
 - **Release**: after edits, bump `version` in both `plugin.json` and `marketplace.json`, otherwise downstream `/plugin update` won't pick it up
 - **PR enforced**: this repo is protected by RULE 7; the plugin hook blocks pushes to main
 
