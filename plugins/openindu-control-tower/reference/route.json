@@ -5,7 +5,6 @@
     "gitee": "https://gitee.com/openIndu",
     "note": "Since 2026-06-20 all repos migrated to GitHub, origin=GitHub; Gitee is only the infra-deploy manifest repo and a backup mirror."
   },
-  "dev_grants": [],
   "repos": {
     "control-tower": {
       "url": "https://github.com/openIndu/control-tower",
@@ -80,12 +79,6 @@
       ],
       "authoritative_host": "github",
       "release_flow": "independent — not in the openindu-website submodule aggregate. Has its own server/Dockerfile and web/Dockerfile plus a top-level docker-compose.yml for the local stack, but no registered Container Registry push target and no manifest in infra-deploy, so delivery still ends at its own reviewed repository change until a publish pipeline is set up.",
-      "dev": {
-        "enabled": true,
-        "build": {
-          "note": "server/Dockerfile and web/Dockerfile both build; no registered Container Registry target or infra-deploy manifest exists yet to push them to — treat as not-yet-actionable, not as 'no image'."
-        }
-      },
       "description": "AI-assisted PLC/HMI program development toolchain: electrical-module survey, circuit design, BOM generation, IO-address planning through PLC/HMI programming; includes a FastAPI server, a React+TypeScript web front-end, a RAG knowledge base and MCP tools (converters/local-rag-mcp/server/web — no longer Python-only). GitHub is the authoritative source (confirmed 2026-08-04); Gitee is mirror only — if a local clone points at Gitee, switch origin."
     },
     "openindu-platform": {

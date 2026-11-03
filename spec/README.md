@@ -69,8 +69,8 @@ control-tower 提交 arbiter（threads 中写 review_request）
 | 002 | [openIndu 全组织 Agent 清点与收敛](./002-agent-consolidation.md)                                                           | finalized  | control-tower | 2026-08-03 |
 | 003 | [Agent 组织架构重构——按能力编制，与仓库数量解耦](./003-agent-org-design.md)                                                | superseded | control-tower | 2026-08-03 |
 | 004 | [principle 里的示例仓库名跟随 GitHub 小写改名](./004-principle-example-repo-names-lowercase.md)                            | finalized  | control-tower | 2026-10-18 |
-| 005 | [组织级开发流水线 /dev——把 platform 的 workflow 提升为全组织 workflow](./005-org-dev-workflow.md)                          | finalized  | control-tower | 2026-11-02 |
-| 006 | [修订 RULE 5.2 / RULE 4：有期限、逐仓列名的常设合并授权](./006-standing-merge-authorization.md)                            | finalized  | control-tower | 2026-10-28 |
-| 007 | [协调 spec 001/002/003 的过时结论——定稿现行 20 席编制，标记 003 为 superseded](./007-roster-and-backlog-reconciliation.md) | finalized  | control-tower | 2026-11-02 |
+| 005 | [组织级开发流水线 /dev——把 platform 的 workflow 提升为全组织 workflow](./005-org-dev-workflow.md)                          | superseded | control-tower | 2026-11-03 |
+| 006 | [修订 RULE 5.2 / RULE 4：有期限、逐仓列名的常设合并授权](./006-standing-merge-authorization.md)                            | superseded | control-tower | 2026-11-03 |
+| 007 | [协调 spec 001/002/003 的过时结论——定稿现行 20 席编制，标记 003 为 superseded](./007-roster-and-backlog-reconciliation.md) | superseded | control-tower | 2026-11-03 |
 | 009 | [Workflow evidence, recovery and merge gates](./009-workflow-execution-gates.md)                                           | finalized  | control-tower | 2026-11-03 |
 | 010 | [Workflow entrypoints and legacy dev retirement](./010-workflow-entrypoints-and-retirement.md)                             | finalized  | control-tower | 2026-11-03 |
