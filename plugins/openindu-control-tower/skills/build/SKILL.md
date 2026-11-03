@@ -17,12 +17,12 @@ Build a Docker image for an openIndu service and push it to the Aliyun Container
 
 Use `/route <service-name>` to get the service's `image` registry path. If no image field exists, this service doesn't produce a container image — stop.
 
-| Repo                        | Image registry path                                                                   | Dockerfile location                 |
-| --------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------- |
-| `openindu-backend`          | `${OPENINDU_REGISTRY}/openindu/openindu-backend` | `openIndu-backend/Dockerfile`       |
-| `openindu-admin`            | `${OPENINDU_REGISTRY}/openindu/openindu-admin`   | `openIndu-admin/Dockerfile.k8s`     |
-| `openindu-portal`           | `${OPENINDU_REGISTRY}/openindu/openindu-portal`  | `openIndu-portal/Dockerfile.k8s`    |
-| Other (studio/platform/etc) | per their own registry                                                                | per their own repo                  |
+| Repo                        | Image registry path                              | Dockerfile location              |
+| --------------------------- | ------------------------------------------------ | -------------------------------- |
+| `openindu-backend`          | `${OPENINDU_REGISTRY}/openindu/openindu-backend` | `openIndu-backend/Dockerfile`    |
+| `openindu-admin`            | `${OPENINDU_REGISTRY}/openindu/openindu-admin`   | `openIndu-admin/Dockerfile.k8s`  |
+| `openindu-portal`           | `${OPENINDU_REGISTRY}/openindu/openindu-portal`  | `openIndu-portal/Dockerfile.k8s` |
+| Other (studio/platform/etc) | per their own registry                           | per their own repo               |
 
 > `${OPENINDU_REGISTRY}` is this deployment's Aliyun Container Registry host. It is deliberately not committed — export it in your shell or take it from your `docker login` target. The `${OPENINDU_PROD_DB_*}` placeholders in `route.json` work the same way (RULE 5.4: infrastructure endpoints are injected, never committed).
 
@@ -39,7 +39,7 @@ Use `/route <service-name>` to get the service's `image` registry path. If no im
 /build openindu-backend --dry-run          # validate Dockerfile only, don't push
 ```
 
-Default tag: the **git short SHA** of the commit being built (`git rev-parse --short origin/main` in the source repo). This is what the manifests in the gitops repo pin, so the tag is traceable straight back to a commit — `grep image: <gitops>/**.yaml` should always land on a resolvable SHA.
+Default tag: the **full SHA of the actual checked-out source commit**, validated against the passing test record. Never label a working-directory build using a different `origin/main` commit. This is what the manifests in the gitops repo pin, so the tag is traceable straight back to a commit — `grep image: <gitops>/**.yaml` should always land on a resolvable SHA.
 
 Deployments must pin an immutable tag; **never point a Deployment at `:latest`** (inspector flags it as image-tag drift). That is a constraint on the manifest, not on what you push: if a manifest still pins a moving tag, keep publishing that tag alongside the SHA until the manifest is fixed, otherwise the build silently stops reaching that workload. Check before you drop a tag:
 
@@ -50,6 +50,25 @@ grep -rn "image:.*<service>" <gitops-repo>/
 > Known case: `infra-deploy/openIndu-website/rag-server.yaml` pins `openindu-backend:latest`. Until it is re-pinned to a SHA, backend builds must push both `:latest` and the SHA.
 
 ## 3. Build
+
+Create a versioned build manifest outside the source checkout with `sourceSha`,
+`repo`, `checkpoint: {stateFile, taskId}`, Dockerfile, context and platform.
+The helper reads the durable task checkpoint, verifies all stage hashes and
+the passing test SHA; a self-declared test result in the build manifest is insufficient.
+For aggregated services also supply `aggregate: {directory, sourceSha, submodulePath}`.
+Fetch and verify the aggregate source SHA is merged on its remote default branch;
+read its gitlink, rather than using a local submodule status as merge evidence.
+Verify the test artifact and its hash against the task checkpoint first, then run:
+
+```text
+node <plugin-root>/skills/build/scripts/check-source.mjs <source-dir> <manifest.json>
+```
+
+Any mismatch, dirty file or uninitialized/changed submodule blocks the build.
+Build from an isolated checkout of that SHA; rerun the source check after build
+before push. Record source SHA, test evidence, Dockerfile/context/platform and
+local image ID in the manifest. The request's task ID follows
+`reference/workflow-execution.md`.
 
 ```bash
 # From the aggregate repo root (openindu-website). Note the build context is the
@@ -65,6 +84,7 @@ The trailing `./<service>` matters. Each submodule carries its own `.dockerignor
 For services outside the website aggregate, build from that repo's root with its own Dockerfile path.
 
 Pre-build checks:
+
 - Submodule pointer is at the merged commit (RULE 11 step ③ must be done first)
 - `.dockerignore` excludes `.git`, `node_modules`, `__pycache__`, `.env*`
 - Working tree is clean
@@ -79,11 +99,20 @@ Registry credentials must be pre-configured (`docker login`). The agent does NOT
 
 ## 5. Verify
 
+Read the authoritative registry, not the local Docker cache:
+
 ```bash
-docker inspect ${OPENINDU_REGISTRY}/openindu/<service>:<tag>
+docker buildx imagetools inspect <registry>/<image>:<validated-source-sha>
+docker buildx imagetools inspect <registry>/<image>@sha256:<remote-digest>
 ```
 
-Confirm: image exists, tag is correct, created date is recent.
+Both reads must succeed. Record the remote manifest digest, platform descriptors,
+source SHA and command output in the build manifest. Local `docker inspect` is
+not push verification. Missing credentials or registry errors leave the build
+unverified. Checkpoint `action: "build"` with `sourceSha`, immutable `image`
+reference and the registry evidence artifact; the checkpoint also verifies all
+stage evidence hashes. `/publish` must consume this exact manifest/digest and
+reject changed source or obsolete tests. Never infer deployed state from a push.
 
 ## 6. Report for RULE 11
 
@@ -98,6 +127,7 @@ The next step is ⑤ — create the infra-deploy PR to update the image tag in t
 ## Boundary
 
 `/build` only does step ④ of RULE 11. It does not:
+
 - Run `kubectl apply` (step ⑥ is human-only)
 - Create the infra-deploy PR (step ⑤ — use the `release` agent or do it manually)
 - Decide when to build (that's the `release` agent's coordination)
@@ -106,11 +136,15 @@ The next step is ⑤ — create the infra-deploy PR to update the image tag in t
 
 ## Troubleshooting
 
-| Problem                              | Fix                                                  |
-| ------------------------------------ | ---------------------------------------------------- |
-| `docker push` unauthorized          | User runs `docker login` to Aliyun CR                |
-| Dockerfile not found                 | Check `route.json` for the repo type; some repos have no Dockerfile |
-| Submodule not at merged commit       | Run step ③ first: update submodule pointer + PR merge |
-| Build context too large              | Context must be the submodule dir, not the aggregate root; check that submodule's `.dockerignore` excludes `.git` |
-| Image already exists with this tag   | The SHA tag is already published for that commit — rebuild only if the Dockerfile changed, else reuse it |
-| Frontend 502 / API calls bypass Ingress | Built with `Dockerfile` instead of `Dockerfile.k8s` — the compose nginx config got baked in |
+| Problem                                 | Fix                                                                                                               |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `docker push` unauthorized              | User runs `docker login` to Aliyun CR                                                                             |
+| Dockerfile not found                    | Check `route.json` for the repo type; some repos have no Dockerfile                                               |
+| Submodule not at merged commit          | Run step ③ first: update submodule pointer + PR merge                                                             |
+| Build context too large                 | Context must be the submodule dir, not the aggregate root; check that submodule's `.dockerignore` excludes `.git` |
+| Image already exists with this tag      | The SHA tag is already published for that commit — rebuild only if the Dockerfile changed, else reuse it          |
+| Frontend 502 / API calls bypass Ingress | Built with `Dockerfile` instead of `Dockerfile.k8s` — the compose nginx config got baked in                       |
+
+## Change log
+
+- 2026-11-03: Bound build tags to tested checkout SHA and required registry digest read-back.
