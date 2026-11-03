@@ -1,13 +1,16 @@
 ---
 name: issue-pipeline
-description: Collect open issues across a GitHub organization, classify which require action, challenge each actionable recommendation with independent reviewers, and dispatch accepted work through the existing SDLC pipeline until its PR has green CI. Use for organization-wide issue triage and execution, not for a single already-selected issue.
+description: Collect open issues across the authorized GitHub organization scope, classify which require action, challenge recommendations with independent reviewers, and dispatch accepted work through role agents or /autopilot to a green PR. Use for organization issue triage, not a single already-selected issue.
 argument-hint: "[--repo NAME] [--org openIndu] [--tier L1] [--dry-run]"
 disable-model-invocation: true
 ---
 
 # /issue-pipeline — Organization issue intake and delivery
 
-Turn an organization's open Issue backlog into an auditable work queue. Collection is deterministic; judgment is structured and adversarial; delivery reuses `/autopilot` instead of creating a second SDLC implementation.
+Turn an organization's open Issue backlog into an auditable work queue.
+Collection is deterministic; judgment is structured and adversarial; delivery
+reuses the existing role-stage contracts or `/autopilot`, rather than defining a
+second SDLC implementation.
 
 Call `/principle` first. Run `/launch` before dispatching role agents.
 

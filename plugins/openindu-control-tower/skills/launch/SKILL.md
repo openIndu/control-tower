@@ -40,20 +40,27 @@ git remote get-url origin   # current repo's remote; extract repo name
 
 Call `/route <repo-name>`; read `primary_language` or `modules[].language` and compute the active roster:
 
-| Domain     | Seats                                         | Always-on?                            |
-| ---------- | --------------------------------------------- | ------------------------------------- |
-| Governance | manager / arbiter / inspector / control-tower | ✅ always                             |
-| Quality    | test / reviewer / security                    | ✅ always                             |
-| Operations | release / ops                                 | ✅ always                             |
-| Data       | data / bi-analyst                             | ✅ always                             |
-| Ideation   | business-analyst / product-manager            | ✅ for 0-to-1 features                |
-| Design     | architect / ui-ux-designer                    | ✅ for 0-to-1 features                |
-| Build      | frontend / backend / edge / station-control   | ⛔ only if the repo has that language |
-| Insight    | codebase-analyst                              | on demand                             |
+| Seat / seats                                        | Activation rule                                                                 |
+| --------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `manager`                                           | Always; coordinates this task                                                   |
+| `arbiter`                                           | Standard track; skip only when all fast-track criteria below pass               |
+| `inspector`                                         | Proactive inspection or an explicitly assigned inspection                       |
+| `control-tower`                                     | Principle, workflow, agent, plugin, or governance-spec changes                  |
+| `test`                                              | Code implementation, testability/admission assessment, or test failure work     |
+| `reviewer`                                          | PR/change pre-review when requested by the task or review gate                  |
+| `security`                                          | Security-sensitive changes or a security review request                         |
+| `release`                                           | Applicable RULE 11 delivery, GitOps, or image-release work                      |
+| `ops`                                               | Operational design, runbooks, or operations troubleshooting in scope            |
+| `data`                                              | Production SQL/data repair or data-governance work                              |
+| `bi-analyst`                                        | Metrics, dashboards, or experiments in scope                                    |
+| `business-analyst` / `product-manager`              | Research or product-definition phases; both for 0-to-1 features                 |
+| `architect` / `ui-ux-designer`                      | Architecture/design phases; UI/UX only for user-facing scope                    |
+| `frontend` / `backend` / `edge` / `station-control` | Select by `route.json` language/modules; multiple seats for multi-language work |
+| `codebase-analyst`                                  | Required Phase 0 in `/design`; otherwise on-demand, read-only discovery         |
 
 > Build-seat activation by `modules[].language`: `vue`/`typescript`/`javascript`→`frontend`; `java`/`python`→`backend`; `rust`→`edge`; `csharp`→`station-control`. Multi-language repos activate multiple build seats. Empty/meta repos activate none. Mapping table: `manifest.yaml` `task_routing.by_language`.
 
-For 0-to-1 features (not one-off fixes), also activate ideation + design; manager uses `/design` to orchestrate the pipeline.
+For 0-to-1 features (not one-off fixes), activate ideation + design; manager uses `/design` to orchestrate applicable phases. Role activation is task-scoped; the catalog does not imply that all 20 agents run for every task.
 
 ## 3. Spawn manager
 
@@ -94,7 +101,7 @@ Agent(
 
 `/launch <task description>` appends to the prompt:
 
-> After init, the user's initial task is: `<task description>`. First spawn arbiter to review task nature, then dispatch per the workflow.
+> After init, the user's initial task is: `<task description>`. Classify it using the manager's fast-track criteria: use arbiter review on the standard track and skip arbiter only when every fast-track criterion passes, then dispatch per the workflow.
 
 No argument:
 
