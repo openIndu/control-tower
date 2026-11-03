@@ -1,11 +1,11 @@
-{
+﻿{
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "openindu-control-tower",
   "displayName": "openIndu Workflow",
-  "version": "5.38.0",
+  "version": "5.39.0",
   "description": "openIndu org-wide Agent behavior principles (11), 20 maintainer agents, organization Issue intake, tiered SDLC workflows, and a main-branch protection hook",
   "author": {
-    "name": "openIndu 社区",
+    "name": "openIndu 绀惧尯",
     "url": "https://github.com/openIndu"
   },
   "homepage": "https://github.com/openIndu/control-tower",
