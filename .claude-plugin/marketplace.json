@@ -1,9 +1,9 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "openindu",
-  "description": "openIndu 社区 AI 开发流程公共资产市场：Agent 守则、治理 agent、流程 skill、主干保护 hook",
+  "description": "openIndu 绀惧尯 AI 寮€鍙戞祦绋嬪叕鍏辫祫浜у競鍦猴細Agent 瀹堝垯銆佹不鐞?agent銆佹祦绋?skill銆佷富骞蹭繚鎶?hook",
   "owner": {
-    "name": "openIndu 社区",
+    "name": "openIndu 绀惧尯",
     "url": "https://github.com/openIndu"
   },
   "plugins": [
@@ -12,9 +12,9 @@
       "displayName": "openIndu Workflow",
       "source": "./plugins/openindu-control-tower",
       "description": "openIndu org-wide Agent behavior principles (11), 20 maintainer agents, organization Issue intake, tiered SDLC workflows, and a main-branch protection hook",
-      "version": "5.38.0",
+      "version": "5.40.0",
       "author": {
-        "name": "openIndu 社区",
+        "name": "openIndu 绀惧尯",
         "url": "https://github.com/openIndu"
       },
       "homepage": "https://github.com/openIndu/control-tower",
