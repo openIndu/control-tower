@@ -4,7 +4,7 @@ slug: session-pipeline-skills
 type: other
 related_spec: —
 author: control-tower (Claude)
-pr: openIndu/control-tower#TBD
+pr: openIndu/control-tower#117
 ---
 
 # Session pipeline skills — /retro, /git-commit-push, /cleanup
