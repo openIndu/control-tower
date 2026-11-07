@@ -43,6 +43,9 @@
 | `/build`                    | 为 openIndu 服务构建并推送镜像（RULE 11 第④步）                         |
 | `/codebase-analysis`        | 逆向分析并整理一个陌生代码库                                            |
 | `/company-analysis`         | 调研分析一家公司——business-analyst 的市场/竞品研究工具                  |
+| `/retro`                    | 把会话中犯的错固化成可复用经验；治理级缺口只出提案不直接改              |
+| `/git-commit-push`          | 按仓库自身规则完成提交、推送并创建 PR                                   |
+| `/cleanup`                  | 会话收尾：归档交付物、修正引用并加变更记录、经确认后删除一次性产物      |
 
 外加 **20 个 agent**（治理/需求/设计/构建/质量/数据/运维/洞察，零业务绑定）和一个阻断 `git push origin main` 的 hook。
 
@@ -206,7 +209,7 @@ control-tower/
 ├── .agents/skills/                       # Codex 本地发现入口（生成文件）
 ├── .codex-plugin/plugin.json             # Codex 插件 manifest
 │   ├── .claude-plugin/plugin.json
-│   ├── skills/                      # 22 个 skill：principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / dev / dev_issue / prod / publish / research / test / issue-pipeline / pr_merge
+│   ├── skills/                      # 25 个 skill：principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / dev / dev_issue / prod / publish / research / test / issue-pipeline / pr_merge / retro / git-commit-push / cleanup
 │   ├── agents/                      # 20 个 agent（SDLC 角色，零业务绑定）
 │   ├── evals/                       # workflow-execution 回归评估
 │   ├── hooks/                       # 主干保护

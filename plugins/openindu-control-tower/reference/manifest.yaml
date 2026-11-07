@@ -208,7 +208,7 @@ roster:
 coverage_notes:
   generic: "Fork ownership, empty repos, meta repos are declared per-repo in route.json (delivery_owner/status), not enumerated here."
 
-# ---- Skills (22) ----
+# ---- Skills (25) ----
 skills:
   - id: principle
     file: ../skills/principle/SKILL.md
@@ -276,6 +276,15 @@ skills:
   - id: pr_merge
     file: ../skills/pr_merge/SKILL.md
     description: "Serially merge eligible PRs for one repository after current approval and required checks"
+  - id: retro
+    file: ../skills/retro/SKILL.md
+    description: "Consolidate session errors into durable lessons; governance gaps become proposals, not edits"
+  - id: git-commit-push
+    file: ../skills/git-commit-push/SKILL.md
+    description: "Commit, push and open a PR under repo rules — attribution, lint, English Gitee PRs, CI green before ready"
+  - id: cleanup
+    file: ../skills/cleanup/SKILL.md
+    description: "Session close-out — file deliverables, fix references with change records, delete throwaways after user confirmation"
 
 # ---- Escalation rules ----
 escalation_rules:
