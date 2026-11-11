@@ -90,7 +90,7 @@ Pass the tier to `/design` as the STOP policy:
 ## 3. Guardrails that NEVER drop, regardless of tier
 
 - **RULE 7** (no push to main): always. Autonomy happens on feature branches; main is always a human-reviewed merge.
-- **RULE 4** (L3 risk actions — prod deploy, prod DB write, payment,对外承诺, permission change): always human + dual approval + rollback. Autopilot tier does not override this.
+- **RULE 4** (L3 risk actions — prod deploy, prod DB write, payment,对外承诺, permission change): human approval + rollback; dual approval remains the default. SM-1 permits only explicitly approved, isolated local/test code authoring by a sole project owner using synthetic disposable data; it never permits merge, push, deployment, staging/live-user/production changes, or external grants. Autopilot does not override these limits.
 - **RULE 8** (K8s in gitops repo): always. L2 staging deploy = merge to gitops → auto-sync; L3 sandbox deploy uses a sandbox cluster, never prod.
 - **RULE 10** (production SQL): always human. Even at L3, a prod DB write is forked out to `data` + human.
 - **Credentials**: never in prompts/logs (RULE 5.4).
