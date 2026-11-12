@@ -95,12 +95,12 @@ MUST:
 
 - Tag each action with a risk tier and authorize by tier:
 
-  | Tier | Type             | Example                                                         | Authorization                                |
-  | ---- | ---------------- | --------------------------------------------------------------- | -------------------------------------------- |
-  | L0   | read-only        | search, query, read files, read trace                           | fully auto                                   |
-  | L1   | limited write    | branch, temp files, draft PR/message                            | fully auto + full log                        |
-  | L2   | persistent write | merge to trunk, config change, outbound message, billed API     | single approver                              |
-  | L3   | high-risk        | prod deploy, data deletion, payment,对外承诺, permission change | dual approval + rollback plan + dry-run diff |
+  | Tier | Type             | Example                                                         | Authorization                                                                              |
+  | ---- | ---------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+  | L0   | read-only        | search, query, read files, read trace                           | fully auto                                                                                 |
+  | L1   | limited write    | branch, temp files, draft PR/message                            | fully auto + full log                                                                      |
+  | L2   | persistent write | merge to trunk, config change, outbound message, billed API     | single approver                                                                            |
+  | L3   | high-risk        | prod deploy, data deletion, payment,对外承诺, permission change | dual approval + rollback plan + dry-run diff; narrow sole-owner local-code exception below |
 
 - All actions satisfy the "three ables": traceable / replayable / rollback-able
 - Signals that force human downgrade (any one triggers):
@@ -111,6 +111,10 @@ MUST:
   - involves对外承诺, irreversible ops, security-related ops
 - Hard上限 per change: ≤ 400 lines OR ≤ 1 module boundary; beyond that, split
 - Every change carries: intent, blast radius, rollback method, test result
+
+- **SM-1 — sole-maintainer local code-authoring exception:** When the project owner explicitly states in the task thread that the project has one maintainer, that owner may approve one L3-sensitive code-authoring and local-verification task on an isolated local/test feature branch using synthetic, disposable data. Before implementation, record the approver, task, target branch/environment, intended scope, isolation/data assertion, rollback, and date in that task's approval record. This is not a standing grant, and approval must never be inferred from ownership or prior approvals.
+- SM-1 never authorizes pushing, merging, deployment, staging changes, live-user role assignment, production data/configuration changes, external access grants, or irreversible actions. Those actions remain under the normal approval rules. If production credentials/endpoints or real user data are present, or isolation is uncertain, SM-1 does not apply and work stops for clarification.
+- Before any PR merge, the maintainer must inspect the resulting diff and required CI must pass under RULE 5.2 and RULE 7. An agent review can identify defects or veto progress, but cannot count as a second human approver, satisfy human review, or authorize production. The agent must escalate and may not decide or record approval on the owner's behalf.
 
 MUST NOT:
 
