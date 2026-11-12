@@ -44,7 +44,7 @@ Claude Code commands use `/name`. Codex skills use `$name` or the Codex skill pi
 
 ```mermaid
 graph TD
-    brain["control-tower (brain)<br/>marketplace.json + plugins/openindu-control-tower<br/>11 principles + 20 agents + 22 skills + hook"]
+    brain["control-tower (brain)<br/>marketplace.json + plugins/openindu-control-tower<br/>11 principles + 20 agents + 25 skills + hook"]
     settings["each repo's .claude/settings.json<br/>6-line reference → effective on clone → /plugin update pulls updates"]
     brain --> settings
     settings --> aggregate
@@ -141,7 +141,7 @@ Auto-detects team state: creates + spawns manager if absent; messages if manager
 
 ---
 
-## Commands & workflows (22 skills)
+## Commands & workflows (25 skills)
 
 Canonical instructions live at `plugins/openindu-control-tower/skills/<name>/SKILL.md`.
 Use `/<name>` in Claude Code and `$<name>` (or the skill picker) in Codex. The
@@ -200,6 +200,14 @@ delivery diagrams. `/design` is phase-gated; eligible generic targets use
 | `/revision-new` | `<change brief>`                                                                                      | `revision/YYYY-MM-DD-brief-slug.md` — a 4-section changelog record (summary / files involved / trigger / impact) with a 3-item verification checklist                                                                                                        |
 | `/memory`       | `[--read <role> \| --add <role> "<lesson>"]` — also read implicitly by every agent at its own startup | read: a role's lesson text surfaced into context; write: one appended line in `team/communications/memory/<role>/{pitfalls,techniques}.md`                                                                                                                   |
 
+### Session workflow (any repo)
+
+| Command            | Input                                                             | Output                                                                                                                                                               |
+| ------------------ | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/retro`           | `[--scope <N messages>] [--dry-run]`                              | durable lesson entries harvested from this session's errors and corrections, deduped against the lessons store; governance gaps become proposals, never direct edits |
+| `/git-commit-push` | `[--message "<summary>"] [--draft] [--no-push] [--base <branch>]` | commit on a feature branch, push, and open a PR under the repository's own rules (attribution, lint, English Gitee PRs, CI green before ready)                       |
+| `/cleanup`         | `[--dry-run] [--yes]`                                             | deliverables filed into the documented docs/scripts trees, references fixed with change records, throwaways deleted after user confirmation                          |
+
 ### Standalone analysis
 
 | Command                     | Input                                     | Output                                                                                                                                                                                                                                                                         |
@@ -221,7 +229,7 @@ control-tower/
 ├── .claude-plugin/marketplace.json  # marketplace catalog
 ├── plugins/openindu-control-tower/       # ★ canonical skills and Claude Code plugin
 │   ├── .claude-plugin/plugin.json
-│   ├── skills/                      # 22 canonical workflows shared by both clients
+│   ├── skills/                      # 25 canonical workflows shared by both clients
 │   ├── agents/                      # 20 agents (SDLC roles, zero business binding)
 │   ├── evals/                       # workflow-execution regression suite
 │   ├── hooks/                       # trunk protection (RULE 7)

@@ -43,6 +43,9 @@ Available immediately after onboarding:
 | `/build`                    | Build and push a Docker image for an openIndu service (RULE 11 step 4)                          |
 | `/codebase-analysis`        | Reverse-engineer and document an unfamiliar codebase                                            |
 | `/company-analysis`         | Research and profile a company — business-analyst's market/competitor-research tool             |
+| `/retro`                    | Consolidate session errors into durable lessons; governance gaps become proposals, not edits    |
+| `/git-commit-push`          | Commit, push and open a PR under the repository's own rules                                     |
+| `/cleanup`                  | Session close-out: file deliverables, fix references, delete throwaways after confirmation      |
 
 Plus **20 agents** (governance / ideation / design / build / quality / data / operations / insight, zero business binding) and a hook that blocks `git push origin main`.
 
@@ -105,7 +108,7 @@ image target is registered, and `/publish` requires a matching GitOps manifest.
         │  · plugins/openindu-control-tower/    │
         │      ├─ 11 principles (sole src)│
         │      ├─ 20 SDLC role agents     │
-        │      ├─ 22 workflow skills      │
+        │      ├─ 25 workflow skills      │
         │      └─ trunk-protection hook   │
         │  · route.json (repo routing, data)│
         │  · spec/ revision/ design & change│
@@ -238,7 +241,7 @@ control-tower/
 ├── .agents/skills/                       # Codex discovery entrypoints (generated)
 ├── .codex-plugin/plugin.json             # Codex plugin package manifest
 │   ├── .claude-plugin/plugin.json
-│   ├── skills/                      # 22 skills: principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / dev / dev_issue / prod / publish / research / test / issue-pipeline / pr_merge
+│   ├── skills/                      # 25 skills: principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / dev / dev_issue / prod / publish / research / test / issue-pipeline / pr_merge / retro / git-commit-push / cleanup
 │   ├── agents/                      # 20 agents (SDLC roles, zero business binding)
 │   ├── evals/                       # workflow-execution regression suite
 │   ├── hooks/                       # Trunk protection

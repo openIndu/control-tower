@@ -53,6 +53,9 @@ Or run `/adopt` in a repo — it writes the block below into `.claude/settings.j
 | `/revision-new`             | Draft a revision record (control-tower)                                                         |
 | `/codebase-analysis`        | 7-step codebase analysis methodology (used by codebase-analyst)                                 |
 | `/company-analysis`         | Evidence-led company research using Five Forces, SWOT, and DuPont                               |
+| `/retro`                    | Consolidate session errors into durable lessons; governance gaps become proposals, not edits    |
+| `/git-commit-push`          | Commit, push and open a PR under the repository's own rules                                     |
+| `/cleanup`                  | Session close-out: file deliverables, fix references, delete throwaways after confirmation      |
 
 ### Workflow boundaries
 
