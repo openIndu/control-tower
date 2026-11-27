@@ -77,3 +77,4 @@ control-tower 提交 arbiter（threads 中写 review_request）
 | 011 | [Remove mandatory real-model evaluation as a release gate](./011-risk-tiered-prompt-validation.md)                         | finalized  | control-tower | 2026-11-03 |
 | 012 | [Clarify workflow artifact, Issue coverage and autonomy contracts](./012-workflow-contract-clarity-and-coverage.md)        | finalized  | control-tower | 2026-11-03 |
 | 013 | [Solo maintainer authorization for non-production L3 changes](./013-solo-maintainer-nonproduction-l3.md)                   | finalized  | control-tower | 2026-11-11 |
+| 014 | [Cross-session independent verification dispatch for completed development](./014-cross-session-verification.md) | draft      | control-tower | 2026-11-27 |

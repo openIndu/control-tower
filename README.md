@@ -38,6 +38,7 @@ Available immediately after onboarding:
 | `/test`                     | Run UT/IT, start the local app, manually verify acceptance and retain evidence                  |
 | `/publish`                  | Prepare and reconcile an infra-deploy Gitee release PR from a verified immutable image          |
 | `/dev_issue`                | Process one repo's Issues through research, product, development, testing and green PRs         |
+| `/session-verify`           | Dispatch an independent cross-session re-inspection (peer session first, reviewer agent fallback) |
 | `/spec-new`                 | Draft a new spec (feature / process / principle change)                                         |
 | `/revision-new`             | Create a revision record (changelog) for a change                                               |
 | `/build`                    | Build and push a Docker image for an openIndu service (RULE 11 step 4)                          |

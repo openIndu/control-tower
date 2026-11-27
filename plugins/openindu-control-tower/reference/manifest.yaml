@@ -273,6 +273,9 @@ skills:
   - id: dev_issue
     file: ../skills/dev_issue/SKILL.md
     description: "Process one openIndu repository's Issues through research, product, dev, test and green PR"
+  - id: session-verify
+    file: ../skills/session-verify/SKILL.md
+    description: "Dispatch an independent cross-session re-inspection of a completed change (spec/014) - findings have veto power, never replace human approval"
   - id: pr_merge
     file: ../skills/pr_merge/SKILL.md
     description: "Serially merge eligible PRs for one repository after current approval and required checks"
