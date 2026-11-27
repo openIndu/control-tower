@@ -11,6 +11,17 @@ Call `/principle` and `/route`; load the test role and the task's precise PRD/de
 artifacts. REASON: map risk and acceptance criteria to checks. EXECUTE: run tests,
 start the environment, interact with it, capture results and clean up.
 
+## Mode dispatch
+
+- `/test <openIndu/repo> <task-id> [--dry-run]` — full pipeline mode (the rest of
+  this file): lease, checkpoints, evidence per acceptance ID.
+- `/test <project>` with no task id — **lightweight mode** (see "Lightweight mode"
+  at the end): start that project's verified local test stack, hand the session to
+  the owner for manual testing, locate + file issues for findings. Writes no
+  leases, checkpoints or workflow state.
+
+## Pipeline mode
+
 Run `skills/issue-pipeline/scripts/workflow-request.mjs <request.json>` under the
 plugin root with `command: "test"`, repo/task/run IDs, `checkpointFile`, exact
 development `sourceSha` and boolean `dryRun`. Check that the tested checkout
@@ -47,3 +58,31 @@ Record test PASS through `workflow-state.mjs` only for the same dev SHA and with
 nonempty evidence. Test cannot be NA. Report failures and next actions exactly.
 The tested SHA/report feed PR creation and `/build`; source changes invalidate
 that evidence. This command does not merge, publish or use production as a test.
+
+## Lightweight mode — `/test <project>`
+
+For ad-hoc verification loops outside the issue pipeline: start the project's
+verified local test stack, hand the session to the owner for interactive testing,
+then locate + file issues for every finding. Writes no leases, checkpoints or
+workflow state. Call `/principle` first (same RULE scope: no production
+endpoints, no device interaction without authorization).
+
+Dispatch table — verified start harnesses only; add a row only after its
+commands have been run successfully end-to-end:
+
+| project (route.json id)   | start + verify                                                                                                                                                                                                            | interactive surface                                                                                                                              | issues                                                                                                                    |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| openindu/openindu-website | `powershell -File mem_script/start-local-test.ps1 -MonorepoBranch main` on the workstation (Docker Desktop required; ~5–10 min; script gates dirty checkouts, self-heals Milvus, seeds data, prints an acceptance matrix) | Portal `localhost:3000` / Admin `localhost:3001` (login `13800000000` / code `888888`; suppliers `13800000003/4`) / MCP `localhost:8005/mcp/sse` | openIndu/openindu-website                                                                                                 |
+| openindu/openindu-scan    | `dotnet build OpenIndu.Scan.sln` → `dotnet test` (49 tests) → `dotnet run --project OpenIndu.Scan` (WinForms window; verify the process via tasklist — `                                                                  | head` pipes kill GUI apps)                                                                                                                       | desktop forms: Login → Dashboard workbench → scan sessions (NG path) → Records → Settings → user management → Diagnostics | openIndu/openindu-scan |
+
+Flow:
+
+1. Start per the table and read back health signals (script acceptance matrix /
+   test count / process alive). Git health first: an orphaned worktree or dirty
+   checkout is reported to the owner before anything is built.
+2. Hand the owner a testing card: entry points, accounts, record format
+   (form/page + symptom + expectation).
+3. For each finding: dual-evidence locate (code grep + stack read-back), dedupe
+   against open issues, then file (background facts with file:line anchors /
+   behavior-level requirement / programmable acceptance incl. no-collateral
+   clauses / deploy context / non-goals). Locate and file — never fix inline.
