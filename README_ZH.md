@@ -38,7 +38,8 @@
 | `/test`                     | 执行 UT/IT、启动本地环境、手动验证并保留证据；`/test <project>` 轻量模式=起本地栈+owner 手测+提单（无管线状态） |
 | `/publish`                  | 基于不可变镜像准备并核对 infra-deploy Gitee 发布 PR                                                             |
 | `/dev_issue`                | 遍历单仓库 Issue，依次完成调研、产品定义、开发、测试并提交通过 CI 的 PR                                         |
-| `/session-verify`           | `<openIndu/repo> <merge-commit-or-PR-ref> [issue-number]`                                                       | 派发独立跨会话复检：红绿重推、四镜正确性、范围对账、验收覆盖；结论有否决权但不替代人工门禁（spec/014） |
+| `/session-verify`           | `<openIndu/repo> <merge-commit-or-PR-ref> [issue-number]`                                                       | 派发独立跨会话复检：红绿重推、四镜正确性、范围对账、验收覆盖；结论有否决权但不替代人工门禁（spec/014）     |
+| `/issue-verify-loop`        | `<openIndu/repo> [--issue <n>] [--max <count>]`                                                                 | 轻量循环 — 收集 Issues（PR #20 引擎）、逐 issue 开发（红绿门禁）、每个修复派发 /session-verify（spec/015） |
 | `/spec-new`                 | 起草新 spec（特性/流程/守则变更）                                                                               |
 | `/revision-new`             | 为一次改动创建变更记录（changelog）                                                                             |
 | `/build`                    | 为 openIndu 服务构建并推送镜像（RULE 11 第④步）                                                                 |
@@ -210,7 +211,11 @@ control-tower/
 ├── .agents/skills/                       # Codex 本地发现入口（生成文件）
 ├── .codex-plugin/plugin.json             # Codex 插件 manifest
 │   ├── .claude-plugin/plugin.json
+<<<<<<< HEAD
 │   ├── skills/                      # 25 个 skill：principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / dev / dev_issue / prod / publish / research / test / issue-pipeline / pr_merge / retro / git-commit-push / cleanup
+=======
+│   ├── skills/                      # 27 个 skill：principle / adopt / launch / design / autopilot / memory / design-md / delivery-check / route / spec-new / revision-new / codebase-analysis / build / company-analysis / dev / dev_issue / prod / publish / research / test / issue-pipeline / pr_merge / retro / git-commit-push / cleanup / session-verify / issue-verify-loop
+>>>>>>> 4f7ced7 (feat(control-tower): add /issue-verify-loop orchestration skill (spec/015))
 │   ├── agents/                      # 20 个 agent（SDLC 角色，零业务绑定）
 │   ├── evals/                       # workflow-execution 回归评估
 │   ├── hooks/                       # 主干保护

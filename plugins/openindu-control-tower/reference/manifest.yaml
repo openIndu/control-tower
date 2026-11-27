@@ -276,6 +276,9 @@ skills:
   - id: session-verify
     file: ../skills/session-verify/SKILL.md
     description: "Dispatch an independent cross-session re-inspection of a completed change (spec/014) - findings have veto power, never replace human approval"
+  - id: issue-verify-loop
+    file: ../skills/issue-verify-loop/SKILL.md
+    description: "Lightweight loop for one repository's open Issues - collect (PR #20 engine), develop per issue, dispatch /session-verify per fix (spec/015)"
   - id: pr_merge
     file: ../skills/pr_merge/SKILL.md
     description: "Serially merge eligible PRs for one repository after current approval and required checks"
