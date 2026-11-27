@@ -35,7 +35,7 @@
 | `/dev`                      | 针对一个已确认任务进行开发，并将确切源码 SHA 交给 `/test` 验证          |
 | `/research`                 | 调研同类产品、路线与证据支持的差异化机会                                |
 | `/prod`                     | 明确产品需求、MVP 范围和验收矩阵                                        |
-| `/test`                     | 执行 UT/IT、启动本地环境、手动验证并保留证据                            |
+| `/test`                     | 执行 UT/IT、启动本地环境、手动验证并保留证据；`/test <project>` 轻量模式=起本地栈+owner 手测+提单（无管线状态）                            |
 | `/publish`                  | 基于不可变镜像准备并核对 infra-deploy Gitee 发布 PR                     |
 | `/dev_issue`                | 遍历单仓库 Issue，依次完成调研、产品定义、开发、测试并提交通过 CI 的 PR |
 | `/spec-new`                 | 起草新 spec（特性/流程/守则变更）                                       |

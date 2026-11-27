@@ -41,7 +41,7 @@ Or run `/adopt` in a repo — it writes the block below into `.claude/settings.j
 | `/dev`                      | Implement one accepted task and hand off its exact source SHA to `/test`                        |
 | `/research`                 | Market and competitor research with evidence-backed differentiation and experiments             |
 | `/prod`                     | Define the scoped product requirements, MVP and acceptance matrix                               |
-| `/test`                     | Run UT/IT, start the local app, manually verify acceptance and retain evidence                  |
+| `/test`                     | Run UT/IT, start the local app, manually verify acceptance and retain evidence; `/test <project>` lightweight mode = local stack + owner test + issue filing (no pipeline state)                  |
 | `/publish`                  | Prepare and reconcile an infra-deploy Gitee release PR from a verified immutable image          |
 | `/dev_issue`                | Process one repo's Issues through research, product, development, testing and green PRs         |
 | `/design-md`                | Adopt a DESIGN.md design system for UI work                                                     |
