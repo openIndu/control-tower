@@ -70,10 +70,10 @@ or a disposable container — never the shared checkout with uncommitted state.
 Findings arrive as per-lens sections with `[severity]` + evidence and a final
 verdict (修复是否成立 / 测试是否可信 / 有无返工点). Route:
 
-| Verdict | Action |
-| --- | --- |
-| critical/major findings | Rework loop: hand findings back to the dev session; re-dispatch verification after rework |
-| clean verdict | Post the re-inspection receipt to the PR/issue; the human approval gate (RULE 5.2) proceeds |
+| Verdict                 | Action                                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------------------- |
+| critical/major findings | Rework loop: hand findings back to the dev session; re-dispatch verification after rework   |
+| clean verdict           | Post the re-inspection receipt to the PR/issue; the human approval gate (RULE 5.2) proceeds |
 
 Receipt format: brief + findings + verdict + (for retrieval-type changes) the
 three-category probe record — 命中 / 显式报错 / 识别通过但空结果（第三类 =

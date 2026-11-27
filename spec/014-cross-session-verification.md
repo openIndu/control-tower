@@ -75,10 +75,10 @@ the load-bearing assumption be checked against production data).
 
 ## 3. 影响范围
 
-| 仓库        | 影响文件 / 模块                                                        | 由谁落地       |
-| ----------- | ---------------------------------------------------------------------- | -------------- |
-| control-tower | `plugins/openindu-control-tower/skills/session-verify/SKILL.md`（新增） | control-tower  |
-| control-tower | `spec/014-*.md` + spec 索引；生成的 Codex 发现元数据；插件版本 minor+1  | control-tower  |
+| 仓库          | 影响文件 / 模块                                                         | 由谁落地      |
+| ------------- | ----------------------------------------------------------------------- | ------------- |
+| control-tower | `plugins/openindu-control-tower/skills/session-verify/SKILL.md`（新增） | control-tower |
+| control-tower | `spec/014-*.md` + spec 索引；生成的 Codex 发现元数据；插件版本 minor+1  | control-tower |
 
 ## 4. 实施路径（HOW）
 
@@ -111,10 +111,10 @@ mid-verification dispatch is a conversation; there is nothing to roll back.
 
 ## 6. 验收标准
 
-| #   | Criterion                                                                                                    | Executable verification                                                            |
-| --- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| 1   | Skill exists, registers in Claude (`/session-verify`) and Codex discovery                                     | `sync-codex-skills.mjs` reports 26 == canonical; `claude mcp`-style listing shows the command |
-| 2   | Dispatch independence enforced by the brief (author session excluded, worktree isolation, read-only)          | Brief text contains the independence rule; the skill refuses to dispatch to the author session |
-| 3   | Brief template covers red-green re-derivation, four lenses, scope stat, acceptance coverage                   | SKILL.md checklist matches this spec's design points                               |
-| 4   | Findings format + routing (veto / rework / human gate) documented                                             | SKILL.md routing section                                                           |
-| 5   | First real adoption recorded (brief + findings + verdict on a PR/issue)                                       | A linked PR/issue comment referencing `/session-verify`                            |
+| #   | Criterion                                                                                            | Executable verification                                                                        |
+| --- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 1   | Skill exists, registers in Claude (`/session-verify`) and Codex discovery                            | `sync-codex-skills.mjs` reports 26 == canonical; `claude mcp`-style listing shows the command  |
+| 2   | Dispatch independence enforced by the brief (author session excluded, worktree isolation, read-only) | Brief text contains the independence rule; the skill refuses to dispatch to the author session |
+| 3   | Brief template covers red-green re-derivation, four lenses, scope stat, acceptance coverage          | SKILL.md checklist matches this spec's design points                                           |
+| 4   | Findings format + routing (veto / rework / human gate) documented                                    | SKILL.md routing section                                                                       |
+| 5   | First real adoption recorded (brief + findings + verdict on a PR/issue)                              | A linked PR/issue comment referencing `/session-verify`                                        |
