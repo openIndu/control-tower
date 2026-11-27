@@ -38,8 +38,8 @@
 | `/test`                     | 执行 UT/IT、启动本地环境、手动验证并保留证据；`/test <project>` 轻量模式=起本地栈+owner 手测+提单（无管线状态） |
 | `/publish`                  | 基于不可变镜像准备并核对 infra-deploy Gitee 发布 PR                                                             |
 | `/dev_issue`                | 遍历单仓库 Issue，依次完成调研、产品定义、开发、测试并提交通过 CI 的 PR                                         |
-| `/session-verify`           | `<openIndu/repo> <merge-commit-or-PR-ref> [issue-number]`                                                       | 派发独立跨会话复检：红绿重推、四镜正确性、范围对账、验收覆盖；结论有否决权但不替代人工门禁（spec/014） |
-| `/issue-verify-loop` | `<openIndu/repo> [--issue <n>] [--max <count>]` | 轻量循环 — 收集 Issues（PR #20 引擎）、逐 issue 开发（红绿门禁）、每个修复派发 /session-verify（spec/015） |
+| `/session-verify`           | `<openIndu/repo> <merge-commit-or-PR-ref> [issue-number]`                                                       | 派发独立跨会话复检：红绿重推、四镜正确性、范围对账、验收覆盖；结论有否决权但不替代人工门禁（spec/014）     |
+| `/issue-verify-loop`        | `<openIndu/repo> [--issue <n>] [--max <count>]`                                                                 | 轻量循环 — 收集 Issues（PR #20 引擎）、逐 issue 开发（红绿门禁）、每个修复派发 /session-verify（spec/015） |
 | `/spec-new`                 | 起草新 spec（特性/流程/守则变更）                                                                               |
 | `/revision-new`             | 为一次改动创建变更记录（changelog）                                                                             |
 | `/build`                    | 为 openIndu 服务构建并推送镜像（RULE 11 第④步）                                                                 |

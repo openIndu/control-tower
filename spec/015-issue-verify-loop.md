@@ -64,10 +64,10 @@ lease/checkpoint contracts don't fit a same-session lightweight loop.
 
 ## 3. 影响范围
 
-| 仓库        | 影响文件 / 模块                                                  | 由谁落地       |
-| ----------- | ---------------------------------------------------------------- | -------------- |
-| control-tower | `plugins/openindu-control-tower/skills/issue-verify-loop/SKILL.md`（新增） | control-tower  |
-| control-tower | `spec/015-*.md` + spec 索引；生成的 Codex 发现元数据              | control-tower  |
+| 仓库          | 影响文件 / 模块                                                            | 由谁落地      |
+| ------------- | -------------------------------------------------------------------------- | ------------- |
+| control-tower | `plugins/openindu-control-tower/skills/issue-verify-loop/SKILL.md`（新增） | control-tower |
+| control-tower | `spec/015-*.md` + spec 索引；生成的 Codex 发现元数据                       | control-tower |
 
 ## 4. 实施路径（HOW）
 
@@ -100,10 +100,10 @@ unmerged PRs, each independently revertible.
 
 ## 6. 验收标准
 
-| #   | Criterion                                                                                             | Executable verification                                                        |
-| --- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| 1   | Collect reuses the PR #20 engine (no new collection code)                                             | SKILL.md references `collect-org-issues.mjs --repo`; no duplicated collection   |
-| 2   | Per-fix verify delegates to /session-verify (no duplicated dispatch logic)                            | SKILL.md verify stage references the session-verify contract, not its internals |
-| 3   | Selection, batch cap, and per-issue status summary documented                                          | SKILL.md sections                                                               |
-| 4   | Lightweight boundary explicit (no leases/checkpoints; heavy machinery = /dev_issue)                    | SKILL.md boundary section                                                       |
-| 5   | First real adoption recorded (a loop run with receipts on a PR/issue)                                  | A linked comment referencing /issue-verify-loop                                 |
+| #   | Criterion                                                                           | Executable verification                                                         |
+| --- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| 1   | Collect reuses the PR #20 engine (no new collection code)                           | SKILL.md references `collect-org-issues.mjs --repo`; no duplicated collection   |
+| 2   | Per-fix verify delegates to /session-verify (no duplicated dispatch logic)          | SKILL.md verify stage references the session-verify contract, not its internals |
+| 3   | Selection, batch cap, and per-issue status summary documented                       | SKILL.md sections                                                               |
+| 4   | Lightweight boundary explicit (no leases/checkpoints; heavy machinery = /dev_issue) | SKILL.md boundary section                                                       |
+| 5   | First real adoption recorded (a loop run with receipts on a PR/issue)               | A linked comment referencing /issue-verify-loop                                 |
